@@ -16,9 +16,7 @@ Fixes #(issue number)
 
 ## Checklist
 
-- [ ] My code follows the project's code style
-- [ ] I have run `npm run lint` and `npm run typecheck`
+- [ ] My code follows the project's guidelines
 - [ ] I have added tests for my changes
-- [ ] All tests pass (`npm test`)
 - [ ] I have updated documentation if needed
 - [ ] My commits follow conventional commit format
