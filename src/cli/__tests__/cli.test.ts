@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { findMonorepoRoot, program } from '../index.js'
+import { findMonorepoRoot, bundleCommand, EXIT_CODES } from '../index.js'
 
 describe('CLI', () => {
   let tempDir: string
@@ -25,41 +25,45 @@ describe('CLI', () => {
     return dir
   }
 
-  describe('program configuration', () => {
+  describe('bundleCommand configuration', () => {
     it('should have correct name', () => {
-      expect(program.name()).toBe('monocrate')
+      // meta is defined directly on the command (not a Promise)
+      const meta = bundleCommand.meta as { name: string; version: string }
+      expect(meta.name).toBe('monocrate')
     })
 
     it('should have version configured', () => {
-      expect(program.version()).toBeDefined()
+      const meta = bundleCommand.meta as { name: string; version: string }
+      expect(meta.version).toBeDefined()
     })
 
-    it('should have expected options', () => {
-      const optionNames = program.options.map((opt) => opt.long ?? opt.short)
-      expect(optionNames).toContain('--output')
-      expect(optionNames).toContain('--root')
-      expect(optionNames).toContain('--clean')
-      expect(optionNames).toContain('--include-dev')
-      expect(optionNames).toContain('--dry-run')
-      expect(optionNames).toContain('--verbose')
-      expect(optionNames).toContain('--quiet')
+    it('should have expected args', () => {
+      const args = bundleCommand.args as Record<string, unknown>
+      const argNames = Object.keys(args)
+      expect(argNames).toContain('output')
+      expect(argNames).toContain('root')
+      expect(argNames).toContain('clean')
+      expect(argNames).toContain('dryRun')
+      expect(argNames).toContain('verbose')
+      expect(argNames).toContain('quiet')
     })
 
     it('should have short aliases for common options', () => {
-      const outputOption = program.options.find((opt) => opt.long === '--output')
-      expect(outputOption?.short).toBe('-o')
+      const args = bundleCommand.args as Record<string, { alias?: string }>
 
-      const rootOption = program.options.find((opt) => opt.long === '--root')
-      expect(rootOption?.short).toBe('-r')
+      expect(args.output?.alias).toBe('o')
+      expect(args.root?.alias).toBe('r')
+      expect(args.clean?.alias).toBe('c')
+      expect(args.verbose?.alias).toBe('v')
+      expect(args.quiet?.alias).toBe('q')
+    })
+  })
 
-      const cleanOption = program.options.find((opt) => opt.long === '--clean')
-      expect(cleanOption?.short).toBe('-c')
-
-      const verboseOption = program.options.find((opt) => opt.long === '--verbose')
-      expect(verboseOption?.short).toBe('-v')
-
-      const quietOption = program.options.find((opt) => opt.long === '--quiet')
-      expect(quietOption?.short).toBe('-q')
+  describe('EXIT_CODES', () => {
+    it('should have correct exit code values', () => {
+      expect(EXIT_CODES.SUCCESS).toBe(0)
+      expect(EXIT_CODES.GENERAL_ERROR).toBe(1)
+      expect(EXIT_CODES.INVALID_ARGS).toBe(2)
     })
   })
 
