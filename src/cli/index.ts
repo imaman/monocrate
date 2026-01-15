@@ -12,6 +12,7 @@
 
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
+import { Command } from 'commander'
 import { bundle, VERSION, type BundleResult, type VersionConflict } from '../index.js'
 import {
   print,
@@ -19,7 +20,6 @@ import {
   printWarning,
   Spinner,
   formatError,
-  formatHelp,
   formatBundleSummary,
   formatTable,
   bold,
@@ -34,19 +34,16 @@ import {
 // ============================================================================
 
 /**
- * Parsed CLI arguments.
+ * Parsed CLI options from commander.
  */
-interface CliArgs {
-  packagePath: string
-  outputDir: string
-  monorepoRoot: string | null
+interface CliOptions {
+  output: string
+  root: string | undefined
   clean: boolean
   includeDev: boolean
   dryRun: boolean
   verbose: boolean
   quiet: boolean
-  help: boolean
-  version: boolean
 }
 
 /**
@@ -59,210 +56,38 @@ const EXIT_CODES = {
 } as const
 
 // ============================================================================
-// Argument Parsing
+// Commander Setup
 // ============================================================================
 
-/**
- * Parse command-line arguments.
- * Uses a lightweight manual parser for fast startup.
- */
-function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = {
-    packagePath: process.cwd(),
-    outputDir: path.join(process.cwd(), 'monocrate-out'),
-    monorepoRoot: null,
-    clean: false,
-    includeDev: false,
-    dryRun: false,
-    verbose: false,
-    quiet: false,
-    help: false,
-    version: false,
-  }
+const program = new Command()
 
-  // Skip node and script path
-  const cliArgs = argv.slice(2)
-  let positionalIndex = 0
-
-  for (let i = 0; i < cliArgs.length; i++) {
-    const arg = cliArgs[i]
-    if (!arg) continue
-
-    // Handle options
-    if (arg.startsWith('-')) {
-      switch (arg) {
-        case '-h':
-        case '--help':
-          args.help = true
-          break
-
-        case '-V':
-        case '--version':
-          args.version = true
-          break
-
-        case '-o':
-        case '--output': {
-          const nextArg = cliArgs[++i]
-          if (!nextArg || nextArg.startsWith('-')) {
-            throw new Error('--output requires a directory path')
-          }
-          args.outputDir = path.resolve(nextArg)
-          break
-        }
-
-        case '-r':
-        case '--root': {
-          const nextArg = cliArgs[++i]
-          if (!nextArg || nextArg.startsWith('-')) {
-            throw new Error('--root requires a directory path')
-          }
-          args.monorepoRoot = path.resolve(nextArg)
-          break
-        }
-
-        case '-c':
-        case '--clean':
-          args.clean = true
-          break
-
-        case '--include-dev':
-          args.includeDev = true
-          break
-
-        case '--dry-run':
-          args.dryRun = true
-          break
-
-        case '-v':
-        case '--verbose':
-          args.verbose = true
-          break
-
-        case '-q':
-        case '--quiet':
-          args.quiet = true
-          break
-
-        default:
-          // Check for combined short options or = syntax
-          if (arg.startsWith('--') && arg.includes('=')) {
-            const [key, value] = arg.split('=')
-            if (key === '--output' || key === '-o') {
-              args.outputDir = path.resolve(value ?? '')
-            } else if (key === '--root' || key === '-r') {
-              args.monorepoRoot = path.resolve(value ?? '')
-            } else {
-              throw new Error(`Unknown option: ${key ?? arg}`)
-            }
-          } else {
-            throw new Error(`Unknown option: ${arg}`)
-          }
-      }
-    } else {
-      // Positional argument
-      if (positionalIndex === 0) {
-        args.packagePath = path.resolve(arg)
-        positionalIndex++
-      } else {
-        throw new Error(`Unexpected argument: ${arg}`)
-      }
-    }
-  }
-
-  return args
-}
-
-// ============================================================================
-// Help Text
-// ============================================================================
-
-/**
- * Display help text.
- */
-function showHelp(): void {
-  const helpText = formatHelp(
-    'monocrate [package-path] [options]',
+program
+  .name('monocrate')
+  .description(
     'Bundle a monorepo package for npm publishing.\n\n' +
       'Monocrate collects your package and all its in-repo dependencies,\n' +
       'copies their compiled output, and generates a publish-ready package.json\n' +
-      'with merged third-party dependencies.',
-    [
-      {
-        title: 'Arguments',
-        items: [
-          {
-            name: 'package-path',
-            description: 'Path to the package to bundle (default: current directory)',
-          },
-        ],
-      },
-      {
-        title: 'Options',
-        items: [
-          {
-            name: '--output <dir>',
-            alias: '-o',
-            description: 'Output directory (default: ./monocrate-out)',
-          },
-          {
-            name: '--root <dir>',
-            alias: '-r',
-            description: 'Monorepo root directory (default: auto-detect)',
-          },
-          {
-            name: '--clean',
-            alias: '-c',
-            description: 'Clean output directory before bundling',
-          },
-          {
-            name: '--include-dev',
-            description: 'Include devDependencies in bundle',
-          },
-          {
-            name: '--dry-run',
-            description: 'Show what would be done without doing it',
-          },
-          {
-            name: '--verbose',
-            alias: '-v',
-            description: 'Show detailed output',
-          },
-          {
-            name: '--quiet',
-            alias: '-q',
-            description: 'Suppress non-error output',
-          },
-          {
-            name: '--help',
-            alias: '-h',
-            description: 'Show this help message',
-          },
-          {
-            name: '--version',
-            alias: '-V',
-            description: 'Show version number',
-          },
-        ],
-      },
-    ],
-    [
-      'monocrate',
-      'monocrate ./packages/my-lib -o dist',
-      'monocrate --dry-run',
-      'monocrate -c -v',
-    ]
+      'with merged third-party dependencies.'
   )
-
-  print(helpText)
-}
-
-/**
- * Display version.
- */
-function showVersion(): void {
-  print(`monocrate v${VERSION}`)
-}
+  .version(VERSION, '-V, --version', 'Show version number')
+  .argument('[package-path]', 'Path to the package to bundle', process.cwd())
+  .option('-o, --output <dir>', 'Output directory', path.join(process.cwd(), 'monocrate-out'))
+  .option('-r, --root <dir>', 'Monorepo root directory (default: auto-detect)')
+  .option('-c, --clean', 'Clean output directory before bundling', false)
+  .option('--include-dev', 'Include devDependencies in bundle', false)
+  .option('--dry-run', 'Show what would be done without doing it', false)
+  .option('-v, --verbose', 'Show detailed output', false)
+  .option('-q, --quiet', 'Suppress non-error output', false)
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ monocrate                           Bundle current package
+  $ monocrate ./packages/my-lib -o dist Bundle specific package to dist/
+  $ monocrate --dry-run                 Preview bundle operation
+  $ monocrate -c -v                     Clean and verbose mode`
+  )
+  .action(runBundle)
 
 // ============================================================================
 // Monorepo Root Detection
@@ -333,39 +158,39 @@ async function findMonorepoRoot(startDir: string): Promise<string | null> {
  * Validate CLI arguments.
  * Returns error message if invalid, null if valid.
  */
-async function validateArgs(args: CliArgs): Promise<string | null> {
+async function validateInputs(packagePath: string, options: CliOptions): Promise<string | null> {
   // Validate package path exists
   try {
-    const stats = await fs.stat(args.packagePath)
+    const stats = await fs.stat(packagePath)
     if (!stats.isDirectory()) {
-      return `Package path is not a directory: ${args.packagePath}`
+      return `Package path is not a directory: ${packagePath}`
     }
   } catch {
-    return `Package path does not exist: ${args.packagePath}`
+    return `Package path does not exist: ${packagePath}`
   }
 
   // Check for package.json in package path
   try {
-    await fs.access(path.join(args.packagePath, 'package.json'))
+    await fs.access(path.join(packagePath, 'package.json'))
   } catch {
-    return `No package.json found in: ${args.packagePath}`
+    return `No package.json found in: ${packagePath}`
   }
 
   // If monorepo root is specified, validate it
-  if (args.monorepoRoot) {
+  if (options.root) {
     try {
-      const stats = await fs.stat(args.monorepoRoot)
+      const stats = await fs.stat(options.root)
       if (!stats.isDirectory()) {
-        return `Monorepo root is not a directory: ${args.monorepoRoot}`
+        return `Monorepo root is not a directory: ${options.root}`
       }
     } catch {
-      return `Monorepo root does not exist: ${args.monorepoRoot}`
+      return `Monorepo root does not exist: ${options.root}`
     }
   }
 
   // Validate output path is not inside package path (could cause issues)
-  const resolvedOutput = path.resolve(args.outputDir)
-  const resolvedPackage = path.resolve(args.packagePath)
+  const resolvedOutput = path.resolve(options.output)
+  const resolvedPackage = path.resolve(packagePath)
   if (resolvedOutput.startsWith(resolvedPackage + path.sep)) {
     return `Output directory cannot be inside package directory`
   }
@@ -380,23 +205,24 @@ async function validateArgs(args: CliArgs): Promise<string | null> {
 /**
  * Perform a dry run, showing what would be done.
  */
-async function performDryRun(
-  args: CliArgs,
-  monorepoRoot: string
-): Promise<void> {
+async function performDryRun(packagePath: string, options: CliOptions, monorepoRoot: string): Promise<void> {
   print('')
   print(bold('Dry run - no changes will be made'))
   print('')
 
   // Read package.json to show info
-  const pkgPath = path.join(args.packagePath, 'package.json')
+  const pkgPath = path.join(packagePath, 'package.json')
   const pkgContent = await fs.readFile(pkgPath, 'utf-8')
-  const pkg = JSON.parse(pkgContent) as { name?: string; version?: string; dependencies?: Record<string, string> }
+  const pkg = JSON.parse(pkgContent) as {
+    name?: string
+    version?: string
+    dependencies?: Record<string, string>
+  }
 
   print(dim('Package:'))
   print(`  Name:    ${cyan(pkg.name ?? 'unknown')}`)
   print(`  Version: ${pkg.version ?? 'unknown'}`)
-  print(`  Path:    ${args.packagePath}`)
+  print(`  Path:    ${packagePath}`)
   print('')
 
   print(dim('Monorepo:'))
@@ -404,8 +230,8 @@ async function performDryRun(
   print('')
 
   print(dim('Output:'))
-  print(`  Path:    ${args.outputDir}`)
-  print(`  Clean:   ${args.clean ? 'yes' : 'no'}`)
+  print(`  Path:    ${options.output}`)
+  print(`  Clean:   ${options.clean ? 'yes' : 'no'}`)
   print('')
 
   print(dim('Operations that would be performed:'))
@@ -424,35 +250,32 @@ async function performDryRun(
 /**
  * Execute the bundle operation.
  */
-async function executeBundle(
-  args: CliArgs,
-  monorepoRoot: string
-): Promise<BundleResult> {
+async function executeBundle(packagePath: string, options: CliOptions, monorepoRoot: string): Promise<BundleResult> {
   const spinner = new Spinner('Resolving dependencies...')
 
-  if (!args.quiet) {
+  if (!options.quiet) {
     spinner.start()
   }
 
   try {
     // Execute the bundle
     const result = await bundle({
-      packagePath: args.packagePath,
+      packagePath,
       monorepoRoot,
-      outputDir: args.outputDir,
-      cleanOutputDir: args.clean,
+      outputDir: options.output,
+      cleanOutputDir: options.clean,
       includeSourceMaps: true,
       includeDeclarations: true,
       versionConflictStrategy: 'warn',
     })
 
-    if (!args.quiet) {
+    if (!options.quiet) {
       spinner.stop()
     }
 
     return result
   } catch (error) {
-    if (!args.quiet) {
+    if (!options.quiet) {
       spinner.fail('Bundle failed')
     }
     throw error
@@ -469,9 +292,7 @@ function formatConflicts(conflicts: readonly VersionConflict[]): string {
 
   const rows: string[][] = []
   for (const conflict of conflicts) {
-    const packages = [...conflict.versions.entries()]
-      .map(([pkg, ver]) => `${pkg}: ${ver}`)
-      .join(', ')
+    const packages = [...conflict.versions.entries()].map(([pkg, ver]) => `${pkg}: ${ver}`).join(', ')
     rows.push([conflict.dependencyName, conflict.resolvedVersion, packages])
   }
 
@@ -483,18 +304,13 @@ function formatConflicts(conflicts: readonly VersionConflict[]): string {
 /**
  * Display bundle results.
  */
-function displayResults(
-  result: BundleResult,
-  args: CliArgs
-): void {
+function displayResults(result: BundleResult, options: CliOptions): void {
   if (!result.success) {
-    print(
-      formatError(result.error, result.details)
-    )
+    print(formatError(result.error, result.details))
     return
   }
 
-  if (args.quiet) {
+  if (options.quiet) {
     // In quiet mode, just print the output path
     print(result.outputPath)
     return
@@ -504,16 +320,18 @@ function displayResults(
 
   // Show warnings for version conflicts
   if (result.versionConflicts.length > 0) {
-    printWarning(`${String(result.versionConflicts.length)} version conflict${result.versionConflicts.length !== 1 ? 's' : ''} were auto-resolved`)
+    printWarning(
+      `${String(result.versionConflicts.length)} version conflict${result.versionConflicts.length !== 1 ? 's' : ''} were auto-resolved`
+    )
     print('')
-    if (args.verbose) {
+    if (options.verbose) {
       print(formatConflicts(result.versionConflicts))
       print('')
     }
   }
 
   // Show included packages in verbose mode
-  if (args.verbose && result.includedPackages.length > 1) {
+  if (options.verbose && result.includedPackages.length > 1) {
     print(dim('Bundled packages:'))
     for (const pkg of result.includedPackages) {
       print(bullet(pkg))
@@ -542,98 +360,80 @@ function displayResults(
 }
 
 // ============================================================================
-// Main Entry Point
+// Main Action Handler
 // ============================================================================
 
 /**
- * Main CLI function.
+ * Main bundle action handler.
  */
-async function main(): Promise<number> {
-  let args: CliArgs
-
-  try {
-    args = parseArgs(process.argv)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    printError(message)
-    print('')
-    print(`Run ${cyan('monocrate --help')} for usage information.`)
-    return EXIT_CODES.INVALID_ARGS
+async function runBundle(packagePathArg: string, options: CliOptions): Promise<void> {
+  const packagePath = path.resolve(packagePathArg)
+  const resolvedOptions: CliOptions = {
+    ...options,
+    output: path.resolve(options.output),
+    root: options.root ? path.resolve(options.root) : undefined,
   }
 
-  // Handle help flag
-  if (args.help) {
-    showHelp()
-    return EXIT_CODES.SUCCESS
-  }
-
-  // Handle version flag
-  if (args.version) {
-    showVersion()
-    return EXIT_CODES.SUCCESS
-  }
-
-  // Validate arguments
-  const validationError = await validateArgs(args)
+  // Validate inputs
+  const validationError = await validateInputs(packagePath, resolvedOptions)
   if (validationError) {
     printError(validationError)
-    return EXIT_CODES.INVALID_ARGS
+    process.exitCode = EXIT_CODES.INVALID_ARGS
+    return
   }
 
   // Find monorepo root
-  let monorepoRoot = args.monorepoRoot
+  let monorepoRoot: string | undefined = resolvedOptions.root
   if (!monorepoRoot) {
-    monorepoRoot = await findMonorepoRoot(args.packagePath)
+    monorepoRoot = (await findMonorepoRoot(packagePath)) ?? undefined
     if (!monorepoRoot) {
       printError('Could not detect monorepo root')
       print('')
       print('  Try specifying the root explicitly:')
       print(`    ${cyan('monocrate --root /path/to/monorepo')}`)
       print('')
-      return EXIT_CODES.GENERAL_ERROR
+      process.exitCode = EXIT_CODES.GENERAL_ERROR
+      return
     }
   }
 
-  if (args.verbose && !args.quiet) {
+  if (resolvedOptions.verbose && !resolvedOptions.quiet) {
     print('')
     print(dim(`Using monorepo root: ${monorepoRoot}`))
   }
 
   // Handle dry run
-  if (args.dryRun) {
-    await performDryRun(args, monorepoRoot)
-    return EXIT_CODES.SUCCESS
+  if (resolvedOptions.dryRun) {
+    await performDryRun(packagePath, resolvedOptions, monorepoRoot)
+    process.exitCode = EXIT_CODES.SUCCESS
+    return
   }
 
   // Execute bundle
   try {
-    const result = await executeBundle(args, monorepoRoot)
-    displayResults(result, args)
+    const result = await executeBundle(packagePath, resolvedOptions, monorepoRoot)
+    displayResults(result, resolvedOptions)
 
-    return result.success ? EXIT_CODES.SUCCESS : EXIT_CODES.GENERAL_ERROR
+    process.exitCode = result.success ? EXIT_CODES.SUCCESS : EXIT_CODES.GENERAL_ERROR
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     printError(message)
 
-    if (args.verbose && error instanceof Error && error.stack) {
+    if (resolvedOptions.verbose && error instanceof Error && error.stack) {
       print('')
       print(dim('Stack trace:'))
       print(gray(error.stack))
     }
 
-    return EXIT_CODES.GENERAL_ERROR
+    process.exitCode = EXIT_CODES.GENERAL_ERROR
   }
 }
 
-// Run the CLI
-main()
-  .then((code) => {
-    process.exitCode = code
-  })
-  .catch((error: unknown) => {
-    console.error('Fatal error:', error)
-    process.exitCode = 1
-  })
+// ============================================================================
+// Run CLI
+// ============================================================================
+
+program.parse()
 
 // Export for testing
-export { parseArgs, validateArgs, findMonorepoRoot, type CliArgs }
+export { findMonorepoRoot, program }
