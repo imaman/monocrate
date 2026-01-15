@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed - Needs Discussion
+**Accepted** - 2026-01-15
 
 ## Context
 
@@ -74,54 +74,86 @@ monocrate pack my-lib --on-conflict=highest  # Use highest, silent
 - More complex
 - Users may choose wrong option
 
-## Recommendation
+## Decision
 
-**Option A (Strict)** as default, with **Option C** as enhancement:
+**Option A: Strict - Fail on version conflicts.**
 
-1. Default behavior: Fail on major version conflicts, warn on minor
-2. `--strict` flag: Fail on any mismatch
-3. `--allow-version-mismatch`: Proceed with highest version
+Monocrate will fail immediately when any version mismatch is detected for the same dependency across in-repo packages. This is the safest approach and forces users to resolve conflicts at the source.
 
-## Conflict Detection Algorithm
+### Behavior
 
-```typescript
-function detectConflict(versions: string[]): ConflictResult {
-  const parsed = versions.map(semver.parse);
-  const majors = new Set(parsed.map(v => v.major));
+When multiple in-repo packages depend on the same third-party package with different version specifiers, monocrate will:
 
-  if (majors.size > 1) {
-    return { type: 'major', severity: 'error' };
-  }
+1. **Detect the conflict** during dependency resolution
+2. **Fail immediately** with a clear error message
+3. **List all conflicting packages** and their version requirements
+4. **Suggest resolution steps**
 
-  const minors = new Set(parsed.map(v => v.minor));
-  if (minors.size > 1) {
-    return { type: 'minor', severity: 'warning' };
-  }
+### No Escape Hatch
 
-  return { type: 'none', severity: 'ok' };
-}
-```
+Unlike the original recommendation, there is **no `--allow-version-mismatch` flag**. Users must resolve version conflicts in their source packages before packing. This decision prioritizes:
 
-## Error Message Format
+- **Safety over convenience**: Version conflicts can cause subtle runtime bugs
+- **Explicit over implicit**: Users should consciously align their dependencies
+- **Correctness over speed**: Better to fail fast than publish broken packages
+
+### Error Message Format
 
 ```
 Error: Dependency version conflict detected
 
   lodash:
-    package-a requires "^4.17.0"
-    package-c requires "^3.10.0"
+    packages/core requires "^4.17.0"
+    packages/utils requires "^3.10.0"
 
-  These versions have different major versions and may be incompatible.
+  These versions are incompatible and cannot be merged.
 
 To resolve:
-  1. Update package-c to use lodash@^4.x
-  2. Or use --allow-version-mismatch to proceed (not recommended)
+  1. Align all packages to use the same version of lodash
+  2. Run: npm ls lodash (or pnpm ls lodash) to see the full dependency tree
+  3. Update the package.json files to use a compatible version
+
+Hint: Consider using "^4.17.0" in all packages, as it's the most recent.
 ```
 
-## Decision
+### Conflict Detection
 
-**Pending** - Recommend Option A with escape hatch
+All version mismatches are treated as conflicts, including:
+
+- Major version differences (`^4.0.0` vs `^3.0.0`)
+- Minor version differences (`^4.17.0` vs `^4.16.0`)
+- Patch version differences (`^4.17.21` vs `^4.17.20`)
+- Different specifier types (`^4.17.0` vs `~4.17.0` vs `4.17.0`)
+
+This strict approach ensures the published package has deterministic dependency versions.
 
 ## Consequences
 
-TBD based on decision.
+### Positive
+
+- Maximum safety - no hidden version mismatches in published packages
+- Forces teams to maintain consistent dependency versions
+- Clear, actionable error messages guide users to resolution
+- Simple implementation - no complex version merging logic
+- Predictable behavior - same input always produces same output
+
+### Negative
+
+- May be frustrating for users with many minor version differences
+- Requires more upfront work to align dependency versions
+- No flexibility for users who "know what they're doing"
+- Could block CI/CD pipelines until conflicts are resolved
+
+### Mitigation for User Frustration
+
+1. Error messages include specific resolution suggestions
+2. Documentation will include a guide on managing dependency versions in monorepos
+3. The `monocrate validate` command will check for conflicts without attempting to pack
+
+### Implementation Notes
+
+1. Collect all dependencies from all in-repo packages during resolution
+2. Group by package name
+3. If any package has more than one unique version specifier, fail
+4. Compare version strings literally (not semantically) for simplicity
+5. Future enhancement: Could add `monocrate check-versions` command for proactive conflict detection
