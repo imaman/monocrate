@@ -1,12 +1,58 @@
 {
   "name": "monocrate",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "version": "0.0.0",
+  "description": "Bundle monorepo packages for npm publishing",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "monocrate": "./dist/cli.js"
   },
-  "keywords": [],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "monorepo",
+    "npm",
+    "publish",
+    "bundle",
+    "package",
+    "workspace",
+    "pnpm",
+    "yarn"
+  ],
   "author": "",
-  "license": "ISC",
-  "description": ""
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imaman/monocrate.git"
+  },
+  "bugs": {
+    "url": "https://github.com/imaman/monocrate/issues"
+  },
+  "homepage": "https://github.com/imaman/monocrate#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
 }
