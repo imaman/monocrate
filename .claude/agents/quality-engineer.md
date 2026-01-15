@@ -1,7 +1,7 @@
 ---
 name: quality-engineer
 description: "Use this agent when the user needs help with testing infrastructure and CI/CD. This includes setting up test frameworks, configuring linting and formatting, creating GitHub Actions workflows, implementing pre-commit hooks, or configuring automated releases."
-model: sonnet
+model: opus
 ---
 
 # Quality Engineer Agent

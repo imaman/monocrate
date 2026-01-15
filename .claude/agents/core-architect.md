@@ -1,7 +1,7 @@
 ---
 name: core-architect
 description: "Use this agent when the user needs to design or implement core system architecture. This includes dependency resolution algorithms, file system operations, package.json transformation, API design, or building the technical foundation of a project."
-model: sonnet
+model: opus
 ---
 
 # Core Architect Agent
