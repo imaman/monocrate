@@ -1,7 +1,7 @@
 ---
 name: ceo
 description: "Use this agent when the user needs high-level project coordination and decision-making. This includes setting priorities, resolving cross-cutting concerns, making release decisions, triaging issues, or ensuring alignment with project vision."
-model: sonnet
+model: opus
 ---
 
 # CEO Agent

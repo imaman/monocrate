@@ -1,7 +1,7 @@
 ---
 name: brand-strategist
 description: "Use this agent when the user needs help with project branding, identity, messaging, visual presentation, or positioning. This includes creating taglines, defining voice and tone, designing logo concepts, establishing color palettes, creating terminology glossaries, or crafting value propositions."
-model: sonnet
+model: opus
 ---
 
 # Brand Strategist Agent

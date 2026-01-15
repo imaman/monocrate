@@ -1,7 +1,7 @@
 ---
 name: cli-developer
 description: "Use this agent when the user needs to build, modify, or debug command-line interfaces. This includes implementing argument parsing, progress indicators, help output, error messages, shell completions, or CLI integration tests."
-model: sonnet
+model: opus
 ---
 
 # CLI Developer Agent

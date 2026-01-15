@@ -1,7 +1,7 @@
 ---
 name: example-curator
 description: "Use this agent when the user needs to create practical examples and demos. This includes building minimal reproducible examples, comprehensive demos, integration guides, or example repositories that demonstrate how to use a tool or library."
-model: sonnet
+model: opus
 ---
 
 # Example Curator Agent
