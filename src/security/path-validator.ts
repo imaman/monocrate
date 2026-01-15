@@ -85,6 +85,12 @@ export function validatePath(basePath: string, targetPath: string): boolean {
     // Normalize the target path to handle encoding attacks
     const normalizedTarget = normalizePath(targetPath)
 
+    // Security check: detect paths that traverse outside and re-enter via absolute path
+    // e.g., "src/../../..//absolute/path" - these are suspicious even if they resolve validly
+    if (containsEscapingTraversal(normalizedTarget)) {
+      return false
+    }
+
     // Resolve both paths to absolute paths
     const resolvedBase = path.resolve(basePath)
     const resolvedTarget = path.resolve(basePath, normalizedTarget)
@@ -105,6 +111,35 @@ export function validatePath(basePath: string, targetPath: string): boolean {
     // Any error during validation means the path is invalid
     return false
   }
+}
+
+/**
+ * Detects if a path contains traversal sequences that would escape the current directory
+ * and then re-enter via an absolute path. This is a defense-in-depth measure.
+ */
+function containsEscapingTraversal(targetPath: string): boolean {
+  // Split on both forward and back slashes
+  const segments = targetPath.split(/[/\\]/).filter((s) => s !== '')
+
+  let depth = 0
+  for (const segment of segments) {
+    if (segment === '..') {
+      depth--
+      // If we've gone negative, we're trying to escape
+      if (depth < 0) {
+        // Check if there's more path after this - indicates re-entry attempt
+        return true
+      }
+    } else if (segment !== '.') {
+      // Check for absolute path segment (starts with drive letter on Windows or is empty string from leading /)
+      if (path.isAbsolute(segment) || (depth < 0 && segment.length > 0)) {
+        return true
+      }
+      depth++
+    }
+  }
+
+  return false
 }
 
 /**
