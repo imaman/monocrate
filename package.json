@@ -1,12 +1,59 @@
 {
   "name": "monocrate",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "description": "From monorepo to npm in one command",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "monocrate": "./dist/cli/index.js"
   },
-  "keywords": [],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "monorepo",
+    "npm",
+    "bundler",
+    "package",
+    "publish"
+  ],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20.19.29",
+    "@types/semver": "^7.7.1",
+    "@vitest/coverage-v8": "^1.2.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.3.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^1.2.0",
+    "zod": "^3.22.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "glob": "^13.0.0",
+    "semver": "^7.7.3"
+  }
 }
