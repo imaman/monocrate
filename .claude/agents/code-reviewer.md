@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: "Use this agent when the user needs a thorough code review. This includes checking for correctness, security vulnerabilities, performance issues, code style consistency, testing coverage, and documentation quality."
-model: sonnet
+model: opus
 ---
 
 # Code Reviewer Agent

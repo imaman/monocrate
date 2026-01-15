@@ -1,7 +1,7 @@
 ---
 name: security-engineer
 description: "Use this agent when the user needs help with security concerns. This includes threat modeling, secure coding practices, path traversal prevention, input validation, dependency security audits, secrets protection, or creating security documentation."
-model: sonnet
+model: opus
 ---
 
 # Security Engineer Agent

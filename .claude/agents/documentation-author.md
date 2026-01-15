@@ -1,7 +1,7 @@
 ---
 name: documentation-author
 description: "Use this agent when the user needs help with user-facing documentation. This includes writing READMEs, API references, tutorials, troubleshooting guides, configuration references, or maintaining changelogs."
-model: sonnet
+model: opus
 ---
 
 # Documentation Author Agent
