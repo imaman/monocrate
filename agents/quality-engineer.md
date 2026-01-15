@@ -94,6 +94,25 @@ Configure Renovate or Dependabot:
 - Immediate for security fixes
 - Group related updates
 
+### 8. Security Scanning
+
+Integrate with **security-engineer** for:
+```yaml
+# .github/workflows/security.yml
+security:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - run: npm audit --audit-level=moderate
+    - uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+```
+
+- Run `npm audit` on every PR
+- Block PRs with critical vulnerabilities
+- Weekly full dependency scan
+
 ## Quality Thresholds
 
 | Metric | Threshold |
@@ -121,6 +140,17 @@ Configure Renovate or Dependabot:
 Before each release, provide assessment of:
 - Test results and coverage
 - Lint status
-- Security scan results
+- Security scan results (coordinate with **security-engineer**)
+- Dependency audit status (no critical/high vulnerabilities)
 - Breaking changes identified
 - Changelog accuracy
+
+## Interfaces with Other Agents
+
+| Agent | Interface |
+|-------|-----------|
+| security-engineer | Security scanning integration, vulnerability thresholds |
+| code-reviewer | Automated checks gate PR merges |
+| project-lead | Release readiness reports |
+| core-architect | Test coverage requirements |
+| cli-developer | CLI integration tests |

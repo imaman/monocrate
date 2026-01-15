@@ -156,3 +156,13 @@ ls monocrate-output/
 - Test script for each example
 - CI job that runs all examples
 - Integration examples with popular tools
+
+## Interfaces with Other Agents
+
+| Agent | Interface |
+|-------|-----------|
+| documentation-author | Examples align with and are linked from docs |
+| quality-engineer | CI job to test examples |
+| core-architect | Examples demonstrate API correctly |
+| cli-developer | Examples use CLI correctly |
+| security-engineer | Examples follow security best practices |

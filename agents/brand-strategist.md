@@ -109,3 +109,13 @@ Use consistently across all documentation:
 - Badge designs for README
 - Terminology glossary
 - Voice and tone guidelines
+
+## Interfaces with Other Agents
+
+| Agent | Interface |
+|-------|-----------|
+| documentation-author | Consistent terminology and voice across all docs |
+| community-architect | README messaging, contributing guide tone |
+| project-lead | Approve final tagline and positioning |
+| cli-developer | Error message tone and format |
+| security-engineer | Security messaging in docs (trust-building language) |

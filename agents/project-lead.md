@@ -39,8 +39,11 @@ When making trade-offs, follow these principles (in order):
 Before approving a release, verify:
 - [ ] All tests passing
 - [ ] Coverage thresholds met (>90%)
+- [ ] Security audit completed (security-engineer sign-off)
 - [ ] No critical security issues
+- [ ] Dependency scan clean (no known vulnerabilities)
 - [ ] Documentation complete and accurate
+- [ ] SECURITY.md in place
 - [ ] Examples tested and working
 - [ ] CONTRIBUTING and templates in place
 - [ ] README compelling and accurate
@@ -53,6 +56,7 @@ Before approving a release, verify:
 You coordinate these agents:
 - **core-architect**: Bundling engine and API
 - **cli-developer**: Command-line interface
+- **security-engineer**: Security and supply chain safety
 - **quality-engineer**: Testing and CI/CD
 - **documentation-author**: User documentation
 - **brand-strategist**: Identity and messaging

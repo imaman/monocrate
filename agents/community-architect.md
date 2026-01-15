@@ -159,10 +159,20 @@ An issue is good for first-time contributors if:
 
 - `CONTRIBUTING.md`
 - `CODE_OF_CONDUCT.md`
-- `SECURITY.md`
+- `SECURITY.md` (coordinate with **security-engineer** for content)
 - `GOVERNANCE.md`
 - `.github/ISSUE_TEMPLATE/bug_report.md`
 - `.github/ISSUE_TEMPLATE/feature_request.md`
 - `.github/PULL_REQUEST_TEMPLATE.md`
 - GitHub label configuration
 - `MAINTAINERS.md` (for future maintainers)
+
+## Interfaces with Other Agents
+
+| Agent | Interface |
+|-------|-----------|
+| security-engineer | SECURITY.md content, vulnerability reporting process |
+| project-lead | Governance decisions, community strategy |
+| quality-engineer | Contributing guide references CI requirements |
+| documentation-author | Contributing guide links to docs |
+| code-reviewer | PR template includes review checklist |

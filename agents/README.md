@@ -9,6 +9,7 @@ This directory contains agent definitions for building and maintaining the Monoc
 | Project Lead | [project-lead.md](./project-lead.md) | CEO / Team coordinator |
 | Core Architect | [core-architect.md](./core-architect.md) | Bundling engine & API |
 | CLI Developer | [cli-developer.md](./cli-developer.md) | Command-line interface |
+| Security Engineer | [security-engineer.md](./security-engineer.md) | Security & supply chain safety |
 | Quality Engineer | [quality-engineer.md](./quality-engineer.md) | Testing & CI/CD |
 | Documentation Author | [documentation-author.md](./documentation-author.md) | User documentation |
 | Brand Strategist | [brand-strategist.md](./brand-strategist.md) | Identity & messaging |
@@ -27,27 +28,30 @@ Each `.md` file contains the complete prompt/instructions for that agent. To inv
 ## Team Structure
 
 ```
-                         ┌─────────────────┐
-                         │  project-lead   │
-                         └────────┬────────┘
-                                  │
-        ┌─────────────────────────┼─────────────────────────┐
-        │                         │                         │
-        ▼                         ▼                         ▼
-┌───────────────┐        ┌───────────────┐        ┌───────────────┐
-│brand-strategist│        │quality-engineer│        │community-architect│
-└───────────────┘        └───────┬───────┘        └───────────────┘
-        │                        │                         │
-        ▼                        ▼                         ▼
-┌───────────────┐        ┌───────────────┐        ┌───────────────┐
-│documentation- │        │ code-reviewer │        │example-curator│
-│    author     │        └───────────────┘        └───────────────┘
-└───────────────┘                │
-                                 ▼
-                    ┌─────────────────────────┐
-                    │     core-architect      │
-                    │     cli-developer       │
-                    └─────────────────────────┘
+                              ┌─────────────────┐
+                              │  project-lead   │
+                              └────────┬────────┘
+                                       │
+        ┌──────────────────────────────┼──────────────────────────────┐
+        │                              │                              │
+        ▼                              ▼                              ▼
+┌───────────────┐           ┌───────────────────┐          ┌───────────────┐
+│brand-strategist│           │ quality-engineer  │          │community-architect│
+└───────────────┘           └─────────┬─────────┘          └───────────────┘
+        │                             │                            │
+        ▼                    ┌────────┴────────┐                   ▼
+┌───────────────┐            │                 │           ┌───────────────┐
+│documentation- │            ▼                 ▼           │example-curator│
+│    author     │    ┌───────────────┐ ┌───────────────┐   └───────────────┘
+└───────────────┘    │ code-reviewer │ │security-engineer│
+                     └───────┬───────┘ └───────┬───────┘
+                             │                 │
+                             └────────┬────────┘
+                                      ▼
+                         ┌─────────────────────────┐
+                         │     core-architect      │
+                         │     cli-developer       │
+                         └─────────────────────────┘
 ```
 
 ## Workflow Phases
@@ -55,12 +59,12 @@ Each `.md` file contains the complete prompt/instructions for that agent. To inv
 | Phase | Description | Key Agents |
 |-------|-------------|------------|
 | 0. Init | Charter, roadmap | project-lead |
-| 1. Foundation | Identity, repo setup, architecture | brand-strategist, quality-engineer, core-architect |
-| 2. Implementation | Core code, CLI | core-architect, cli-developer, code-reviewer |
-| 3. Documentation | Docs, examples | documentation-author, example-curator |
-| 4. Pre-Release | Validation | quality-engineer, code-reviewer, project-lead |
+| 1. Foundation | Identity, repo setup, architecture, threat model | brand-strategist, quality-engineer, core-architect, security-engineer |
+| 2. Implementation | Core code, CLI, security patterns | core-architect, cli-developer, code-reviewer, security-engineer |
+| 3. Documentation | Docs, examples, security docs | documentation-author, example-curator, security-engineer |
+| 4. Pre-Release | Validation, security audit | quality-engineer, code-reviewer, security-engineer, project-lead |
 | 5. Launch | Publish, announce | project-lead, community-architect |
-| 6. Ongoing | Maintenance | All agents |
+| 6. Ongoing | Maintenance, security patches | All agents |
 
 ## Quality Standards
 

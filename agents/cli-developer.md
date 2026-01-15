@@ -110,3 +110,21 @@ Provide completion scripts for:
 - Colored, formatted output
 - Shell completion scripts in `/completions`
 - Integration tests for CLI behavior
+
+## Interfaces with Other Agents
+
+| Agent | Interface |
+|-------|-----------|
+| security-engineer | Review input validation, ensure error messages don't leak sensitive data |
+| core-architect | Consume programmatic API |
+| quality-engineer | CLI integration tests |
+| code-reviewer | Respond to code review feedback |
+| documentation-author | CLI help text matches documentation |
+
+## Security Considerations
+
+Follow security-engineer guidelines for CLI:
+- Validate all user input before passing to core API
+- Error messages must not expose sensitive paths or internal state
+- Don't log full package.json contents (may contain private registry URLs)
+- Sanitize file paths in user-facing output

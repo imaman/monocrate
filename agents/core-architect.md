@@ -77,3 +77,21 @@ or extract shared code into a third package.
 - Unit tests in `/src/__tests__` or alongside source files
 - TSDoc comments on all public APIs
 - Clean, readable, maintainable code
+
+## Interfaces with Other Agents
+
+| Agent | Interface |
+|-------|-----------|
+| security-engineer | Review all file system operations, path validation, dependency handling |
+| cli-developer | Provide programmatic API for CLI commands |
+| quality-engineer | Meet coverage thresholds, integrate with test infrastructure |
+| code-reviewer | Respond to code review feedback |
+| documentation-author | Provide accurate API documentation |
+
+## Security Considerations
+
+All file operations must follow security-engineer guidelines:
+- Use path validation before any read/write
+- Never execute code from user-controlled paths
+- Handle symlinks safely (don't follow outside repo)
+- Validate package.json structure before parsing

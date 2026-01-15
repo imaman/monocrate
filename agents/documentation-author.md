@@ -131,3 +131,13 @@ Honest assessment vs:
 - [ ] Spelling and grammar checked
 - [ ] Screenshots/diagrams where helpful
 - [ ] Updated with every API change
+
+## Interfaces with Other Agents
+
+| Agent | Interface |
+|-------|-----------|
+| security-engineer | Document security model, write user-facing security guidance |
+| core-architect | Accurate API documentation |
+| cli-developer | CLI help text consistency |
+| example-curator | Examples align with documentation |
+| project-lead | README quality standards |
