@@ -3,12 +3,12 @@ import * as fsSync from 'node:fs'
 import module from 'node:module'
 import * as path from 'node:path'
 import * as esbuild from 'esbuild'
-import type { DependencyGraph, MonorepoPackage } from './types.js'
+import type { DependencyGraph, MonorepoPackage, PackageJson } from './types.js'
 import { getExternalDependencies } from './dependency-graph.js'
 
 const NODE_BUILTIN_MODULES = module.builtinModules.flatMap((m) => [m, `node:${m}`])
 
-function findEntryPoint(packageDir: string, packageJson: Record<string, unknown>): string {
+function findEntryPoint(packageDir: string, packageJson: PackageJson): string {
   const possibleEntries = [
     packageJson.source,
     packageJson.main,
@@ -16,7 +16,7 @@ function findEntryPoint(packageDir: string, packageJson: Record<string, unknown>
     'src/index.js',
     'index.ts',
     'index.js',
-  ].filter((e): e is string => typeof e === 'string')
+  ].flatMap((at) => (at ? [at] : []))
 
   for (const entry of possibleEntries) {
     const fullPath = path.resolve(packageDir, entry)
@@ -65,7 +65,7 @@ export async function bundle(graph: DependencyGraph, outputDir: string): Promise
     outfile: path.join(outputDir, 'index.js'),
     external: [...externalDeps, ...NODE_BUILTIN_MODULES],
     plugins: [resolverPlugin],
-    sourcemap: false,
+    sourcemap: true,
     minify: false,
   })
 }

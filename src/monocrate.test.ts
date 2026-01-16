@@ -71,10 +71,13 @@ function unfolderify(dir: string): FolderifyRecipe {
   return result
 }
 
-async function runMonocrate(
-  monorepoRoot: string,
-  sourcePackage: string
-): Promise<{ stdout: string; output: FolderifyRecipe }> {
+interface RunMonocrateResult {
+  stdout: string
+  stderr: string
+  output: FolderifyRecipe
+}
+
+async function runMonocrate(monorepoRoot: string, sourcePackage: string): Promise<RunMonocrateResult> {
   const outputDir = createTempDir('monocrate-output-')
 
   const result = await monocrate({
@@ -87,10 +90,19 @@ async function runMonocrate(
     throw new Error('monocrate failed')
   }
 
-  const stdout = execSync(`node ${path.join(outputDir, 'index.js')}`, { encoding: 'utf-8' })
+  let stdout = ''
+  let stderr = ''
+  try {
+    stdout = execSync(`node --enable-source-maps ${path.join(outputDir, 'index.js')}`, {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    })
+  } catch (error) {
+    stderr = (error as { stderr: string }).stderr
+  }
   const output = unfolderify(outputDir)
 
-  return { stdout, output }
+  return { stdout, stderr, output }
 }
 
 describe('monocrate e2e', () => {
@@ -363,5 +375,43 @@ export function pnpmGreet(): string {
     })
 
     expect(stdout.trim()).toBe('pnpm works!')
+  })
+
+  it('preserves line numbers in stack traces', async () => {
+    // Line 1: empty (template literal starts with newline)
+    // Line 2: export function throwError(): void {
+    // Line 3:   throw new Error('intentional error');
+    // Line 4: }
+    const libSource = `
+export function throwError(): void {
+  throw new Error('intentional error');
+}
+`
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        dependencies: {
+          '@test/lib': 'workspace:*',
+        },
+      },
+      'packages/app/src/index.ts': `
+import { throwError } from '@test/lib';
+throwError();
+`,
+      'packages/lib/package.json': {
+        name: '@test/lib',
+        version: '1.0.0',
+      },
+      'packages/lib/src/index.ts': libSource,
+    })
+
+    const { stderr } = await runMonocrate(monorepoRoot, 'packages/app')
+
+    // Verify the stack trace contains the error message and original source location
+    // The throw statement is on line 3 of the original lib source file
+    expect(stderr).toContain('intentional error')
+    expect(stderr).toContain('lib/src/index.ts:3')
   })
 })
