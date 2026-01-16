@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { glob } from 'glob'
-import type { PackageJson, MonorepoPackage } from './types.js'
+import { PackageJsonSchema, type PackageJson, type MonorepoPackage } from './types.js'
 
 export function findMonorepoRoot(startDir: string): string {
   let dir = path.resolve(startDir)
@@ -9,8 +9,8 @@ export function findMonorepoRoot(startDir: string): string {
   while (dir !== path.dirname(dir)) {
     const packageJsonPath = path.join(dir, 'package.json')
     if (fs.existsSync(packageJsonPath)) {
-      const content = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as Record<string, unknown>
-      if (content.workspaces !== undefined) {
+      const parsed = PackageJsonSchema.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
+      if (parsed.success && parsed.data.workspaces !== undefined) {
         return dir
       }
     }
@@ -31,19 +31,26 @@ export function readPackageJson(packageDir: string): PackageJson {
   if (!fs.existsSync(packageJsonPath)) {
     throw new Error(`No package.json found at ${packageDir}`)
   }
-  return JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as PackageJson
+  const content: unknown = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
+  const parsed = PackageJsonSchema.safeParse(content)
+  if (!parsed.success) {
+    throw new Error(`Invalid package.json at ${packageDir}: ${parsed.error.message}`)
+  }
+  return parsed.data
 }
 
 function parseWorkspacePatterns(monorepoRoot: string): string[] {
   const packageJsonPath = path.join(monorepoRoot, 'package.json')
   if (fs.existsSync(packageJsonPath)) {
-    const content = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as Record<string, unknown>
-    const workspaces = content.workspaces
-    if (Array.isArray(workspaces)) {
-      return workspaces as string[]
-    }
-    if (workspaces && typeof workspaces === 'object' && 'packages' in workspaces) {
-      return (workspaces as { packages: string[] }).packages
+    const parsed = PackageJsonSchema.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
+    if (parsed.success) {
+      const workspaces = parsed.data.workspaces
+      if (Array.isArray(workspaces)) {
+        return workspaces
+      }
+      if (workspaces && typeof workspaces === 'object' && 'packages' in workspaces) {
+        return workspaces.packages
+      }
     }
   }
 

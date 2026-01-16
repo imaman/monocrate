@@ -16,7 +16,7 @@ export async function monocrate(options: BundleOptions): Promise<BundleResult> {
     await bundle(graph, outputDir)
 
     const packageJson = transformPackageJson(graph)
-    writePackageJson(packageJson, outputDir)
+    await writePackageJson(packageJson, outputDir)
 
     return {
       success: true,
@@ -25,7 +25,7 @@ export async function monocrate(options: BundleOptions): Promise<BundleResult> {
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: error instanceof Error ? (error.stack ?? error.message) : String(error),
     }
   }
 }

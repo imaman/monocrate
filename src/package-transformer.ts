@@ -1,4 +1,4 @@
-import * as fs from 'node:fs'
+import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import type { DependencyGraph, PackageJson } from './types.js'
 
@@ -37,7 +37,7 @@ export function transformPackageJson(graph: DependencyGraph): PackageJson {
   return transformed
 }
 
-export function writePackageJson(packageJson: PackageJson, outputDir: string): void {
+export async function writePackageJson(packageJson: PackageJson, outputDir: string): Promise<void> {
   const outputPath = path.join(outputDir, 'package.json')
-  fs.writeFileSync(outputPath, JSON.stringify(packageJson, null, 2) + '\n')
+  await fs.writeFile(outputPath, JSON.stringify(packageJson, null, 2) + '\n')
 }

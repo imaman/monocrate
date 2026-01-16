@@ -1,8 +1,12 @@
-import * as fs from 'node:fs'
+import * as fs from 'node:fs/promises'
+import * as fsSync from 'node:fs'
+import module from 'node:module'
 import * as path from 'node:path'
 import * as esbuild from 'esbuild'
 import type { DependencyGraph, MonorepoPackage } from './types.js'
 import { getExternalDependencies } from './dependency-graph.js'
+
+const NODE_BUILTIN_MODULES = module.builtinModules.flatMap((m) => [m, `node:${m}`])
 
 function findEntryPoint(packageDir: string, packageJson: Record<string, unknown>): string {
   const possibleEntries = [
@@ -16,7 +20,7 @@ function findEntryPoint(packageDir: string, packageJson: Record<string, unknown>
 
   for (const entry of possibleEntries) {
     const fullPath = path.resolve(packageDir, entry)
-    if (fs.existsSync(fullPath)) {
+    if (fsSync.existsSync(fullPath)) {
       return fullPath
     }
   }
@@ -50,50 +54,7 @@ export async function bundle(graph: DependencyGraph, outputDir: string): Promise
   const externalDeps = getExternalDependencies(graph)
   const resolverPlugin = createInRepoResolverPlugin(graph.inRepoDeps)
 
-  fs.mkdirSync(outputDir, { recursive: true })
-
-  const nodePrefixedBuiltins = [
-    'node:assert',
-    'node:buffer',
-    'node:child_process',
-    'node:cluster',
-    'node:console',
-    'node:constants',
-    'node:crypto',
-    'node:dgram',
-    'node:dns',
-    'node:domain',
-    'node:events',
-    'node:fs',
-    'node:http',
-    'node:http2',
-    'node:https',
-    'node:inspector',
-    'node:module',
-    'node:net',
-    'node:os',
-    'node:path',
-    'node:perf_hooks',
-    'node:process',
-    'node:punycode',
-    'node:querystring',
-    'node:readline',
-    'node:repl',
-    'node:stream',
-    'node:string_decoder',
-    'node:sys',
-    'node:timers',
-    'node:tls',
-    'node:trace_events',
-    'node:tty',
-    'node:url',
-    'node:util',
-    'node:v8',
-    'node:vm',
-    'node:wasi',
-    'node:worker_threads',
-    'node:zlib',
-  ]
+  await fs.mkdir(outputDir, { recursive: true })
 
   await esbuild.build({
     entryPoints: [entryPoint],
@@ -102,7 +63,7 @@ export async function bundle(graph: DependencyGraph, outputDir: string): Promise
     target: 'node20',
     format: 'esm',
     outfile: path.join(outputDir, 'index.js'),
-    external: [...externalDeps, ...nodePrefixedBuiltins],
+    external: [...externalDeps, ...NODE_BUILTIN_MODULES],
     plugins: [resolverPlugin],
     sourcemap: false,
     minify: false,
