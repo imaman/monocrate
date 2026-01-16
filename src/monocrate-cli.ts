@@ -1,9 +1,7 @@
-#!/usr/bin/env node
-
 import { defineCommand, runMain } from 'citty'
-import { monocrate } from '../index.js'
+import { monocrate } from './monocrate.js'
 
-const main = defineCommand({
+const command = defineCommand({
   meta: {
     name: 'monocrate',
     description: 'Bundle a monorepo package for npm publishing',
@@ -41,4 +39,6 @@ const main = defineCommand({
   },
 })
 
-void runMain(main)
+export function monocrateCli(): void {
+  void runMain(command)
+}

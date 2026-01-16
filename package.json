@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "monocrate": "./dist/cli/index.js"
+    "monocrate": "./dist/main.js"
   },
   "exports": {
     ".": {
