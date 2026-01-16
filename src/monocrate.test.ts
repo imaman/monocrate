@@ -71,6 +71,28 @@ function unfolderify(dir: string): FolderifyRecipe {
   return result
 }
 
+async function runMonocrate(
+  monorepoRoot: string,
+  sourcePackage: string
+): Promise<{ stdout: string; output: FolderifyRecipe }> {
+  const outputDir = createTempDir('monocrate-output-')
+
+  const result = await monocrate({
+    sourceDir: path.join(monorepoRoot, sourcePackage),
+    outputDir,
+    monorepoRoot,
+  })
+
+  if (!result.success) {
+    throw new Error('monocrate failed')
+  }
+
+  const stdout = execSync(`node ${path.join(outputDir, 'index.js')}`, { encoding: 'utf-8' })
+  const output = unfolderify(outputDir)
+
+  return { stdout, output }
+}
+
 describe('monocrate e2e', () => {
   afterEach(() => {
     for (const dir of tempDirs) {
@@ -108,17 +130,7 @@ export function greet(name: string): string {
 `,
     })
 
-    const outputDir = createTempDir('monocrate-output-')
-
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-    })
-
-    expect(result.success).toBe(true)
-
-    const output = unfolderify(outputDir)
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
 
     expect(output['package.json']).toEqual({
       name: '@test/app',
@@ -130,7 +142,6 @@ export function greet(name: string): string {
       },
     })
 
-    const stdout = execSync(`node ${path.join(outputDir, 'index.js')}`, { encoding: 'utf-8' })
     expect(stdout.trim()).toBe('Hello, World!')
   })
 })
