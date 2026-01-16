@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -76,9 +77,7 @@ describe('monocrate e2e', () => {
       },
       'packages/app/src/index.ts': `
 import { greet } from '@test/lib';
-export function main() {
-  return greet('World');
-}
+console.log(greet('World'));
 `,
       'packages/lib/package.json': {
         name: '@test/lib',
@@ -116,8 +115,7 @@ export function greet(name: string): string {
       },
     })
 
-    expect(output['index.js']).toContain('Hello,')
-    expect(output['index.js']).toContain('greet')
-    expect(output['index.js']).not.toContain('@test/lib')
+    const stdout = execSync(`node ${path.join(outputDir, 'index.js')}`, { encoding: 'utf-8' })
+    expect(stdout.trim()).toBe('Hello, World!')
   })
 })
