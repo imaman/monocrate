@@ -71,10 +71,13 @@ function unfolderify(dir: string): FolderifyRecipe {
   return result
 }
 
-async function runMonocrate(
-  monorepoRoot: string,
-  sourcePackage: string
-): Promise<{ stdout: string; output: FolderifyRecipe }> {
+interface RunMonocrateResult {
+  stdout: string
+  stderr: string
+  output: FolderifyRecipe
+}
+
+async function runMonocrate(monorepoRoot: string, sourcePackage: string): Promise<RunMonocrateResult> {
   const outputDir = createTempDir('monocrate-output-')
 
   const result = await monocrate({
@@ -87,10 +90,19 @@ async function runMonocrate(
     throw new Error('monocrate failed')
   }
 
-  const stdout = execSync(`node ${path.join(outputDir, 'index.js')}`, { encoding: 'utf-8' })
+  let stdout = ''
+  let stderr = ''
+  try {
+    stdout = execSync(`node --enable-source-maps ${path.join(outputDir, 'index.js')}`, {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    })
+  } catch (error) {
+    stderr = (error as { stderr: string }).stderr
+  }
   const output = unfolderify(outputDir)
 
-  return { stdout, output }
+  return { stdout, stderr, output }
 }
 
 describe('monocrate e2e', () => {
@@ -395,30 +407,11 @@ throwError();
       'packages/lib/src/index.ts': libSource,
     })
 
-    const outputDir = createTempDir('monocrate-output-')
-
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-    })
-
-    expect(result.success).toBe(true)
-
-    // Run the bundled code with source maps enabled and capture the stack trace
-    let stackTrace = ''
-    try {
-      execSync(`node --enable-source-maps ${path.join(outputDir, 'index.js')}`, {
-        encoding: 'utf-8',
-        stdio: 'pipe',
-      })
-    } catch (error) {
-      stackTrace = (error as { stderr: string }).stderr
-    }
+    const { stderr } = await runMonocrate(monorepoRoot, 'packages/app')
 
     // Verify the stack trace contains the error message and original source location
     // The throw statement is on line 3 of the original lib source file
-    expect(stackTrace).toContain('intentional error')
-    expect(stackTrace).toContain('lib/src/index.ts:3')
+    expect(stderr).toContain('intentional error')
+    expect(stderr).toContain('lib/src/index.ts:3')
   })
 })
