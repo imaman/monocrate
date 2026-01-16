@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as esbuild from 'esbuild'
-import type { DependencyGraph } from './types.js'
+import type { DependencyGraph, MonorepoPackage } from './types.js'
 import { getExternalDependencies } from './dependency-graph.js'
 
 function findEntryPoint(packageDir: string, packageJson: Record<string, unknown>): string {
@@ -24,9 +24,31 @@ function findEntryPoint(packageDir: string, packageJson: Record<string, unknown>
   throw new Error(`Could not find entry point in ${packageDir}`)
 }
 
+function createInRepoResolverPlugin(inRepoDeps: MonorepoPackage[]): esbuild.Plugin {
+  const packageMap = new Map<string, string>()
+  for (const dep of inRepoDeps) {
+    const entryPoint = findEntryPoint(dep.path, dep.packageJson)
+    packageMap.set(dep.name, entryPoint)
+  }
+
+  return {
+    name: 'in-repo-resolver',
+    setup(build) {
+      build.onResolve({ filter: /.*/ }, (args) => {
+        const resolved = packageMap.get(args.path)
+        if (resolved) {
+          return { path: resolved }
+        }
+        return null
+      })
+    },
+  }
+}
+
 export async function bundle(graph: DependencyGraph, outputDir: string): Promise<void> {
   const entryPoint = findEntryPoint(graph.root.path, graph.root.packageJson)
   const externalDeps = getExternalDependencies(graph)
+  const resolverPlugin = createInRepoResolverPlugin(graph.inRepoDeps)
 
   fs.mkdirSync(outputDir, { recursive: true })
 
@@ -81,6 +103,7 @@ export async function bundle(graph: DependencyGraph, outputDir: string): Promise
     format: 'esm',
     outfile: path.join(outputDir, 'index.js'),
     external: [...externalDeps, ...nodePrefixedBuiltins],
+    plugins: [resolverPlugin],
     sourcemap: false,
     minify: false,
   })
