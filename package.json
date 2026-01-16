@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "monocrate": "./dist/cli/index.js"
+    "monocrate": "./dist/main.js"
   },
   "exports": {
     ".": {
@@ -41,7 +41,6 @@
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@types/node": "^20.19.29",
-    "@types/semver": "^7.7.1",
     "@vitest/coverage-v8": "^1.2.0",
     "eslint": "^9.0.0",
     "husky": "^9.1.7",
@@ -62,8 +61,8 @@
   },
   "dependencies": {
     "citty": "^0.1.6",
+    "esbuild": "^0.24.0",
     "glob": "^13.0.0",
-    "semver": "^7.7.3",
     "zod": "^3.22.0"
   }
 }
