@@ -31,14 +31,17 @@ const command = defineCommand({
     })
 
     if (result.success) {
-      console.log(`Bundle created at: ${result.outputDir ?? ''}`)
+      console.log(`Bundle created at: ${result.outputDir}`)
     } else {
-      console.error(`Error: ${result.error ?? 'Unknown error'}`)
+      console.error(`Error: ${result.error}`)
       process.exit(1)
     }
   },
 })
 
 export function monocrateCli(): void {
-  void runMain(command)
+  runMain(command).catch((error: unknown) => {
+    console.error('Fatal error:', error instanceof Error ? error.stack : error)
+    process.exit(1)
+  })
 }

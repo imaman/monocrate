@@ -2,14 +2,22 @@ import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import { monocrate } from './index.js'
 
 type Jsonable = Record<string, unknown>
 type FolderifyRecipe = Record<string, string | Jsonable>
 
+const tempDirs: string[] = []
+
+function createTempDir(prefix: string): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix))
+  tempDirs.push(dir)
+  return dir
+}
+
 function folderify(recipe: FolderifyRecipe): string {
-  const ret = fs.mkdtempSync(path.join(os.tmpdir(), 'monocrate-test-'))
+  const ret = createTempDir('monocrate-test-')
   const keys = Object.keys(recipe).map((p) => path.normalize(p))
   const set = new Set<string>(keys)
 
@@ -50,9 +58,9 @@ function unfolderify(dir: string): FolderifyRecipe {
         walk(fullPath, relativePath)
       } else {
         const content = fs.readFileSync(fullPath, 'utf-8')
-        try {
+        if (entry.name.endsWith('.json')) {
           result[relativePath] = JSON.parse(content) as Jsonable
-        } catch {
+        } else {
           result[relativePath] = content
         }
       }
@@ -64,6 +72,13 @@ function unfolderify(dir: string): FolderifyRecipe {
 }
 
 describe('monocrate e2e', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+    tempDirs.length = 0
+  })
+
   it('bundles a simple package with an in-repo dependency', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -93,7 +108,7 @@ export function greet(name: string): string {
 `,
     })
 
-    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'monocrate-output-'))
+    const outputDir = createTempDir('monocrate-output-')
 
     const result = await monocrate({
       sourceDir: path.join(monorepoRoot, 'packages/app'),
