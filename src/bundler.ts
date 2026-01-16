@@ -65,7 +65,7 @@ export async function bundle(graph: DependencyGraph, outputDir: string): Promise
     outfile: path.join(outputDir, 'index.js'),
     external: [...externalDeps, ...NODE_BUILTIN_MODULES],
     plugins: [resolverPlugin],
-    sourcemap: false,
+    sourcemap: true,
     minify: false,
   })
 }
