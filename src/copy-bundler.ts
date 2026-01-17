@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as fsPromises from 'node:fs/promises'
 import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
-import type { DependencyGraph, PackageLocation, PackageMap } from './types.js'
+import type { DependencyGraph, MonorepoPackage, PackageLocation, PackageMap } from './types.js'
 
 function getDistDir(main: string | undefined): string {
   const mainPath = main ?? 'dist/index.js'
@@ -15,7 +15,7 @@ function getEntryPoint(main: string | undefined): string {
 }
 
 function createPackageLocation(
-  pkg: { name: string; path: string; packageJson: { main?: string } },
+  pkg: MonorepoPackage,
   monorepoRoot: string,
   isPackageToBundle: boolean
 ): PackageLocation {
