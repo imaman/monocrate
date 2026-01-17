@@ -45,3 +45,13 @@ export interface BundleOptions {
 }
 
 export type BundleResult = { success: true; outputDir: string } | { success: false; error: string }
+
+export interface PackageLocation {
+  name: string
+  monorepoRelativePath: string
+  entryPoint: string
+  distDir: string
+  isSourcePackage: boolean
+}
+
+export type PackageMap = Map<string, PackageLocation>

@@ -8,7 +8,14 @@ export function transformPackageJson(graph: DependencyGraph): PackageJson {
   const transformed: PackageJson = {
     name: source.name,
     version: source.version,
-    main: 'index.js',
+  }
+
+  if (source.main) {
+    transformed.main = source.main
+  }
+
+  if (source.types) {
+    transformed.types = source.types
   }
 
   const fieldsToPreserve = [
@@ -28,6 +35,12 @@ export function transformPackageJson(graph: DependencyGraph): PackageJson {
     if (field in source) {
       ;(transformed as Record<string, unknown>)[field] = source[field as keyof PackageJson]
     }
+  }
+
+  // exports is a passthrough field with complex structure, use bracket notation
+  if ('exports' in source) {
+    // eslint-disable-next-line @typescript-eslint/dot-notation
+    ;(transformed as Record<string, unknown>)['exports'] = source['exports']
   }
 
   if (Object.keys(graph.allThirdPartyDeps).length > 0) {

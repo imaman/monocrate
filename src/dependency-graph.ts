@@ -50,11 +50,3 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     allThirdPartyDeps,
   }
 }
-
-export function getAllSourceDirs(graph: DependencyGraph): string[] {
-  return [graph.root.path, ...graph.inRepoDeps.map((pkg) => pkg.path)]
-}
-
-export function getExternalDependencies(graph: DependencyGraph): string[] {
-  return Object.keys(graph.allThirdPartyDeps)
-}

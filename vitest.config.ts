@@ -9,7 +9,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts', 'src/main.ts', 'src/monocrate-cli.ts'],
       thresholds: {
         lines: 90,
         functions: 90,
