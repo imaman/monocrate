@@ -14,27 +14,27 @@ function getEntryPoint(main: string | undefined): string {
   return main ?? 'dist/index.js'
 }
 
+function createPackageLocation(
+  pkg: { name: string; path: string; packageJson: { main?: string } },
+  monorepoRoot: string,
+  isPackageToBundle: boolean
+): PackageLocation {
+  return {
+    name: pkg.name,
+    monorepoRelativePath: path.relative(monorepoRoot, pkg.path),
+    entryPoint: getEntryPoint(pkg.packageJson.main),
+    distDir: getDistDir(pkg.packageJson.main),
+    isPackageToBundle,
+  }
+}
+
 export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): PackageMap {
   const packageMap: PackageMap = new Map()
 
-  const rootRelativePath = path.relative(monorepoRoot, graph.root.path)
-  packageMap.set(graph.root.name, {
-    name: graph.root.name,
-    monorepoRelativePath: rootRelativePath,
-    entryPoint: getEntryPoint(graph.root.packageJson.main),
-    distDir: getDistDir(graph.root.packageJson.main),
-    isSourcePackage: true,
-  })
+  packageMap.set(graph.packageToBundle.name, createPackageLocation(graph.packageToBundle, monorepoRoot, true))
 
   for (const dep of graph.inRepoDeps) {
-    const depRelativePath = path.relative(monorepoRoot, dep.path)
-    packageMap.set(dep.name, {
-      name: dep.name,
-      monorepoRelativePath: depRelativePath,
-      entryPoint: getEntryPoint(dep.packageJson.main),
-      distDir: getDistDir(dep.packageJson.main),
-      isSourcePackage: false,
-    })
+    packageMap.set(dep.name, createPackageLocation(dep, monorepoRoot, false))
   }
 
   return packageMap
@@ -61,24 +61,24 @@ export async function copyDistDirectories(
   packageMap: PackageMap,
   outputDir: string
 ): Promise<void> {
-  const rootLocation = packageMap.get(graph.root.name)
-  if (!rootLocation) {
-    throw new Error(`Source package ${graph.root.name} not found in package map`)
+  const packageToBundleLocation = packageMap.get(graph.packageToBundle.name)
+  if (!packageToBundleLocation) {
+    throw new Error(`Package to bundle ${graph.packageToBundle.name} not found in package map`)
   }
 
-  const rootDistSrc = path.join(graph.root.path, rootLocation.distDir)
-  const rootDistDest = path.join(outputDir, rootLocation.distDir)
+  const packageToBundleDistSrc = path.join(graph.packageToBundle.path, packageToBundleLocation.distDir)
+  const packageToBundleDistDest = path.join(outputDir, packageToBundleLocation.distDir)
 
-  if (!fs.existsSync(rootDistSrc)) {
-    throw new Error(`dist directory not found at ${rootDistSrc}. Did you run the build?`)
+  if (!fs.existsSync(packageToBundleDistSrc)) {
+    throw new Error(`dist directory not found at ${packageToBundleDistSrc}. Did you run the build?`)
   }
 
-  await copyDir(rootDistSrc, rootDistDest)
+  await copyDir(packageToBundleDistSrc, packageToBundleDistDest)
 
   for (const dep of graph.inRepoDeps) {
     const depLocation = packageMap.get(dep.name)
     if (!depLocation) {
-      continue
+      throw new Error(`In-repo dependency ${dep.name} not found in package map. This is a bug.`)
     }
 
     const depDistSrc = path.join(dep.path, depLocation.distDir)
@@ -93,7 +93,10 @@ export async function copyDistDirectories(
 }
 
 function computeRelativePath(fromFile: string, target: PackageLocation, outputDir: string): string {
-  const targetPath = target.isSourcePackage
+  // isPackageToBundle distinguishes between the main package being bundled vs its in-repo dependencies:
+  // - Package to bundle (true): files go to output root, e.g., outputDir/dist/index.js
+  // - In-repo deps (false): files go under deps/, e.g., outputDir/deps/packages/lib/dist/index.js
+  const targetPath = target.isPackageToBundle
     ? path.join(outputDir, target.entryPoint)
     : path.join(outputDir, 'deps', target.monorepoRelativePath, target.entryPoint)
 
@@ -118,7 +121,7 @@ function rewriteSpecifier(
   for (const [pkgName, location] of packageMap) {
     if (specifier.startsWith(pkgName + '/')) {
       const subpath = specifier.slice(pkgName.length + 1)
-      const basePath = location.isSourcePackage
+      const basePath = location.isPackageToBundle
         ? path.join(outputDir, location.distDir)
         : path.join(outputDir, 'deps', location.monorepoRelativePath, location.distDir)
 
