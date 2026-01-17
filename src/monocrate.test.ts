@@ -377,6 +377,57 @@ export function pnpmGreet(): string {
     expect(stdout.trim()).toBe('pnpm works!')
   })
 
+  it('excludes devDependencies from the output', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        dependencies: {
+          '@test/lib': 'workspace:*',
+          chalk: '^5.0.0',
+        },
+        devDependencies: {
+          vitest: '^1.0.0',
+          typescript: '^5.0.0',
+        },
+      },
+      'packages/app/src/index.ts': `
+import { greet } from '@test/lib';
+console.log(greet('World'));
+`,
+      'packages/lib/package.json': {
+        name: '@test/lib',
+        version: '1.0.0',
+        dependencies: {
+          lodash: '^4.17.21',
+        },
+        devDependencies: {
+          '@types/lodash': '^4.14.0',
+        },
+      },
+      'packages/lib/src/index.ts': `
+export function greet(name: string): string {
+  return 'Hello, ' + name + '!';
+}
+`,
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+
+    expect(output['package.json']).toEqual({
+      name: '@test/app',
+      version: '1.0.0',
+      main: 'index.js',
+      dependencies: {
+        chalk: '^5.0.0',
+        lodash: '^4.17.21',
+      },
+    })
+
+    expect(stdout.trim()).toBe('Hello, World!')
+  })
+
   it('preserves line numbers in stack traces', async () => {
     // Line 1: empty (template literal starts with newline)
     // Line 2: export function throwError(): void {
