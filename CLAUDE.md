@@ -58,3 +58,27 @@ Coverage thresholds: 90% lines/functions/statements, 85% branches.
 ## TypeScript Configuration
 
 Strict mode with additional checks: `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `noUnusedLocals`, `noUnusedParameters`.
+
+## Coding Patterns
+
+**Compiler-verified type safety**: Prefer designs where the compiler can verify correctness. If you find yourself needing to "tell" TypeScript something is safe, redesign so it can prove it instead.
+
+**No unchecked type casting**: Never use `!` (non-null assertion) or `as` (type assertion). If TypeScript can't verify the type, restructure the code or add a runtime check.
+
+**Minimal entry points**: `main.ts` contains only shebang + import + function call. All logic lives elsewhere.
+
+**Use derived types from Zod schemas**: Introduce and use a derived type. Do not duplicate the shape manually.
+
+**Use same name for a Zod schema and its derived type**: `const Foo = z.object({...}); type Foo = z.infer<typeof Foo>`
+
+**safeParse over parse**: Use `safeParse()` to get structured errors with context, not generic "validation failed" exceptions.
+
+**Fail early and loud**: Always prefer to detect errors as soon as possible and to throw (to abort the execution) instead of trying to cope/recover. You can catch an error locally if you need to translate the caught error into a more meaningful message.
+
+**Handle errors at the top**: let the entry point file catch/report/exit.
+
+**Resolve paths immediately**: Call `path.resolve()` on all path arguments as early as possible. Prevents subtle bugs from mixing relative/absolute paths.
+
+**flatMap for conditional mapping**: `.flatMap(x => x ? [x] : [])` filters falsy values while preserving type narrowing (unlike `.filter(Boolean)`).
+
+
