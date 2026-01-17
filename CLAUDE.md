@@ -24,64 +24,37 @@ Run tests matching a pattern:
 npx vitest run -t "pattern"
 ```
 
-## Architecture Overview
+## What Monocrate Does
 
-Monocrate bundles monorepo packages for npm publishing. It resolves in-repo dependencies, bundles them with esbuild, and generates a unified package.json.
+Publishing a package from a monorepo to npm is painful when your package depends on other internal packages (like `@myorg/utils`). npm doesn't understand workspace dependencies, forcing you to either publish every internal dependency separately, manually bundle and merge dependencies, or use complex build pipelines that lose module structure.
 
-### Module Structure
+Monocrate solves this by bundling a package and all its in-repo dependencies into a single publishable unit. In-repo dependencies get inlined via esbuild; third-party dependencies are collected from all packages and merged into a single output package.json.
 
-```
-src/
-├── main.ts              # CLI entry point (#!/usr/bin/env node)
-├── index.ts             # Library exports (public API)
-├── monocrate.ts         # Main orchestrator function
-├── monocrate-cli.ts     # CLI command definition (citty)
-├── bundler.ts           # esbuild bundling with in-repo resolver plugin
-├── dependency-graph.ts  # Dependency resolution & graph building
-├── monorepo.ts          # Monorepo discovery & package.json reading
-├── package-transformer.ts # Output package.json generation
-├── types.ts             # Zod schemas and TypeScript types
-└── monocrate.test.ts    # E2E tests
-```
+Only `dependencies` are traversed and included—`devDependencies` are ignored entirely. This is because devDependencies are only needed during development (build tools, test frameworks, linters); consumers of the published package don't need them at runtime.
 
-### Data Flow
+## Architecture
 
-1. **monocrate()** (monocrate.ts) - Orchestrator that coordinates:
-   - `findMonorepoRoot()` → locate monorepo root by walking up directories
-   - `buildDependencyGraph()` → recursively resolve in-repo and third-party deps
-   - `bundle()` → esbuild with custom plugin for in-repo resolution
-   - `transformPackageJson()` → create minimal output package.json
-   - `writePackageJson()` → write to disk
+### Main Responsibilities
 
-2. **Dependency Resolution** (dependency-graph.ts):
-   - Separates in-repo dependencies (bundled) from external dependencies (marked external)
-   - Only traverses `dependencies`, not `devDependencies`
-   - Uses visited set to handle circular dependencies
+- `main.ts` - CLI entry point (shebang)
+- `monocrate-cli.ts` - CLI argument parsing (uses citty)
+- `index.ts` - Library exports (public API re-exports)
 
-3. **Bundling** (bundler.ts):
-   - esbuild plugin `createInRepoResolverPlugin()` maps in-repo package names to entry points
-   - External deps are not bundled, just declared in output package.json
-   - Output: single `index.js` with sourcemap
+### Core Flow
 
-### Key Types (types.ts)
+The `monocrate()` function orchestrates: discover monorepo root → build dependency graph → bundle with esbuild → transform package.json → write output.
 
-- `DependencyGraph`: `{root, inRepoDeps[], allThirdPartyDeps}`
-- `BundleOptions`: `{sourceDir, outputDir, monorepoRoot?}`
-- `BundleResult`: Discriminated union (success/failure)
-- `MonorepoPackage`: `{name, path, packageJson}`
+Key architectural decisions:
+- **esbuild plugin**: Custom resolver plugin maps in-repo package names to their entry points
 
 ### Testing
 
 Tests use helper utilities:
 - `folderify(recipe)`: Creates temp directory structure from object DSL
 - `unfolderify(dir)`: Reads directory back to recipe for assertions
-- `runMonocrate()`: Bundles and executes output to verify behavior
 
-Tests are co-located in `src/monocrate.test.ts`. Coverage thresholds: 90% lines/functions/statements, 85% branches.
+Coverage thresholds: 90% lines/functions/statements, 85% branches.
 
 ## TypeScript Configuration
 
-Strict mode enabled with additional checks:
-- `noUncheckedIndexedAccess`: Array/object access returns `T | undefined`
-- `exactOptionalPropertyTypes`: Distinguishes `undefined` from missing properties
-- `noImplicitReturns`, `noUnusedLocals`, `noUnusedParameters`
+Strict mode with additional checks: `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `noUnusedLocals`, `noUnusedParameters`.
