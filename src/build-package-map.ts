@@ -2,41 +2,45 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { DependencyGraph, MonorepoPackage, PackageLocation, PackageMap } from './types.js'
 
+const DEFAULT_MAIN = 'dist/index.js'
+
 function getDistDir(main: string | undefined): string {
-  const mainPath = main ?? 'dist/index.js'
+  const mainPath = main ?? DEFAULT_MAIN
   const dir = path.dirname(mainPath)
   return dir || 'dist'
 }
 
 function getEntryPoint(main: string | undefined): string {
-  return main ?? 'dist/index.js'
+  return main ?? DEFAULT_MAIN
 }
 
-interface PackageLocationInput {
-  pkg: MonorepoPackage
-  monorepoRoot: string
-  isPackageToBundle: boolean
-}
-
-function createPackageLocation(input: PackageLocationInput): PackageLocation {
-  const { pkg, monorepoRoot, isPackageToBundle } = input
+function createMainPackageLocation(pkg: MonorepoPackage): PackageLocation {
   const distDir = getDistDir(pkg.packageJson.main)
   const entryPoint = getEntryPoint(pkg.packageJson.main)
-  const monorepoRelativePath = path.relative(monorepoRoot, pkg.path)
-
-  const sourceDistDir = path.resolve(pkg.path, distDir)
-
-  const outputDistDir = isPackageToBundle ? distDir : path.join('deps', monorepoRelativePath, distDir)
-
-  const outputEntryPoint = isPackageToBundle ? entryPoint : path.join('deps', monorepoRelativePath, entryPoint)
 
   return {
     name: pkg.name,
-    sourceDistDir,
-    outputDistDir,
-    outputEntryPoint,
+    sourceDistDir: path.resolve(pkg.path, distDir),
+    outputDistDir: distDir,
+    outputEntryPoint: entryPoint,
     resolveSubpath(subpath: string): string {
-      return isPackageToBundle ? path.join(distDir, subpath) : path.join('deps', monorepoRelativePath, distDir, subpath)
+      return path.join(distDir, subpath)
+    },
+  }
+}
+
+function createDependencyLocation(pkg: MonorepoPackage, monorepoRoot: string): PackageLocation {
+  const distDir = getDistDir(pkg.packageJson.main)
+  const entryPoint = getEntryPoint(pkg.packageJson.main)
+  const depsPrefix = path.join('deps', path.relative(monorepoRoot, pkg.path))
+
+  return {
+    name: pkg.name,
+    sourceDistDir: path.resolve(pkg.path, distDir),
+    outputDistDir: path.join(depsPrefix, distDir),
+    outputEntryPoint: path.join(depsPrefix, entryPoint),
+    resolveSubpath(subpath: string): string {
+      return path.join(depsPrefix, distDir, subpath)
     },
   }
 }
@@ -52,20 +56,12 @@ function validatePackageLocation(location: PackageLocation): void {
 export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): PackageMap {
   const packageMap: PackageMap = new Map()
 
-  const mainLocation = createPackageLocation({
-    pkg: graph.packageToBundle,
-    monorepoRoot,
-    isPackageToBundle: true,
-  })
+  const mainLocation = createMainPackageLocation(graph.packageToBundle)
   packageMap.set(graph.packageToBundle.name, mainLocation)
   validatePackageLocation(mainLocation)
 
   for (const dep of graph.inRepoDeps) {
-    const depLocation = createPackageLocation({
-      pkg: dep,
-      monorepoRoot,
-      isPackageToBundle: false,
-    })
+    const depLocation = createDependencyLocation(dep, monorepoRoot)
     packageMap.set(dep.name, depLocation)
     validatePackageLocation(depLocation)
   }
