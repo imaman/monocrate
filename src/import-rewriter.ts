@@ -70,9 +70,6 @@ export class ImportRewriter {
 
   private rewriteSpecifier(specifier: string, fromFile: string): string | null {
     const { packageName, pathInPackage } = this.parseSpecifier(specifier)
-    if (packageName === null) {
-      return null
-    }
 
     const location = this.packageMap.get(packageName)
     if (!location) {
@@ -93,22 +90,31 @@ export class ImportRewriter {
     return this.computeRelativePath(fromFile, targetPath)
   }
 
-  private parseSpecifier(specifier: string): { packageName: string | null; pathInPackage: string | null } {
+  private parseSpecifier(specifier: string): { packageName: string; pathInPackage: string | null } {
     // For scoped packages (@org/name), package name includes everything up to the 2nd "/"
     // For regular packages (name), package name is everything up to the 1st "/"
-    if (specifier.startsWith('@')) {
-      const secondSlash = specifier.indexOf('/', specifier.indexOf('/') + 1)
-      if (secondSlash === -1) {
-        return { packageName: specifier, pathInPackage: null }
-      }
-      return { packageName: specifier.slice(0, secondSlash), pathInPackage: specifier.slice(secondSlash + 1) }
+    const parts = specifier.split('/')
+
+    const part0 = parts[0]
+    if (part0 === undefined) {
+      throw new Error(`BUG: split() returned empty array for specifier: ${specifier}`)
     }
 
-    const firstSlash = specifier.indexOf('/')
-    if (firstSlash === -1) {
-      return { packageName: specifier, pathInPackage: null }
+    if (specifier.startsWith('@')) {
+      const part1 = parts[1]
+      if (part1 === undefined) {
+        throw new Error(`BUG: malformed scoped package specifier: ${specifier}`)
+      }
+      const packageName = `${part0}/${part1}`
+      const pathInPackage = parts.length > 2 ? parts.slice(2).join('/') : null
+      return { packageName, pathInPackage }
     }
-    return { packageName: specifier.slice(0, firstSlash), pathInPackage: specifier.slice(firstSlash + 1) }
+
+    if (part0 === '') {
+      throw new Error(`BUG: empty package name in specifier: ${specifier}`)
+    }
+    const pathInPackage = parts.length > 1 ? parts.slice(1).join('/') : null
+    return { packageName: part0, pathInPackage }
   }
 
   private computeRelativePath(fromFile: string, targetOutputPath: string): string {
