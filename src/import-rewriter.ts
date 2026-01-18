@@ -9,7 +9,8 @@ export class ImportRewriter {
   ) {}
 
   async rewriteAll(files: string[]): Promise<void> {
-    for (const file of files) {
+    const jsAndDtsFiles = files.filter((f) => f.endsWith('.js') || f.endsWith('.d.ts'))
+    for (const file of jsAndDtsFiles) {
       await this.rewriteFile(file)
     }
   }

@@ -8,6 +8,11 @@ interface CopyOperation {
   destination: string
 }
 
+interface ValidatedPackage {
+  sourceDir: string
+  location: PackageLocation
+}
+
 export class DistCopier {
   constructor(
     private graph: DependencyGraph,
@@ -28,39 +33,38 @@ export class DistCopier {
   private collectCopyOperations(): CopyOperation[] {
     const operations: CopyOperation[] = []
 
-    const mainLocation = this.getPackageLocation(this.graph.packageToBundle)
-    const mainSource = this.getValidatedSourceDir(this.graph.packageToBundle, mainLocation)
+    const main = this.getValidatedPackage(this.graph.packageToBundle)
     operations.push({
-      source: mainSource,
-      destination: path.join(this.outputDir, mainLocation.distDir),
+      source: main.sourceDir,
+      destination: path.join(this.outputDir, main.location.distDir),
     })
 
     for (const dep of this.graph.inRepoDeps) {
-      const depLocation = this.getPackageLocation(dep)
-      const depSource = this.getValidatedSourceDir(dep, depLocation)
+      const validated = this.getValidatedPackage(dep)
       operations.push({
-        source: depSource,
-        destination: path.join(this.outputDir, 'deps', depLocation.monorepoRelativePath, depLocation.distDir),
+        source: validated.sourceDir,
+        destination: path.join(
+          this.outputDir,
+          'deps',
+          validated.location.monorepoRelativePath,
+          validated.location.distDir
+        ),
       })
     }
 
     return operations
   }
 
-  private getPackageLocation(pkg: MonorepoPackage): PackageLocation {
+  private getValidatedPackage(pkg: MonorepoPackage): ValidatedPackage {
     const location = this.packageMap.get(pkg.name)
     if (!location) {
       throw new Error(`Package ${pkg.name} not found in package map. This is a bug.`)
     }
-    return location
-  }
-
-  private getValidatedSourceDir(pkg: MonorepoPackage, location: PackageLocation): string {
     const sourceDir = path.join(pkg.path, location.distDir)
     if (!fs.existsSync(sourceDir)) {
       throw new Error(`dist directory not found at ${sourceDir}. Did you run the build for ${pkg.name}?`)
     }
-    return sourceDir
+    return { sourceDir, location }
   }
 
   private async copyDir(src: string, dest: string): Promise<string[]> {
@@ -77,9 +81,7 @@ export class DistCopier {
         copiedFiles.push(...nestedFiles)
       } else {
         await fsPromises.copyFile(srcPath, destPath)
-        if (entry.name.endsWith('.js') || entry.name.endsWith('.d.ts')) {
-          copiedFiles.push(destPath)
-        }
+        copiedFiles.push(destPath)
       }
     }
 
