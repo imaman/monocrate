@@ -6,12 +6,6 @@ export interface MonorepoPackage {
   packageJson: PackageJson
 }
 
-export interface DependencyGraph {
-  packageToBundle: MonorepoPackage
-  inRepoDeps: MonorepoPackage[]
-  allThirdPartyDeps: Record<string, string>
-}
-
 export interface BundleOptions {
   sourceDir: string
   outputDir: string

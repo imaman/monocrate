@@ -1,6 +1,12 @@
-import type { MonorepoPackage, DependencyGraph } from './types.js'
+import type { MonorepoPackage } from './types.js'
 import { readPackageJson, discoverMonorepoPackages, isInRepoDep } from './monorepo.js'
 import type { PackageJson } from './package-json.js'
+
+export interface DependencyGraph {
+  packageToBundle: MonorepoPackage
+  inRepoDeps: MonorepoPackage[]
+  allThirdPartyDeps: Record<string, string>
+}
 
 function getDependencies(packageJson: PackageJson): Record<string, string> {
   return packageJson.dependencies ?? {}
