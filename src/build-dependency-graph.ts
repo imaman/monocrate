@@ -16,13 +16,13 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
 
   const inRepoDeps: MonorepoPackage[] = []
   const allThirdPartyDeps: Record<string, string> = {}
-  const visited = new Set<string>()
+  const visited = new Map<string, MonorepoPackage>()
 
   function collectDeps(pkg: MonorepoPackage): void {
     if (visited.has(pkg.name)) {
       return
     }
-    visited.add(pkg.name)
+    visited.set(pkg.name, pkg)
 
     const deps = pkg.packageJson.dependencies ?? {}
 
