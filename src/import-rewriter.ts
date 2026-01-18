@@ -69,26 +69,46 @@ export class ImportRewriter {
   }
 
   private rewriteSpecifier(specifier: string, fromFile: string): string | null {
-    // Case 1: Exact package match
+    const { packageName, pathInPackage } = this.parseSpecifier(specifier)
+    if (packageName === null) {
+      return null
+    }
+
+    const location = this.packageMap.get(packageName)
+    if (!location) {
+      return null
+    }
+
+    // Case 1: Exact package match (no subpath)
     // Handles imports that reference the package entry point directly:
     //   import { foo } from '@myorg/utils'
-    const exactMatch = this.packageMap.get(specifier)
-    if (exactMatch) {
-      return this.computeRelativePath(fromFile, exactMatch.outputEntryPoint)
+    if (pathInPackage === null) {
+      return this.computeRelativePath(fromFile, location.outputEntryPoint)
     }
 
     // Case 2: Subpath imports
     // Handles imports that reference files within a package:
     //   import { bar } from '@myorg/utils/lib/helpers.js'
-    for (const [pkgName, location] of this.packageMap) {
-      if (specifier.startsWith(pkgName + '/')) {
-        const subpath = specifier.slice(pkgName.length + 1)
-        const targetPath = location.resolveSubpath(subpath)
-        return this.computeRelativePath(fromFile, targetPath)
+    const targetPath = location.resolveSubpath(pathInPackage)
+    return this.computeRelativePath(fromFile, targetPath)
+  }
+
+  private parseSpecifier(specifier: string): { packageName: string | null; pathInPackage: string | null } {
+    // For scoped packages (@org/name), package name includes everything up to the 2nd "/"
+    // For regular packages (name), package name is everything up to the 1st "/"
+    if (specifier.startsWith('@')) {
+      const secondSlash = specifier.indexOf('/', specifier.indexOf('/') + 1)
+      if (secondSlash === -1) {
+        return { packageName: specifier, pathInPackage: null }
       }
+      return { packageName: specifier.slice(0, secondSlash), pathInPackage: specifier.slice(secondSlash + 1) }
     }
 
-    return null
+    const firstSlash = specifier.indexOf('/')
+    if (firstSlash === -1) {
+      return { packageName: specifier, pathInPackage: null }
+    }
+    return { packageName: specifier.slice(0, firstSlash), pathInPackage: specifier.slice(firstSlash + 1) }
   }
 
   private computeRelativePath(fromFile: string, targetOutputPath: string): string {

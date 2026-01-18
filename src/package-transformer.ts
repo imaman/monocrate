@@ -14,7 +14,7 @@ export function transformPackageJson(graph: DependencyGraph): PackageJson {
 
   // Replace dependencies with flattened third-party deps (no workspace deps)
   if (Object.keys(graph.allThirdPartyDeps).length > 0) {
-    transformed.dependencies = { ...graph.allThirdPartyDeps }
+    transformed.dependencies = graph.allThirdPartyDeps
   }
 
   return transformed
