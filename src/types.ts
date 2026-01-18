@@ -48,10 +48,10 @@ export type BundleResult = { success: true; outputDir: string } | { success: fal
 
 export interface PackageLocation {
   name: string
-  monorepoRelativePath: string
-  entryPoint: string
-  distDir: string
-  isPackageToBundle: boolean
+  sourceDistDir: string
+  outputDistDir: string
+  outputEntryPoint: string
+  resolveSubpath(subpath: string): string
 }
 
 export type PackageMap = Map<string, PackageLocation>

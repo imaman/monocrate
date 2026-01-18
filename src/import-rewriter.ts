@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
-import type { PackageLocation, PackageMap } from './types.js'
+import type { PackageMap } from './types.js'
 
 export class ImportRewriter {
   constructor(
@@ -65,36 +65,23 @@ export class ImportRewriter {
   private rewriteSpecifier(specifier: string, fromFile: string): string | null {
     const exactMatch = this.packageMap.get(specifier)
     if (exactMatch) {
-      return this.computeRelativePath(fromFile, exactMatch)
+      return this.computeRelativePath(fromFile, exactMatch.outputEntryPoint)
     }
 
     for (const [pkgName, location] of this.packageMap) {
       if (specifier.startsWith(pkgName + '/')) {
         const subpath = specifier.slice(pkgName.length + 1)
-        const basePath = location.isPackageToBundle
-          ? path.join(this.outputDir, location.distDir)
-          : path.join(this.outputDir, 'deps', location.monorepoRelativePath, location.distDir)
-
-        let relativePath = path.relative(path.dirname(fromFile), path.join(basePath, subpath))
-        if (!relativePath.startsWith('.')) {
-          relativePath = './' + relativePath
-        }
-        return relativePath
+        const targetPath = location.resolveSubpath(subpath)
+        return this.computeRelativePath(fromFile, targetPath)
       }
     }
 
     return null
   }
 
-  private computeRelativePath(fromFile: string, target: PackageLocation): string {
-    // isPackageToBundle distinguishes between the main package being bundled vs its in-repo dependencies:
-    // - Package to bundle (true): files go to output root, e.g., outputDir/dist/index.js
-    // - In-repo deps (false): files go under deps/, e.g., outputDir/deps/packages/lib/dist/index.js
-    const targetPath = target.isPackageToBundle
-      ? path.join(this.outputDir, target.entryPoint)
-      : path.join(this.outputDir, 'deps', target.monorepoRelativePath, target.entryPoint)
-
-    let relative = path.relative(path.dirname(fromFile), targetPath)
+  private computeRelativePath(fromFile: string, targetOutputPath: string): string {
+    const absoluteTargetPath = path.join(this.outputDir, targetOutputPath)
+    let relative = path.relative(path.dirname(fromFile), absoluteTargetPath)
     if (!relative.startsWith('.')) {
       relative = './' + relative
     }

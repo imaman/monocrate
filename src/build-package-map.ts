@@ -1,3 +1,4 @@
+import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { DependencyGraph, MonorepoPackage, PackageLocation, PackageMap } from './types.js'
 
@@ -11,28 +12,84 @@ function getEntryPoint(main: string | undefined): string {
   return main ?? 'dist/index.js'
 }
 
-function createPackageLocation(
-  pkg: MonorepoPackage,
-  monorepoRoot: string,
+interface PackageLocationInput {
+  pkg: MonorepoPackage
+  monorepoRoot: string
   isPackageToBundle: boolean
-): PackageLocation {
+}
+
+function createPackageLocation(input: PackageLocationInput): PackageLocation {
+  const { pkg, monorepoRoot, isPackageToBundle } = input
+  const distDir = getDistDir(pkg.packageJson.main)
+  const entryPoint = getEntryPoint(pkg.packageJson.main)
+  const monorepoRelativePath = path.relative(monorepoRoot, pkg.path)
+
+  const sourceDistDir = path.resolve(pkg.path, distDir)
+
+  const outputDistDir = isPackageToBundle ? distDir : path.join('deps', monorepoRelativePath, distDir)
+
+  const outputEntryPoint = isPackageToBundle ? entryPoint : path.join('deps', monorepoRelativePath, entryPoint)
+
   return {
     name: pkg.name,
-    monorepoRelativePath: path.relative(monorepoRoot, pkg.path),
-    entryPoint: getEntryPoint(pkg.packageJson.main),
-    distDir: getDistDir(pkg.packageJson.main),
-    isPackageToBundle,
+    sourceDistDir,
+    outputDistDir,
+    outputEntryPoint,
+    resolveSubpath(subpath: string): string {
+      return isPackageToBundle ? path.join(distDir, subpath) : path.join('deps', monorepoRelativePath, distDir, subpath)
+    },
   }
 }
 
-export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): PackageMap {
+interface ValidationError {
+  packageName: string
+  message: string
+}
+
+function validatePackageLocation(location: PackageLocation): ValidationError | null {
+  if (!fs.existsSync(location.sourceDistDir)) {
+    return {
+      packageName: location.name,
+      message: `dist directory not found at ${location.sourceDistDir}. Did you run the build for ${location.name}?`,
+    }
+  }
+  return null
+}
+
+export interface BuildPackageMapResult {
+  packageMap: PackageMap
+  errors: ValidationError[]
+}
+
+export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): BuildPackageMapResult {
   const packageMap: PackageMap = new Map()
+  const errors: ValidationError[] = []
 
-  packageMap.set(graph.packageToBundle.name, createPackageLocation(graph.packageToBundle, monorepoRoot, true))
+  const mainLocation = createPackageLocation({
+    pkg: graph.packageToBundle,
+    monorepoRoot,
+    isPackageToBundle: true,
+  })
+  packageMap.set(graph.packageToBundle.name, mainLocation)
 
-  for (const dep of graph.inRepoDeps) {
-    packageMap.set(dep.name, createPackageLocation(dep, monorepoRoot, false))
+  const mainError = validatePackageLocation(mainLocation)
+  if (mainError) {
+    errors.push(mainError)
   }
 
-  return packageMap
+  for (const dep of graph.inRepoDeps) {
+    const depLocation = createPackageLocation({
+      pkg: dep,
+      monorepoRoot,
+      isPackageToBundle: false,
+    })
+    packageMap.set(dep.name, depLocation)
+
+    const depError = validatePackageLocation(depLocation)
+    if (depError) {
+      errors.push(depError)
+    }
+  }
+
+  return { packageMap, errors }
 }
