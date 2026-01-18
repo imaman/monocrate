@@ -1,5 +1,5 @@
-import type { MonorepoPackage } from './monorepo.js';
-import { readPackageJson, discoverMonorepoPackages, isInRepoDep } from './monorepo.js'
+import type { MonorepoPackage } from './monorepo.js'
+import { discoverMonorepoPackages, isInRepoDep } from './monorepo.js'
 import type { PackageJson } from './package-json.js'
 
 export interface DependencyGraph {
@@ -13,13 +13,10 @@ function getDependencies(packageJson: PackageJson): Record<string, string> {
 }
 
 export async function buildDependencyGraph(sourceDir: string, monorepoRoot: string): Promise<DependencyGraph> {
-  const monorepoPackages = await discoverMonorepoPackages(monorepoRoot)
-  const packageToBundleJson = readPackageJson(sourceDir)
-
-  const packageToBundle: MonorepoPackage = {
-    name: packageToBundleJson.name,
-    path: sourceDir,
-    packageJson: packageToBundleJson,
+  const allPackages = await discoverMonorepoPackages(monorepoRoot)
+  const packageToBundle = [...allPackages.values()].find((at) => at.path === sourceDir)
+  if (!packageToBundle) {
+    throw new Error(`Could not find a monorepo package at ${sourceDir}`)
   }
 
   const inRepoDeps: MonorepoPackage[] = []
@@ -35,8 +32,8 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     const deps = getDependencies(pkg.packageJson)
 
     for (const [depName, depVersion] of Object.entries(deps)) {
-      if (isInRepoDep(depName, monorepoPackages)) {
-        const depPackage = monorepoPackages.get(depName)
+      if (isInRepoDep(depName, allPackages)) {
+        const depPackage = allPackages.get(depName)
         if (depPackage && !visited.has(depName)) {
           inRepoDeps.push(depPackage)
           collectDeps(depPackage)

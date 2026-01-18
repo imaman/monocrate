@@ -232,7 +232,7 @@ describe('error handling', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toContain('No package.json found')
+      expect(result.error).toContain(`Could not find a monorepo package at ${monorepoRoot}/packages/app`)
     }
   })
 
