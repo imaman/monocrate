@@ -15,9 +15,9 @@ export class ImportRewriter {
     }
   }
 
-  private async rewriteFile(filePath: string): Promise<void> {
+  private async rewriteFile(pathToImporter: string): Promise<void> {
     const project = new Project({ useInMemoryFileSystem: false })
-    const sourceFile = project.addSourceFileAtPath(filePath)
+    const sourceFile = project.addSourceFileAtPath(pathToImporter)
 
     let modified = false
 
@@ -25,7 +25,7 @@ export class ImportRewriter {
     //   import { foo } from '@myorg/utils'  ->  import { foo } from './deps/packages/utils/dist/index.js'
     for (const decl of sourceFile.getImportDeclarations()) {
       const specifier = decl.getModuleSpecifierValue()
-      const newSpecifier = this.rewriteSpecifier(specifier, filePath)
+      const newSpecifier = this.computeNewSpecifier(pathToImporter, specifier)
       if (newSpecifier) {
         decl.setModuleSpecifier(newSpecifier)
         modified = true
@@ -37,7 +37,7 @@ export class ImportRewriter {
     for (const decl of sourceFile.getExportDeclarations()) {
       const specifier = decl.getModuleSpecifierValue()
       if (specifier) {
-        const newSpecifier = this.rewriteSpecifier(specifier, filePath)
+        const newSpecifier = this.computeNewSpecifier(pathToImporter, specifier)
         if (newSpecifier) {
           decl.setModuleSpecifier(newSpecifier)
           modified = true
@@ -54,7 +54,7 @@ export class ImportRewriter {
         const firstArg = args[0]
         if (firstArg?.getKind() === SyntaxKind.StringLiteral) {
           const specifier = firstArg.getText().slice(1, -1)
-          const newSpecifier = this.rewriteSpecifier(specifier, filePath)
+          const newSpecifier = this.computeNewSpecifier(pathToImporter, specifier)
           if (newSpecifier) {
             firstArg.replaceWithText(`'${newSpecifier}'`)
             modified = true
@@ -68,18 +68,18 @@ export class ImportRewriter {
     }
   }
 
-  private rewriteSpecifier(specifier: string, fromFile: string): string | null {
-    const packageName = this.extractPackageName(specifier)
+  private computeNewSpecifier(pathToImporter: string, importSpecifier: string) {
+    const packageName = this.extractPackageName(importSpecifier)
     const location = this.packageMap.get(packageName)
     if (!location) {
-      return null
+      return undefined
     }
 
-    const subpath = specifier.slice(packageName.length + 1)
+    const subpath = importSpecifier.slice(packageName.length + 1)
     // Empty subpath means bare package import (e.g., '@myorg/utils' -> 'dist/index.js')
     // Non-empty subpath means subpath import (e.g., '@myorg/utils/foo' -> 'dist/foo')
     const pathAtImportee = subpath === '' ? location.outputEntryPoint : location.resolveSubpath(subpath)
-    return this.computeRelativePath(fromFile, pathAtImportee)
+    return this.computeRelativePath(pathToImporter, pathAtImportee)
   }
 
   private extractPackageName(specifier: string): string {
@@ -88,9 +88,9 @@ export class ImportRewriter {
     return parts.slice(0, prefixLength).join('/')
   }
 
-  private computeRelativePath(fromFile: string, targetOutputPath: string): string {
-    const absoluteTargetPath = path.join(this.outputDir, targetOutputPath)
-    let relative = path.relative(path.dirname(fromFile), absoluteTargetPath)
+  private computeRelativePath(pathToImporter: string, pathToImportee: string): string {
+    const absoluteTargetPath = path.join(this.outputDir, pathToImportee)
+    let relative = path.relative(path.dirname(pathToImporter), absoluteTargetPath)
     if (!relative.startsWith('.')) {
       relative = './' + relative
     }
