@@ -32,9 +32,7 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
       const depPackage = allPackages.get(depName)
       if (depPackage) {
         // Is an in-repo dep
-        if (!visited.has(depName)) {
-          collectDeps(depPackage)
-        }
+        collectDeps(depPackage)
       } else {
         if (!(depName in allThirdPartyDeps)) {
           allThirdPartyDeps[depName] = depVersion
