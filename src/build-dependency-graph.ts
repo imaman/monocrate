@@ -23,9 +23,7 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     }
     visited.set(pkg.name, pkg)
 
-    const deps = pkg.packageJson.dependencies ?? {}
-
-    for (const [depName, depVersion] of Object.entries(deps)) {
+    for (const [depName, depVersion] of Object.entries(pkg.packageJson.dependencies ?? {})) {
       if (!depVersion) {
         throw new Error(`no version for dep ${depName} in ${pkg.name}`)
       }
