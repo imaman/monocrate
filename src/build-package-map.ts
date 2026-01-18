@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import type { DependencyGraph, MonorepoPackage, PackageLocation, PackageMap } from './types.js'
+import type { DependencyGraph, MonorepoPackage, PackageMap } from './types.js'
 
 const DEFAULT_DIST_DIR = 'dist'
 const DEFAULT_ENTRY_POINT = 'dist/index.js'
@@ -17,7 +17,7 @@ function resolveEntryPoint(main: string | undefined): string {
   return main ?? DEFAULT_ENTRY_POINT
 }
 
-function createPackageLocation(pkg: MonorepoPackage, outputPrefix: string): PackageLocation {
+function registerPackageLocation(packageMap: PackageMap, pkg: MonorepoPackage, outputPrefix: string): void {
   const distDir = resolveDistDir(pkg.packageJson.main)
   const sourceDistDir = path.resolve(pkg.path, distDir)
 
@@ -27,7 +27,7 @@ function createPackageLocation(pkg: MonorepoPackage, outputPrefix: string): Pack
 
   const outputDistDir = path.join(outputPrefix, distDir)
 
-  return {
+  packageMap.set(pkg.name, {
     name: pkg.name,
     sourceDistDir,
     outputDistDir,
@@ -35,7 +35,7 @@ function createPackageLocation(pkg: MonorepoPackage, outputPrefix: string): Pack
     resolveSubpath(subpath: string): string {
       return path.join(outputDistDir, subpath)
     },
-  }
+  })
 }
 
 function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): string {
@@ -45,12 +45,10 @@ function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): str
 export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): PackageMap {
   const packageMap: PackageMap = new Map()
 
-  const mainLocation = createPackageLocation(graph.packageToBundle, '')
-  packageMap.set(graph.packageToBundle.name, mainLocation)
+  registerPackageLocation(packageMap, graph.packageToBundle, '')
 
   for (const dep of graph.inRepoDeps) {
-    const depLocation = createPackageLocation(dep, computeDepOutputPrefix(dep, monorepoRoot))
-    packageMap.set(dep.name, depLocation)
+    registerPackageLocation(packageMap, dep, computeDepOutputPrefix(dep, monorepoRoot))
   }
 
   return packageMap
