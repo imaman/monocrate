@@ -1,4 +1,3 @@
-import * as fsPromises from 'node:fs/promises'
 import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
 import type { PackageLocation, PackageMap } from './types.js'
@@ -9,31 +8,10 @@ export class ImportRewriter {
     private outputDir: string
   ) {}
 
-  async rewriteAll(): Promise<void> {
-    const files = await this.findAllJsAndDtsFiles()
-
+  async rewriteAll(files: string[]): Promise<void> {
     for (const file of files) {
       await this.rewriteFile(file)
     }
-  }
-
-  private async findAllJsAndDtsFiles(): Promise<string[]> {
-    const files: string[] = []
-
-    const walk = async (currentDir: string): Promise<void> => {
-      const entries = await fsPromises.readdir(currentDir, { withFileTypes: true })
-      for (const entry of entries) {
-        const fullPath = path.join(currentDir, entry.name)
-        if (entry.isDirectory()) {
-          await walk(fullPath)
-        } else if (entry.name.endsWith('.js') || entry.name.endsWith('.d.ts')) {
-          files.push(fullPath)
-        }
-      }
-    }
-
-    await walk(this.outputDir)
-    return files
   }
 
   private async rewriteFile(filePath: string): Promise<void> {

@@ -9,6 +9,6 @@ export async function copyBundle(graph: DependencyGraph, monorepoRoot: string, o
 
   const packageMap = buildPackageMap(graph, monorepoRoot)
 
-  await new DistCopier(graph, packageMap, outputDir).copy()
-  await new ImportRewriter(packageMap, outputDir).rewriteAll()
+  const copiedFiles = await new DistCopier(graph, packageMap, outputDir).copy()
+  await new ImportRewriter(packageMap, outputDir).rewriteAll(copiedFiles)
 }
