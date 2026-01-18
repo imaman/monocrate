@@ -3,7 +3,14 @@ import { findMonorepoRoot } from './monorepo.js'
 import { buildDependencyGraph } from './build-dependency-graph.js'
 import { bundle } from './bundle.js'
 import { transformPackageJson, writePackageJson } from './transform-package-json.js'
-import type { BundleOptions, BundleResult } from './types.js'
+
+export interface BundleOptions {
+  sourceDir: string
+  outputDir: string
+  monorepoRoot: string
+}
+
+export type BundleResult = { success: true; outputDir: string } | { success: false; error: string }
 
 export async function monocrate(options: BundleOptions): Promise<BundleResult> {
   try {

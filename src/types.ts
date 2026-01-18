@@ -6,14 +6,6 @@ export interface MonorepoPackage {
   packageJson: PackageJson
 }
 
-export interface BundleOptions {
-  sourceDir: string
-  outputDir: string
-  monorepoRoot: string
-}
-
-export type BundleResult = { success: true; outputDir: string } | { success: false; error: string }
-
 export interface PackageLocation {
   name: string
   sourceDistDir: string
