@@ -1,12 +1,12 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import type { DependencyGraph, PackageJson } from './types.js'
+import type { PackageJson } from './package-json.js'
+import type { DependencyGraph } from './build-dependency-graph.js'
 
 export function transformPackageJson(graph: DependencyGraph): PackageJson {
   const source = graph.packageToBundle.packageJson
 
-  // Start with a copy of source, then remove/replace fields we don't want
-  const { dependencies: _deps, devDependencies: _devDeps, ...rest } = source
+  const { dependencies: _1, devDependencies: _2, ...rest } = source
 
   const transformed: PackageJson = {
     ...rest,

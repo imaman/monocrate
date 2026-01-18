@@ -85,4 +85,6 @@ Strict mode with additional checks: `noUncheckedIndexedAccess`, `exactOptionalPr
 
 **Naming conventions**: Function and method names should be verbs (e.g., `buildGraph`, `resolvePackage`). Class, type, and interface names should be nouns (e.g., `DependencyGraph`, `PackageInfo`).
 
+**Partial Record over Record**: Use `Partial<Record<string, T>>` instead of `Record<string, T>` for dictionary-like objects. This mekes it explicit that properties may be undefined, preventing bugs from assuming all keys exist. 
+
 

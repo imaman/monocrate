@@ -2,7 +2,7 @@ import * as fsPromises from 'node:fs/promises'
 import { buildPackageMap } from './build-package-map.js'
 import { DistCopier } from './dist-copier.js'
 import { ImportRewriter } from './import-rewriter.js'
-import type { DependencyGraph } from './types.js'
+import type { DependencyGraph } from './build-dependency-graph.js'
 
 export async function bundle(graph: DependencyGraph, monorepoRoot: string, outputDir: string): Promise<void> {
   const packageMap = buildPackageMap(graph, monorepoRoot)

@@ -3,7 +3,8 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { describe, it, expect, afterEach } from 'vitest'
-import { monocrate, findMonorepoRoot } from './index.js'
+import { monocrate } from './index.js'
+import { findMonorepoRoot } from './monorepo.js'
 
 type Jsonable = Record<string, unknown>
 type FolderifyRecipe = Record<string, string | Jsonable>
@@ -231,7 +232,7 @@ describe('error handling', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toContain('No package.json found')
+      expect(result.error).toContain(`Could not find a monorepo package at ${monorepoRoot}/packages/app`)
     }
   })
 
@@ -757,6 +758,7 @@ export declare const bar: typeof foo;
 
     const output = unfolderify(outputDir)
 
+    console.error(JSON.stringify(output, null, 2))
     // Verify .js file has rewritten import
     expect(output['dist/index.js']).toContain('../deps/packages/b/dist/index.js')
     expect(output['dist/index.js']).not.toContain("'@myorg/b'")

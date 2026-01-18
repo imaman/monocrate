@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
-import type { PackageMap } from './types.js'
+import type { PackageMap } from './package-map.js'
 
 export class ImportRewriter {
   constructor(
