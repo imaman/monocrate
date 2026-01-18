@@ -6,8 +6,7 @@ import type { PackageJson } from './package-json.js'
 export function transformPackageJson(graph: DependencyGraph): PackageJson {
   const source = graph.packageToBundle.packageJson
 
-  // Start with a copy of source, then remove/replace fields we don't want
-  const { dependencies: _deps, devDependencies: _devDeps, ...rest } = source
+  const { dependencies: _1, devDependencies: _2, ...rest } = source
 
   const transformed: PackageJson = {
     ...rest,
