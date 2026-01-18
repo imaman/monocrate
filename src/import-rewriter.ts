@@ -94,27 +94,17 @@ export class ImportRewriter {
     // For scoped packages (@org/name), package name includes everything up to the 2nd "/"
     // For regular packages (name), package name is everything up to the 1st "/"
     const parts = specifier.split('/')
+    const cutoff = specifier.startsWith('@') ? 2 : 1
 
-    const part0 = parts[0]
-    if (part0 === undefined) {
-      throw new Error(`BUG: split() returned empty array for specifier: ${specifier}`)
+    if (parts.length < cutoff) {
+      throw new Error(`BUG: malformed package specifier: ${specifier}`)
     }
 
-    if (specifier.startsWith('@')) {
-      const part1 = parts[1]
-      if (part1 === undefined) {
-        throw new Error(`BUG: malformed scoped package specifier: ${specifier}`)
-      }
-      const packageName = `${part0}/${part1}`
-      const pathInPackage = parts.length > 2 ? parts.slice(2).join('/') : null
-      return { packageName, pathInPackage }
-    }
+    const packageName = parts.slice(0, cutoff).join('/')
+    const rest = parts.slice(cutoff)
+    const pathInPackage = rest.length > 0 ? rest.join('/') : null
 
-    if (part0 === '') {
-      throw new Error(`BUG: empty package name in specifier: ${specifier}`)
-    }
-    const pathInPackage = parts.length > 1 ? parts.slice(1).join('/') : null
-    return { packageName: part0, pathInPackage }
+    return { packageName, pathInPackage }
   }
 
   private computeRelativePath(fromFile: string, targetOutputPath: string): string {
