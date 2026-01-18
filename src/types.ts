@@ -1,11 +1,3 @@
-import type { PackageJson } from './package-json.js'
-
-export interface MonorepoPackage {
-  name: string
-  path: string
-  packageJson: PackageJson
-}
-
 export interface PackageLocation {
   name: string
   sourceDistDir: string

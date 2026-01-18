@@ -1,8 +1,13 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { glob } from 'glob'
-import type { MonorepoPackage } from './types.js'
 import { PackageJson } from './package-json.js'
+
+export interface MonorepoPackage {
+  name: string
+  path: string
+  packageJson: PackageJson
+}
 
 export function findMonorepoRoot(startDir: string): string {
   let dir = path.resolve(startDir)

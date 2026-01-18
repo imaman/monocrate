@@ -1,7 +1,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import type { MonorepoPackage, PackageMap } from './types.js'
+import type { PackageMap } from './types.js'
 import type { DependencyGraph } from './build-dependency-graph.js'
+import type { MonorepoPackage } from './monorepo.js'
 
 const DEFAULT_DIST_DIR = 'dist'
 const DEFAULT_ENTRY_POINT = 'dist/index.js'

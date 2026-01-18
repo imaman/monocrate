@@ -1,4 +1,4 @@
-import type { MonorepoPackage } from './types.js'
+import type { MonorepoPackage } from './monorepo.js';
 import { readPackageJson, discoverMonorepoPackages, isInRepoDep } from './monorepo.js'
 import type { PackageJson } from './package-json.js'
 
