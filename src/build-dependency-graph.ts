@@ -1,5 +1,5 @@
 import type { MonorepoPackage } from './monorepo.js'
-import { discoverMonorepoPackages, isInRepoDep } from './monorepo.js'
+import { discoverMonorepoPackages } from './monorepo.js'
 import type { PackageJson } from './package-json.js'
 
 export interface DependencyGraph {
@@ -32,9 +32,10 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     const deps = getDependencies(pkg.packageJson)
 
     for (const [depName, depVersion] of Object.entries(deps)) {
-      if (isInRepoDep(depName, allPackages)) {
-        const depPackage = allPackages.get(depName)
-        if (depPackage && !visited.has(depName)) {
+      const depPackage = allPackages.get(depName)
+      if (depPackage) {
+        // Is an in-repo dep
+        if (!visited.has(depName)) {
           inRepoDeps.push(depPackage)
           collectDeps(depPackage)
         }

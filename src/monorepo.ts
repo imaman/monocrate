@@ -99,7 +99,3 @@ export async function discoverMonorepoPackages(monorepoRoot: string): Promise<Ma
 
   return packages
 }
-
-export function isInRepoDep(depName: string, monorepoPackages: Map<string, MonorepoPackage>): boolean {
-  return monorepoPackages.has(depName)
-}
