@@ -1,7 +1,7 @@
 export { monocrate } from './monocrate.js'
 export { findMonorepoRoot } from './monorepo.js'
 export { buildDependencyGraph } from './dependency-graph.js'
-export { copyBundle } from './copy-bundler.js'
+export { bundle } from './bundler.js'
 export { transformPackageJson, writePackageJson } from './package-transformer.js'
 export type {
   BundleOptions,

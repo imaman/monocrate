@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import { findMonorepoRoot } from './monorepo.js'
 import { buildDependencyGraph } from './dependency-graph.js'
-import { copyBundle } from './copy-bundler.js'
+import { bundle } from './bundler.js'
 import { transformPackageJson, writePackageJson } from './package-transformer.js'
 import type { BundleOptions, BundleResult } from './types.js'
 
@@ -13,7 +13,7 @@ export async function monocrate(options: BundleOptions): Promise<BundleResult> {
 
     const graph = await buildDependencyGraph(sourceDir, monorepoRoot)
 
-    await copyBundle(graph, monorepoRoot, outputDir)
+    await bundle(graph, monorepoRoot, outputDir)
 
     const packageJson = transformPackageJson(graph)
     await writePackageJson(packageJson, outputDir)

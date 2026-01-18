@@ -4,7 +4,7 @@ import { DistCopier } from './dist-copier.js'
 import { ImportRewriter } from './import-rewriter.js'
 import type { DependencyGraph } from './types.js'
 
-export async function copyBundle(graph: DependencyGraph, monorepoRoot: string, outputDir: string): Promise<void> {
+export async function bundle(graph: DependencyGraph, monorepoRoot: string, outputDir: string): Promise<void> {
   const packageMap = buildPackageMap(graph, monorepoRoot)
 
   await fsPromises.mkdir(outputDir, { recursive: true })

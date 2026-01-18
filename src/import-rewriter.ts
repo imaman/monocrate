@@ -69,11 +69,17 @@ export class ImportRewriter {
   }
 
   private rewriteSpecifier(specifier: string, fromFile: string): string | null {
+    // Case 1: Exact package match
+    // Handles imports that reference the package entry point directly:
+    //   import { foo } from '@myorg/utils'
     const exactMatch = this.packageMap.get(specifier)
     if (exactMatch) {
       return this.computeRelativePath(fromFile, exactMatch.outputEntryPoint)
     }
 
+    // Case 2: Subpath imports
+    // Handles imports that reference files within a package:
+    //   import { bar } from '@myorg/utils/lib/helpers.js'
     for (const [pkgName, location] of this.packageMap) {
       if (specifier.startsWith(pkgName + '/')) {
         const subpath = specifier.slice(pkgName.length + 1)
