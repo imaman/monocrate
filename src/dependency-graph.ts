@@ -7,12 +7,12 @@ function getDependencies(packageJson: PackageJson): Record<string, string> {
 
 export async function buildDependencyGraph(sourceDir: string, monorepoRoot: string): Promise<DependencyGraph> {
   const monorepoPackages = await discoverMonorepoPackages(monorepoRoot)
-  const rootPackageJson = readPackageJson(sourceDir)
+  const packageToBundleJson = readPackageJson(sourceDir)
 
-  const root: MonorepoPackage = {
-    name: rootPackageJson.name,
+  const packageToBundle: MonorepoPackage = {
+    name: packageToBundleJson.name,
     path: sourceDir,
-    packageJson: rootPackageJson,
+    packageJson: packageToBundleJson,
   }
 
   const inRepoDeps: MonorepoPackage[] = []
@@ -42,19 +42,11 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     }
   }
 
-  collectDeps(root)
+  collectDeps(packageToBundle)
 
   return {
-    root,
+    packageToBundle,
     inRepoDeps,
     allThirdPartyDeps,
   }
-}
-
-export function getAllSourceDirs(graph: DependencyGraph): string[] {
-  return [graph.root.path, ...graph.inRepoDeps.map((pkg) => pkg.path)]
-}
-
-export function getExternalDependencies(graph: DependencyGraph): string[] {
-  return Object.keys(graph.allThirdPartyDeps)
 }

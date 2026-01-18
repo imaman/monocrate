@@ -33,7 +33,7 @@ export interface MonorepoPackage {
 }
 
 export interface DependencyGraph {
-  root: MonorepoPackage
+  packageToBundle: MonorepoPackage
   inRepoDeps: MonorepoPackage[]
   allThirdPartyDeps: Record<string, string>
 }
@@ -45,3 +45,13 @@ export interface BundleOptions {
 }
 
 export type BundleResult = { success: true; outputDir: string } | { success: false; error: string }
+
+export interface PackageLocation {
+  name: string
+  sourceDistDir: string
+  outputDistDir: string
+  outputEntryPoint: string
+  resolveSubpath(subpath: string): string
+}
+
+export type PackageMap = Map<string, PackageLocation>

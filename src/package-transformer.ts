@@ -3,35 +3,18 @@ import * as path from 'node:path'
 import type { DependencyGraph, PackageJson } from './types.js'
 
 export function transformPackageJson(graph: DependencyGraph): PackageJson {
-  const source = graph.root.packageJson
+  const source = graph.packageToBundle.packageJson
+
+  // Start with a copy of source, then remove/replace fields we don't want
+  const { dependencies: _deps, devDependencies: _devDeps, ...rest } = source
 
   const transformed: PackageJson = {
-    name: source.name,
-    version: source.version,
-    main: 'index.js',
+    ...rest,
   }
 
-  const fieldsToPreserve = [
-    'description',
-    'keywords',
-    'author',
-    'license',
-    'repository',
-    'homepage',
-    'bugs',
-    'engines',
-    'bin',
-    'type',
-  ] as const
-
-  for (const field of fieldsToPreserve) {
-    if (field in source) {
-      ;(transformed as Record<string, unknown>)[field] = source[field as keyof PackageJson]
-    }
-  }
-
+  // Replace dependencies with flattened third-party deps (no workspace deps)
   if (Object.keys(graph.allThirdPartyDeps).length > 0) {
-    transformed.dependencies = { ...graph.allThirdPartyDeps }
+    transformed.dependencies = graph.allThirdPartyDeps
   }
 
   return transformed

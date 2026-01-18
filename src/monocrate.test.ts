@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { describe, it, expect, afterEach } from 'vitest'
-import { monocrate } from './index.js'
+import { monocrate, findMonorepoRoot } from './index.js'
 
 type Jsonable = Record<string, unknown>
 type FolderifyRecipe = Record<string, string | Jsonable>
@@ -77,7 +77,11 @@ interface RunMonocrateResult {
   output: FolderifyRecipe
 }
 
-async function runMonocrate(monorepoRoot: string, sourcePackage: string): Promise<RunMonocrateResult> {
+async function runMonocrate(
+  monorepoRoot: string,
+  sourcePackage: string,
+  entryPoint = 'dist/index.js'
+): Promise<RunMonocrateResult> {
   const outputDir = createTempDir('monocrate-output-')
 
   const result = await monocrate({
@@ -87,13 +91,13 @@ async function runMonocrate(monorepoRoot: string, sourcePackage: string): Promis
   })
 
   if (!result.success) {
-    throw new Error('monocrate failed')
+    throw new Error(`monocrate failed: ${result.error}`)
   }
 
   let stdout = ''
   let stderr = ''
   try {
-    stdout = execSync(`node --enable-source-maps ${path.join(outputDir, 'index.js')}`, {
+    stdout = execSync(`node --enable-source-maps ${path.join(outputDir, entryPoint)}`, {
       encoding: 'utf-8',
       stdio: 'pipe',
     })
@@ -104,6 +108,249 @@ async function runMonocrate(monorepoRoot: string, sourcePackage: string): Promis
 
   return { stdout, stderr, output }
 }
+
+describe('monorepo discovery', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+    tempDirs.length = 0
+  })
+
+  it('finds monorepo root with npm workspaces', () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*'] },
+      'packages/app/package.json': { name: '@test/app' },
+    })
+
+    const found = findMonorepoRoot(path.join(monorepoRoot, 'packages/app'))
+    expect(found).toBe(monorepoRoot)
+  })
+
+  it('finds monorepo root with pnpm workspaces', () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'pnpm-root' },
+      'pnpm-workspace.yaml': `packages:
+  - 'packages/*'
+`,
+      'packages/app/package.json': { name: '@test/app' },
+    })
+
+    const found = findMonorepoRoot(path.join(monorepoRoot, 'packages/app'))
+    expect(found).toBe(monorepoRoot)
+  })
+
+  it('throws when no monorepo root is found', () => {
+    const tempDir = createTempDir('no-monorepo-')
+    fs.mkdirSync(path.join(tempDir, 'some-package'))
+
+    expect(() => findMonorepoRoot(path.join(tempDir, 'some-package'))).toThrow('Could not find monorepo root')
+  })
+})
+
+describe('error handling', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+    tempDirs.length = 0
+  })
+
+  it('returns error when dist directory does not exist', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+      },
+      // No dist directory created
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toContain('dist directory not found')
+    }
+  })
+
+  it('returns error when package.json is invalid JSON syntax', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': 'invalid json {{{',
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('returns error when package.json fails schema validation', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      // Missing required 'name' field
+      'packages/app/package.json': { version: '1.0.0', main: 'dist/index.js' },
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toContain('Invalid package.json')
+    }
+  })
+
+  it('returns error when source package directory has no package.json', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      // No packages/app/package.json
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toContain('No package.json found')
+    }
+  })
+
+  it('works with workspace object format (packages field)', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: { packages: ['packages/*'] } },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: { '@test/lib': 'workspace:*' },
+      },
+      'packages/app/dist/index.js': `import { greet } from '@test/lib';
+console.log(greet());
+`,
+      'packages/lib/package.json': {
+        name: '@test/lib',
+        version: '1.0.0',
+        main: 'dist/index.js',
+      },
+      'packages/lib/dist/index.js': `export function greet() {
+  return 'Hello!';
+}
+`,
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+
+    expect(output['package.json']).toEqual({
+      name: '@test/app',
+      version: '1.0.0',
+      main: 'dist/index.js',
+    })
+
+    expect(stdout.trim()).toBe('Hello!')
+  })
+})
+
+describe('package.json transformation', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+    tempDirs.length = 0
+  })
+
+  it('preserves exports field in package.json', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        types: 'dist/index.d.ts',
+        exports: {
+          '.': {
+            types: './dist/index.d.ts',
+            import: './dist/index.js',
+          },
+        },
+      },
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+      'packages/app/dist/index.d.ts': `export declare const foo: string;
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+    const pkgJson = output['package.json'] as Record<string, unknown>
+
+    expect(pkgJson.exports).toEqual({
+      '.': {
+        types: './dist/index.d.ts',
+        import: './dist/index.js',
+      },
+    })
+  })
+
+  it('preserves metadata fields like description and keywords', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        description: 'Test package',
+        keywords: ['test', 'example'],
+        author: 'Test Author',
+        license: 'MIT',
+      },
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+    const pkgJson = output['package.json'] as Record<string, unknown>
+
+    expect(pkgJson.description).toBe('Test package')
+    expect(pkgJson.keywords).toEqual(['test', 'example'])
+    expect(pkgJson.author).toBe('Test Author')
+    expect(pkgJson.license).toBe('MIT')
+  })
+})
 
 describe('monocrate e2e', () => {
   afterEach(() => {
@@ -119,26 +366,32 @@ describe('monocrate e2e', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        main: 'dist/index.js',
+        types: 'dist/index.d.ts',
         dependencies: {
           '@test/lib': 'workspace:*',
           chalk: '^5.0.0',
         },
       },
-      'packages/app/src/index.ts': `
-import { greet } from '@test/lib';
+      'packages/app/dist/index.js': `import { greet } from '@test/lib';
 console.log(greet('World'));
+`,
+      'packages/app/dist/index.d.ts': `import { greet } from '@test/lib';
 `,
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        main: 'dist/index.js',
+        types: 'dist/index.d.ts',
         dependencies: {
           lodash: '^4.17.21',
         },
       },
-      'packages/lib/src/index.ts': `
-export function greet(name: string): string {
+      'packages/lib/dist/index.js': `export function greet(name) {
   return 'Hello, ' + name + '!';
 }
+`,
+      'packages/lib/dist/index.d.ts': `export declare function greet(name: string): string;
 `,
     })
 
@@ -147,7 +400,8 @@ export function greet(name: string): string {
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '1.0.0',
-      main: 'index.js',
+      main: 'dist/index.js',
+      types: 'dist/index.d.ts',
       dependencies: {
         chalk: '^5.0.0',
         lodash: '^4.17.21',
@@ -164,24 +418,24 @@ export function greet(name: string): string {
       'packages/app-alpha/package.json': {
         name: '@test/app-alpha',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           '@test/lib-alpha': 'workspace:*',
           chalk: '^5.0.0',
         },
       },
-      'packages/app-alpha/src/index.ts': `
-import { getAlpha } from '@test/lib-alpha';
+      'packages/app-alpha/dist/index.js': `import { getAlpha } from '@test/lib-alpha';
 console.log('Alpha: ' + getAlpha());
 `,
       'packages/lib-alpha/package.json': {
         name: '@test/lib-alpha',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           lodash: '^4.17.21',
         },
       },
-      'packages/lib-alpha/src/index.ts': `
-export function getAlpha(): string {
+      'packages/lib-alpha/dist/index.js': `export function getAlpha() {
   return 'ALPHA';
 }
 `,
@@ -189,24 +443,24 @@ export function getAlpha(): string {
       'packages/app-beta/package.json': {
         name: '@test/app-beta',
         version: '2.0.0',
+        main: 'dist/index.js',
         dependencies: {
           '@test/lib-beta': 'workspace:*',
           zod: '^3.0.0',
         },
       },
-      'packages/app-beta/src/index.ts': `
-import { getBeta } from '@test/lib-beta';
+      'packages/app-beta/dist/index.js': `import { getBeta } from '@test/lib-beta';
 console.log('Beta: ' + getBeta());
 `,
       'packages/lib-beta/package.json': {
         name: '@test/lib-beta',
         version: '2.0.0',
+        main: 'dist/index.js',
         dependencies: {
           uuid: '^9.0.0',
         },
       },
-      'packages/lib-beta/src/index.ts': `
-export function getBeta(): string {
+      'packages/lib-beta/dist/index.js': `export function getBeta() {
   return 'BETA';
 }
 `,
@@ -218,7 +472,7 @@ export function getBeta(): string {
     expect(alpha.output['package.json']).toEqual({
       name: '@test/app-alpha',
       version: '1.0.0',
-      main: 'index.js',
+      main: 'dist/index.js',
       dependencies: {
         chalk: '^5.0.0',
         lodash: '^4.17.21',
@@ -232,7 +486,7 @@ export function getBeta(): string {
     expect(beta.output['package.json']).toEqual({
       name: '@test/app-beta',
       version: '2.0.0',
-      main: 'index.js',
+      main: 'dist/index.js',
       dependencies: {
         zod: '^3.0.0',
         uuid: '^9.0.0',
@@ -247,66 +501,66 @@ export function getBeta(): string {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           '@test/level1': 'workspace:*',
           express: '^4.18.0',
         },
       },
-      'packages/app/src/index.ts': `
-import { fromLevel1 } from '@test/level1';
+      'packages/app/dist/index.js': `import { fromLevel1 } from '@test/level1';
 console.log(fromLevel1());
 `,
       'packages/level1/package.json': {
         name: '@test/level1',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           '@test/level2': 'workspace:*',
           lodash: '^4.17.21',
         },
       },
-      'packages/level1/src/index.ts': `
-import { fromLevel2 } from '@test/level2';
-export function fromLevel1(): string {
+      'packages/level1/dist/index.js': `import { fromLevel2 } from '@test/level2';
+export function fromLevel1() {
   return 'L1->' + fromLevel2();
 }
 `,
       'packages/level2/package.json': {
         name: '@test/level2',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           '@test/level3': 'workspace:*',
           chalk: '^5.0.0',
         },
       },
-      'packages/level2/src/index.ts': `
-import { fromLevel3 } from '@test/level3';
-export function fromLevel2(): string {
+      'packages/level2/dist/index.js': `import { fromLevel3 } from '@test/level3';
+export function fromLevel2() {
   return 'L2->' + fromLevel3();
 }
 `,
       'packages/level3/package.json': {
         name: '@test/level3',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           '@test/level4': 'workspace:*',
           zod: '^3.0.0',
         },
       },
-      'packages/level3/src/index.ts': `
-import { fromLevel4 } from '@test/level4';
-export function fromLevel3(): string {
+      'packages/level3/dist/index.js': `import { fromLevel4 } from '@test/level4';
+export function fromLevel3() {
   return 'L3->' + fromLevel4();
 }
 `,
       'packages/level4/package.json': {
         name: '@test/level4',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           uuid: '^9.0.0',
         },
       },
-      'packages/level4/src/index.ts': `
-export function fromLevel4(): string {
+      'packages/level4/dist/index.js': `export function fromLevel4() {
   return 'L4';
 }
 `,
@@ -317,7 +571,7 @@ export function fromLevel4(): string {
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '1.0.0',
-      main: 'index.js',
+      main: 'dist/index.js',
       dependencies: {
         express: '^4.18.0',
         lodash: '^4.17.21',
@@ -339,24 +593,24 @@ export function fromLevel4(): string {
       'packages/app/package.json': {
         name: '@test/pnpm-app',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           '@test/pnpm-lib': 'workspace:*',
           chalk: '^5.0.0',
         },
       },
-      'packages/app/src/index.ts': `
-import { pnpmGreet } from '@test/pnpm-lib';
+      'packages/app/dist/index.js': `import { pnpmGreet } from '@test/pnpm-lib';
 console.log(pnpmGreet());
 `,
       'packages/lib/package.json': {
         name: '@test/pnpm-lib',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           lodash: '^4.17.21',
         },
       },
-      'packages/lib/src/index.ts': `
-export function pnpmGreet(): string {
+      'packages/lib/dist/index.js': `export function pnpmGreet() {
   return 'pnpm works!';
 }
 `,
@@ -367,7 +621,7 @@ export function pnpmGreet(): string {
     expect(output['package.json']).toEqual({
       name: '@test/pnpm-app',
       version: '1.0.0',
-      main: 'index.js',
+      main: 'dist/index.js',
       dependencies: {
         chalk: '^5.0.0',
         lodash: '^4.17.21',
@@ -383,6 +637,7 @@ export function pnpmGreet(): string {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           '@test/lib': 'workspace:*',
           chalk: '^5.0.0',
@@ -392,13 +647,13 @@ export function pnpmGreet(): string {
           typescript: '^5.0.0',
         },
       },
-      'packages/app/src/index.ts': `
-import { greet } from '@test/lib';
+      'packages/app/dist/index.js': `import { greet } from '@test/lib';
 console.log(greet('World'));
 `,
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           lodash: '^4.17.21',
         },
@@ -406,8 +661,7 @@ console.log(greet('World'));
           '@types/lodash': '^4.14.0',
         },
       },
-      'packages/lib/src/index.ts': `
-export function greet(name: string): string {
+      'packages/lib/dist/index.js': `export function greet(name) {
   return 'Hello, ' + name + '!';
 }
 `,
@@ -418,7 +672,7 @@ export function greet(name: string): string {
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '1.0.0',
-      main: 'index.js',
+      main: 'dist/index.js',
       dependencies: {
         chalk: '^5.0.0',
         lodash: '^4.17.21',
@@ -429,12 +683,10 @@ export function greet(name: string): string {
   })
 
   it('preserves line numbers in stack traces', async () => {
-    // Line 1: empty (template literal starts with newline)
-    // Line 2: export function throwError(): void {
-    // Line 3:   throw new Error('intentional error');
-    // Line 4: }
-    const libSource = `
-export function throwError(): void {
+    // Line 1: export function throwError() {
+    // Line 2:   throw new Error('intentional error');
+    // Line 3: }
+    const libSource = `export function throwError() {
   throw new Error('intentional error');
 }
 `
@@ -443,26 +695,426 @@ export function throwError(): void {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        main: 'dist/index.js',
         dependencies: {
           '@test/lib': 'workspace:*',
         },
       },
-      'packages/app/src/index.ts': `
-import { throwError } from '@test/lib';
+      'packages/app/dist/index.js': `import { throwError } from '@test/lib';
 throwError();
 `,
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        main: 'dist/index.js',
       },
-      'packages/lib/src/index.ts': libSource,
+      'packages/lib/dist/index.js': libSource,
     })
 
     const { stderr } = await runMonocrate(monorepoRoot, 'packages/app')
 
-    // Verify the stack trace contains the error message and original source location
-    // The throw statement is on line 3 of the original lib source file
+    // Verify the stack trace contains the error message and the line number in the output
+    // The throw statement is on line 2 of the lib dist file
     expect(stderr).toContain('intentional error')
-    expect(stderr).toContain('lib/src/index.ts:3')
+    // The error occurs in the deps directory where the in-repo dep is placed
+    expect(stderr).toContain('index.js:2')
+  })
+
+  it('rewrites imports in both .js and .d.ts files', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/a/package.json': {
+        name: '@myorg/a',
+        main: 'dist/index.js',
+        types: 'dist/index.d.ts',
+        dependencies: { '@myorg/b': '*', lodash: '^4.0.0' },
+      },
+      'packages/a/dist/index.js': `import { foo } from '@myorg/b';
+export const bar = foo;
+`,
+      'packages/a/dist/index.d.ts': `import { foo } from '@myorg/b';
+export declare const bar: typeof foo;
+`,
+      'packages/b/package.json': {
+        name: '@myorg/b',
+        main: 'dist/index.js',
+        types: 'dist/index.d.ts',
+        dependencies: { lodash: '^4.0.0' },
+      },
+      'packages/b/dist/index.js': `export const foo = 'foo';
+`,
+      'packages/b/dist/index.d.ts': `export declare const foo: string;
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/a'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+
+    // Verify .js file has rewritten import
+    expect(output['dist/index.js']).toContain('../deps/packages/b/dist/index.js')
+    expect(output['dist/index.js']).not.toContain("'@myorg/b'")
+
+    // Verify .d.ts file has rewritten import
+    expect(output['dist/index.d.ts']).toContain('../deps/packages/b/dist/index.js')
+    expect(output['dist/index.d.ts']).not.toContain("'@myorg/b'")
+  })
+
+  it('rewrites export declarations', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/a/package.json': {
+        name: '@myorg/a',
+        main: 'dist/index.js',
+        dependencies: { '@myorg/b': '*' },
+      },
+      'packages/a/dist/index.js': `export { foo } from '@myorg/b';
+export * from '@myorg/b';
+`,
+      'packages/b/package.json': {
+        name: '@myorg/b',
+        main: 'dist/index.js',
+      },
+      'packages/b/dist/index.js': `export const foo = 'foo';
+export const bar = 'bar';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/a'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+
+    // Verify export declarations have rewritten module specifiers
+    const indexJs = output['dist/index.js'] as string
+    expect(indexJs).toContain('../deps/packages/b/dist/index.js')
+    expect(indexJs).not.toContain("'@myorg/b'")
+  })
+
+  it('leaves third-party imports unchanged', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/a/package.json': {
+        name: '@myorg/a',
+        main: 'dist/index.js',
+        dependencies: { '@myorg/b': '*', lodash: '^4.0.0' },
+      },
+      'packages/a/dist/index.js': `import { foo } from '@myorg/b';
+import _ from 'lodash';
+import * as path from 'node:path';
+export const bar = foo;
+`,
+      'packages/b/package.json': {
+        name: '@myorg/b',
+        main: 'dist/index.js',
+      },
+      'packages/b/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/a'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+    const indexJs = output['dist/index.js'] as string
+
+    // Third-party imports should be unchanged
+    expect(indexJs).toContain("from 'lodash'")
+    expect(indexJs).toContain("from 'node:path'")
+  })
+
+  it('rewrites imports in nested files at different depths', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/a/package.json': {
+        name: '@myorg/a',
+        main: 'dist/index.js',
+        dependencies: { '@myorg/b': '*' },
+      },
+      'packages/a/dist/index.js': `import { foo } from '@myorg/b';
+export { helper } from './utils/helper.js';
+export const bar = foo;
+`,
+      'packages/a/dist/utils/helper.js': `import { foo } from '@myorg/b';
+export const helper = foo + '-helper';
+`,
+      'packages/b/package.json': {
+        name: '@myorg/b',
+        main: 'dist/index.js',
+      },
+      'packages/b/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/a'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+
+    // Root level file should have '../deps/...'
+    expect(output['dist/index.js']).toContain('../deps/packages/b/dist/index.js')
+
+    // Nested file should have '../../deps/...'
+    expect(output['dist/utils/helper.js']).toContain('../../deps/packages/b/dist/index.js')
+  })
+
+  it('handles packages in different monorepo directories', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*', 'libs/*'] },
+      'packages/a/package.json': {
+        name: '@myorg/a',
+        main: 'dist/index.js',
+        dependencies: { '@myorg/b': '*', '@myorg/utils': '*' },
+      },
+      'packages/a/dist/index.js': `import { foo } from '@myorg/b';
+import { util } from '@myorg/utils';
+export const bar = foo + util;
+`,
+      'packages/b/package.json': {
+        name: '@myorg/b',
+        main: 'dist/index.js',
+      },
+      'packages/b/dist/index.js': `export const foo = 'foo';
+`,
+      'libs/utils/package.json': {
+        name: '@myorg/utils',
+        main: 'dist/index.js',
+      },
+      'libs/utils/dist/index.js': `export const util = 'util';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/a'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+    const indexJs = output['dist/index.js'] as string
+
+    // Both imports should be rewritten with correct paths
+    expect(indexJs).toContain('../deps/packages/b/dist/index.js')
+    expect(indexJs).toContain('../deps/libs/utils/dist/index.js')
+
+    // Verify the deps directory structure mirrors the monorepo
+    expect(output).toHaveProperty('deps/packages/b/dist/index.js')
+    expect(output).toHaveProperty('deps/libs/utils/dist/index.js')
+  })
+
+  it('verifies output directory structure matches spec', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*', 'libs/*'] },
+      'packages/a/package.json': {
+        name: '@myorg/a',
+        main: 'dist/index.js',
+        types: 'dist/index.d.ts',
+        dependencies: { '@myorg/b': '*' },
+      },
+      'packages/a/dist/index.js': `import { foo } from '@myorg/b';
+export const bar = foo;
+`,
+      'packages/a/dist/index.d.ts': `import { foo } from '@myorg/b';
+export declare const bar: typeof foo;
+`,
+      'packages/a/dist/utils/helper.js': `export const x = 1;
+`,
+      'packages/a/dist/utils/helper.d.ts': `export declare const x: number;
+`,
+      'packages/b/package.json': {
+        name: '@myorg/b',
+        main: 'dist/index.js',
+        types: 'dist/index.d.ts',
+      },
+      'packages/b/dist/index.js': `export const foo = 'foo';
+`,
+      'packages/b/dist/index.d.ts': `export declare const foo: string;
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/a'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+
+    // Verify root structure
+    expect(output).toHaveProperty('package.json')
+    expect(output).toHaveProperty('dist/index.js')
+    expect(output).toHaveProperty('dist/index.d.ts')
+    expect(output).toHaveProperty('dist/utils/helper.js')
+    expect(output).toHaveProperty('dist/utils/helper.d.ts')
+
+    // Verify deps structure
+    expect(output).toHaveProperty('deps/packages/b/dist/index.js')
+    expect(output).toHaveProperty('deps/packages/b/dist/index.d.ts')
+  })
+
+  it('handles source package importing itself by name', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/a/package.json': {
+        name: '@myorg/a',
+        main: 'dist/index.js',
+        dependencies: {},
+      },
+      'packages/a/dist/index.js': `import { helper } from '@myorg/a/utils/helper';
+export const result = helper;
+`,
+      'packages/a/dist/utils/helper.js': `export const helper = 'helper';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/a'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+    const indexJs = output['dist/index.js'] as string
+
+    // Self-import should be rewritten to relative path
+    expect(indexJs).toContain('./utils/helper')
+    expect(indexJs).not.toContain("'@myorg/a/utils/helper'")
+  })
+
+  it('handles subpath imports like @myorg/b/submodule', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/a/package.json': {
+        name: '@myorg/a',
+        main: 'dist/index.js',
+        dependencies: { '@myorg/b': '*' },
+      },
+      'packages/a/dist/index.js': `import { helper } from '@myorg/b/utils/helper';
+export const result = helper;
+`,
+      'packages/b/package.json': {
+        name: '@myorg/b',
+        main: 'dist/index.js',
+      },
+      'packages/b/dist/index.js': `export const foo = 'foo';
+`,
+      'packages/b/dist/utils/helper.js': `export const helper = 'helper';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/a'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+    const indexJs = output['dist/index.js'] as string
+
+    // Subpath import should be rewritten with preserved subpath
+    expect(indexJs).toContain('../deps/packages/b/dist/utils/helper')
+    expect(indexJs).not.toContain("'@myorg/b/utils/helper'")
+  })
+
+  it('handles dynamic imports', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/a/package.json': {
+        name: '@myorg/a',
+        main: 'dist/index.js',
+        dependencies: { '@myorg/b': '*' },
+      },
+      'packages/a/dist/index.js': `const b = await import('@myorg/b');
+export const foo = b.foo;
+`,
+      'packages/b/package.json': {
+        name: '@myorg/b',
+        main: 'dist/index.js',
+      },
+      'packages/b/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/a'),
+      outputDir,
+      monorepoRoot,
+    })
+    expect(result.success).toBe(true)
+
+    const output = unfolderify(outputDir)
+    const indexJs = output['dist/index.js'] as string
+
+    // Dynamic import should be rewritten
+    expect(indexJs).toContain('../deps/packages/b/dist/index.js')
+    expect(indexJs).not.toContain("import('@myorg/b')")
+  })
+
+  it('handles cross-dependency imports between in-repo deps', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@myorg/app',
+        main: 'dist/index.js',
+        dependencies: { '@myorg/lib-a': '*' },
+      },
+      'packages/app/dist/index.js': `import { a } from '@myorg/lib-a';
+console.log(a);
+`,
+      'packages/lib-a/package.json': {
+        name: '@myorg/lib-a',
+        main: 'dist/index.js',
+        dependencies: { '@myorg/lib-b': '*' },
+      },
+      'packages/lib-a/dist/index.js': `import { b } from '@myorg/lib-b';
+export const a = 'a-' + b;
+`,
+      'packages/lib-b/package.json': {
+        name: '@myorg/lib-b',
+        main: 'dist/index.js',
+      },
+      'packages/lib-b/dist/index.js': `export const b = 'b';
+`,
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+
+    // Verify the deps files also have their imports rewritten
+    const libAIndex = output['deps/packages/lib-a/dist/index.js'] as string
+    expect(libAIndex).toContain('../lib-b/dist/index.js')
+    expect(libAIndex).not.toContain("'@myorg/lib-b'")
+
+    // Verify execution works
+    expect(stdout.trim()).toBe('a-b')
   })
 })

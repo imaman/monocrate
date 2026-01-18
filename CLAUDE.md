@@ -81,4 +81,8 @@ Strict mode with additional checks: `noUncheckedIndexedAccess`, `exactOptionalPr
 
 **flatMap for conditional mapping**: `.flatMap(x => x ? [x] : [])` filters falsy values while preserving type narrowing (unlike `.filter(Boolean)`).
 
+**Prefer undefined over null**: Always use `undefined` to represent absence of a value. Only use `null` when required by an external library or API.
+
+**Naming conventions**: Function and method names should be verbs (e.g., `buildGraph`, `resolvePackage`). Class, type, and interface names should be nouns (e.g., `DependencyGraph`, `PackageInfo`).
+
 
