@@ -1,7 +1,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { glob } from 'glob'
-import { PackageJsonSchema, type PackageJson, type MonorepoPackage } from './types.js'
+import type { MonorepoPackage } from './types.js'
+import { PackageJson } from './package-json.js'
 
 export function findMonorepoRoot(startDir: string): string {
   let dir = path.resolve(startDir)
@@ -9,7 +10,7 @@ export function findMonorepoRoot(startDir: string): string {
   while (dir !== path.dirname(dir)) {
     const packageJsonPath = path.join(dir, 'package.json')
     if (fs.existsSync(packageJsonPath)) {
-      const parsed = PackageJsonSchema.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
+      const parsed = PackageJson.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
       if (parsed.success && parsed.data.workspaces !== undefined) {
         return dir
       }
@@ -32,7 +33,7 @@ export function readPackageJson(packageDir: string): PackageJson {
     throw new Error(`No package.json found at ${packageDir}`)
   }
   const content: unknown = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
-  const parsed = PackageJsonSchema.safeParse(content)
+  const parsed = PackageJson.safeParse(content)
   if (!parsed.success) {
     throw new Error(`Invalid package.json at ${packageDir}: ${parsed.error.message}`)
   }
@@ -42,7 +43,7 @@ export function readPackageJson(packageDir: string): PackageJson {
 function parseWorkspacePatterns(monorepoRoot: string): string[] {
   const packageJsonPath = path.join(monorepoRoot, 'package.json')
   if (fs.existsSync(packageJsonPath)) {
-    const parsed = PackageJsonSchema.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
+    const parsed = PackageJson.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
     if (parsed.success) {
       const workspaces = parsed.data.workspaces
       if (Array.isArray(workspaces)) {

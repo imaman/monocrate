@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import type { DependencyGraph, PackageJson } from './types.js'
+import type { DependencyGraph } from './types.js'
+import type { PackageJson } from './package-json.js'
 
 export function transformPackageJson(graph: DependencyGraph): PackageJson {
   const source = graph.packageToBundle.packageJson
