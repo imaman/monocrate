@@ -7,7 +7,7 @@ export const PackageJson = z
     main: z.string().optional(),
     source: z.string().optional(),
     types: z.string().optional(),
-    dependencies: z.record(z.string()).optional(),
+    dependencies: z.record(z.string(), z.string().optional()).optional(),
     devDependencies: z.record(z.string()).optional(),
     peerDependencies: z.record(z.string()).optional(),
     description: z.string().optional(),

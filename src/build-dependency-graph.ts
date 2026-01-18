@@ -1,15 +1,10 @@
 import type { MonorepoPackage } from './monorepo.js'
 import { discoverMonorepoPackages } from './monorepo.js'
-import type { PackageJson } from './package-json.js'
 
 export interface DependencyGraph {
   packageToBundle: MonorepoPackage
   inRepoDeps: MonorepoPackage[]
-  allThirdPartyDeps: Record<string, string>
-}
-
-function getDependencies(packageJson: PackageJson): Record<string, string> {
-  return packageJson.dependencies ?? {}
+  allThirdPartyDeps: Partial<Record<string, string>>
 }
 
 export async function buildDependencyGraph(sourceDir: string, monorepoRoot: string): Promise<DependencyGraph> {
@@ -29,7 +24,7 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     }
     visited.add(pkg.name)
 
-    const deps = getDependencies(pkg.packageJson)
+    const deps = pkg.packageJson.dependencies ?? {}
 
     for (const [depName, depVersion] of Object.entries(deps)) {
       const depPackage = allPackages.get(depName)
