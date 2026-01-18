@@ -758,6 +758,7 @@ export declare const bar: typeof foo;
 
     const output = unfolderify(outputDir)
 
+    console.error(JSON.stringify(output, null, 2))
     // Verify .js file has rewritten import
     expect(output['dist/index.js']).toContain('../deps/packages/b/dist/index.js')
     expect(output['dist/index.js']).not.toContain("'@myorg/b'")

@@ -49,7 +49,7 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
 
   return {
     packageToBundle,
-    inRepoDeps,
+    inRepoDeps: [...visited.values()].filter((at) => at !== packageToBundle),
     allThirdPartyDeps,
   }
 }
