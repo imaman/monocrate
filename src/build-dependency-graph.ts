@@ -1,10 +1,15 @@
 import type { MonorepoPackage } from './monorepo.js'
 import { discoverMonorepoPackages } from './monorepo.js'
+import type { PackageJson } from './package-json.js'
 
 export interface DependencyGraph {
   packageToBundle: MonorepoPackage
   inRepoDeps: MonorepoPackage[]
-  allThirdPartyDeps: Partial<Record<string, string>>
+  allThirdPartyDeps: Record<string, string>
+}
+
+function getDependencies(packageJson: PackageJson): Record<string, string> {
+  return packageJson.dependencies ?? {}
 }
 
 export async function buildDependencyGraph(sourceDir: string, monorepoRoot: string): Promise<DependencyGraph> {
@@ -14,21 +19,30 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     throw new Error(`Could not find a monorepo package at ${sourceDir}`)
   }
 
-  const allThirdPartyDeps: Partial<Record<string, string>> = {}
-  const visited = new Map<string, MonorepoPackage>()
+  const inRepoDeps: MonorepoPackage[] = []
+  const allThirdPartyDeps: Record<string, string> = {}
+  const visited = new Set<string>()
 
   function collectDeps(pkg: MonorepoPackage): void {
     if (visited.has(pkg.name)) {
       return
     }
-    visited.set(pkg.name, pkg)
+    visited.add(pkg.name)
 
-    for (const [depName, depVersion] of Object.entries(pkg.packageJson.dependencies ?? {})) {
+    const deps = getDependencies(pkg.packageJson)
+
+    for (const [depName, depVersion] of Object.entries(deps)) {
       const depPackage = allPackages.get(depName)
       if (depPackage) {
-        collectDeps(depPackage)
+        // Is an in-repo dep
+        if (!visited.has(depName)) {
+          inRepoDeps.push(depPackage)
+          collectDeps(depPackage)
+        }
       } else {
-        allThirdPartyDeps[depName] = depVersion
+        if (!(depName in allThirdPartyDeps)) {
+          allThirdPartyDeps[depName] = depVersion
+        }
       }
     }
   }
@@ -37,7 +51,7 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
 
   return {
     packageToBundle,
-    inRepoDeps: [...visited.values()],
+    inRepoDeps,
     allThirdPartyDeps,
   }
 }
