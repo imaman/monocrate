@@ -76,12 +76,10 @@ export class ImportRewriter {
     }
 
     const subpath = specifier.slice(packageName.length + 1)
-    if (subpath === '') {
-      // Empty subpath means bare package import (e.g., '@myorg/utils' -> 'deps/packages/utils/dist/index.js')
-      return this.computeRelativePath(fromFile, location.outputEntryPoint)
-    }
-    // Non-empty subpath means subpath import (e.g., '@myorg/utils/foo' -> 'deps/packages/utils/dist/foo')
-    return this.computeRelativePath(fromFile, location.resolveSubpath(subpath))
+    // Empty subpath means bare package import (e.g., '@myorg/utils' -> 'dist/index.js')
+    // Non-empty subpath means subpath import (e.g., '@myorg/utils/foo' -> 'dist/foo')
+    const pathAtImportee = subpath === '' ? location.outputEntryPoint : location.resolveSubpath(subpath)
+    return this.computeRelativePath(fromFile, pathAtImportee)
   }
 
   private extractPackageName(specifier: string): string {
