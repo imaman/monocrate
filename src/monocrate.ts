@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import { findMonorepoRoot } from './monorepo.js'
 import { buildDependencyGraph } from './dependency-graph.js'
 import { bundle } from './bundle.js'
-import { transformPackageJson, writePackageJson } from './package-transformer.js'
+import { transformPackageJson, writePackageJson } from './transform-package-json.js'
 import type { BundleOptions, BundleResult } from './types.js'
 
 export async function monocrate(options: BundleOptions): Promise<BundleResult> {
