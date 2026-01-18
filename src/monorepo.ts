@@ -32,7 +32,7 @@ export function findMonorepoRoot(startDir: string): string {
   throw new Error(`Could not find monorepo root from ${startDir}`)
 }
 
-export function readPackageJson(packageDir: string): PackageJson {
+function readPackageJson(packageDir: string): PackageJson {
   const packageJsonPath = path.join(packageDir, 'package.json')
   if (!fs.existsSync(packageJsonPath)) {
     throw new Error(`No package.json found at ${packageDir}`)
