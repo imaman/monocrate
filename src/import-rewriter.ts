@@ -69,28 +69,27 @@ export class ImportRewriter {
   }
 
   private computeNewSpecifier(pathToImporter: string, importSpecifier: string) {
-    const packageName = this.extractPackageName(importSpecifier)
-    const location = this.packageMap.get(packageName)
-    if (!location) {
+    const { packageName, subPath } = this.extractPackageName(importSpecifier)
+    const importeeLocation = this.packageMap.get(packageName)
+    if (!importeeLocation) {
       return undefined
     }
 
-    const subpath = importSpecifier.slice(packageName.length + 1)
     // Empty subpath means bare package import (e.g., '@myorg/utils' -> 'dist/index.js')
     // Non-empty subpath means subpath import (e.g., '@myorg/utils/foo' -> 'dist/foo')
-    const pathAtImportee = subpath === '' ? location.outputEntryPoint : location.resolveSubpath(subpath)
+    const pathAtImportee = subPath === '' ? importeeLocation.outputEntryPoint : importeeLocation.resolveSubpath(subPath)
     return this.computeRelativePath(pathToImporter, pathAtImportee)
   }
 
-  private extractPackageName(specifier: string): string {
+  private extractPackageName(specifier: string) {
     const parts = specifier.split('/')
-    const prefixLength = specifier.startsWith('@') ? 2 : 1
-    return parts.slice(0, prefixLength).join('/')
+    const cutoff = specifier.startsWith('@') ? 2 : 1
+    return { packageName: parts.slice(0, cutoff).join('/'), subPath: parts.slice(cutoff).join('/') }
   }
 
-  private computeRelativePath(pathToImporter: string, pathToImportee: string): string {
-    const absoluteTargetPath = path.join(this.outputDir, pathToImportee)
-    let relative = path.relative(path.dirname(pathToImporter), absoluteTargetPath)
+  private computeRelativePath(importerPath: string, importeePath: string): string {
+    const absoluteImporteePath = path.join(this.outputDir, importeePath)
+    let relative = path.relative(path.dirname(importerPath), absoluteImporteePath)
     if (!relative.startsWith('.')) {
       relative = './' + relative
     }
