@@ -14,7 +14,6 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     throw new Error(`Could not find a monorepo package at ${sourceDir}`)
   }
 
-  const inRepoDeps: MonorepoPackage[] = []
   const allThirdPartyDeps: Record<string, string> = {}
   const visited = new Map<string, MonorepoPackage>()
 
@@ -34,7 +33,6 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
       if (depPackage) {
         // Is an in-repo dep
         if (!visited.has(depName)) {
-          inRepoDeps.push(depPackage)
           collectDeps(depPackage)
         }
       } else {
