@@ -21,6 +21,8 @@ export class ImportRewriter {
 
     let modified = false
 
+    // Rewrite static import declarations:
+    //   import { foo } from '@myorg/utils'  ->  import { foo } from './deps/packages/utils/dist/index.js'
     for (const decl of sourceFile.getImportDeclarations()) {
       const specifier = decl.getModuleSpecifierValue()
       const newSpecifier = this.rewriteSpecifier(specifier, filePath)
@@ -30,6 +32,8 @@ export class ImportRewriter {
       }
     }
 
+    // Rewrite re-export declarations:
+    //   export { bar } from '@myorg/utils'  ->  export { bar } from './deps/packages/utils/dist/index.js'
     for (const decl of sourceFile.getExportDeclarations()) {
       const specifier = decl.getModuleSpecifierValue()
       if (specifier) {
@@ -41,6 +45,8 @@ export class ImportRewriter {
       }
     }
 
+    // Rewrite dynamic import() calls:
+    //   const mod = await import('@myorg/utils')  ->  const mod = await import('./deps/packages/utils/dist/index.js')
     for (const callExpr of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
       const expr = callExpr.getExpression()
       if (expr.getKind() === SyntaxKind.ImportKeyword) {

@@ -5,14 +5,7 @@ import { ImportRewriter } from './import-rewriter.js'
 import type { DependencyGraph } from './types.js'
 
 export async function copyBundle(graph: DependencyGraph, monorepoRoot: string, outputDir: string): Promise<void> {
-  const { packageMap, errors } = buildPackageMap(graph, monorepoRoot)
-
-  if (errors.length > 0) {
-    const firstError = errors[0]
-    if (firstError) {
-      throw new Error(firstError.message)
-    }
-  }
+  const packageMap = buildPackageMap(graph, monorepoRoot)
 
   await fsPromises.mkdir(outputDir, { recursive: true })
 

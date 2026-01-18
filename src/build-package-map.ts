@@ -41,29 +41,16 @@ function createPackageLocation(input: PackageLocationInput): PackageLocation {
   }
 }
 
-interface ValidationError {
-  packageName: string
-  message: string
-}
-
-function validatePackageLocation(location: PackageLocation): ValidationError | null {
+function validatePackageLocation(location: PackageLocation): void {
   if (!fs.existsSync(location.sourceDistDir)) {
-    return {
-      packageName: location.name,
-      message: `dist directory not found at ${location.sourceDistDir}. Did you run the build for ${location.name}?`,
-    }
+    throw new Error(
+      `dist directory not found at ${location.sourceDistDir}. Did you run the build for ${location.name}?`
+    )
   }
-  return null
 }
 
-export interface BuildPackageMapResult {
-  packageMap: PackageMap
-  errors: ValidationError[]
-}
-
-export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): BuildPackageMapResult {
+export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): PackageMap {
   const packageMap: PackageMap = new Map()
-  const errors: ValidationError[] = []
 
   const mainLocation = createPackageLocation({
     pkg: graph.packageToBundle,
@@ -71,11 +58,7 @@ export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): B
     isPackageToBundle: true,
   })
   packageMap.set(graph.packageToBundle.name, mainLocation)
-
-  const mainError = validatePackageLocation(mainLocation)
-  if (mainError) {
-    errors.push(mainError)
-  }
+  validatePackageLocation(mainLocation)
 
   for (const dep of graph.inRepoDeps) {
     const depLocation = createPackageLocation({
@@ -84,12 +67,8 @@ export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): B
       isPackageToBundle: false,
     })
     packageMap.set(dep.name, depLocation)
-
-    const depError = validatePackageLocation(depLocation)
-    if (depError) {
-      errors.push(depError)
-    }
+    validatePackageLocation(depLocation)
   }
 
-  return { packageMap, errors }
+  return packageMap
 }
