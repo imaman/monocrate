@@ -27,6 +27,9 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     const deps = pkg.packageJson.dependencies ?? {}
 
     for (const [depName, depVersion] of Object.entries(deps)) {
+      if (!depVersion) {
+        throw new Error(`no version for dep ${depName} in ${pkg.name}`)
+      }
       const depPackage = allPackages.get(depName)
       if (depPackage) {
         // Is an in-repo dep
