@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process'
 import { defineCommand, runMain } from 'citty'
 import { monocrate } from './monocrate.js'
 
@@ -24,8 +23,8 @@ const command = defineCommand({
       alias: 'r',
     },
     publish: {
-      type: 'boolean',
-      description: 'Run npm publish from the output directory after bundling',
+      type: 'string',
+      description: 'Version bump and publish: x.y.z | patch | minor | major',
       alias: 'p',
     },
   },
@@ -35,21 +34,12 @@ const command = defineCommand({
       sourceDir: args.source,
       ...(outputDir ? { outputDir } : {}),
       monorepoRoot: args.root,
+      publish: args.publish,
     })
 
     if (!result.success) {
       console.error(`Error: ${result.error}`)
       process.exit(1)
-    }
-
-    if (args.publish) {
-      const npmResult = spawnSync('npm', ['publish'], {
-        cwd: result.outputDir,
-        stdio: 'inherit',
-      })
-      if (npmResult.status !== 0) {
-        process.exit(npmResult.status ?? 1)
-      }
     }
 
     if (outputDir) {
