@@ -14,28 +14,31 @@ const command = defineCommand({
     },
     output: {
       type: 'positional',
-      description: 'Output directory',
-      required: true,
+      description: 'Output directory (creates a dedicated temp directory if not specified)',
+      required: false,
     },
     root: {
       type: 'string',
       description: 'Monorepo root directory (auto-detected if not specified)',
       alias: 'r',
     },
+    publish: {
+      type: 'string',
+      description: 'Publish to npm with version: x.y.z (explicit) or patch|minor|major (increment)',
+      alias: 'p',
+    },
   },
   async run({ args }) {
-    const result = await monocrate({
-      sourceDir: args.source,
-      outputDir: args.output,
+    const outputDir = args.output || undefined
+    const actualOutputDir = await monocrate({
+      pathToPackageToBundle: args.source,
+      ...(outputDir ? { outputDir } : {}),
       monorepoRoot: args.root,
+      publishToVersion: args.publish,
+      cwd: process.cwd(),
     })
 
-    if (result.success) {
-      console.log(`Bundle created at: ${result.outputDir}`)
-    } else {
-      console.error(`Error: ${result.error}`)
-      process.exit(1)
-    }
+    console.log(actualOutputDir)
   },
 })
 

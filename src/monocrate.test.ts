@@ -85,15 +85,12 @@ async function runMonocrate(
 ): Promise<RunMonocrateResult> {
   const outputDir = createTempDir('monocrate-output-')
 
-  const result = await monocrate({
-    sourceDir: path.join(monorepoRoot, sourcePackage),
+  await monocrate({
+    cwd: monorepoRoot,
+    pathToPackageToBundle: path.join(monorepoRoot, sourcePackage),
     outputDir,
     monorepoRoot,
   })
-
-  if (!result.success) {
-    throw new Error(`monocrate failed: ${result.error}`)
-  }
 
   let stdout = ''
   let stderr = ''
@@ -109,6 +106,72 @@ async function runMonocrate(
 
   return { stdout, stderr, output }
 }
+
+describe('optional output directory', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+    tempDirs.length = 0
+  })
+
+  it('creates a temp directory when outputDir is not provided', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+      },
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+      monorepoRoot,
+    })
+
+    // Verify a temp directory was created
+    expect(outputDir).toContain('monocrate-')
+    expect(fs.existsSync(outputDir)).toBe(true)
+
+    // Verify the bundle was created there
+    const output = unfolderify(outputDir)
+    expect(output['package.json']).toEqual({
+      name: '@test/app',
+      version: '1.0.0',
+      main: 'dist/index.js',
+    })
+
+    // Clean up the temp directory
+    tempDirs.push(outputDir)
+  })
+
+  it('uses provided outputDir when specified', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+      },
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-explicit-output-')
+    const result = await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    expect(result).toBe(outputDir)
+  })
+})
 
 describe('monorepo discovery', () => {
   afterEach(() => {
@@ -157,7 +220,7 @@ describe('error handling', () => {
     tempDirs.length = 0
   })
 
-  it('returns error when dist directory does not exist', async () => {
+  it('throws when dist directory does not exist', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': {
@@ -169,35 +232,34 @@ describe('error handling', () => {
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-    })
-
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error).toContain('dist directory not found')
-    }
+    await expect(
+      monocrate({
+        cwd: monorepoRoot,
+        pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+        outputDir,
+        monorepoRoot,
+      })
+    ).rejects.toThrow('dist directory not found')
   })
 
-  it('returns error when package.json is invalid JSON syntax', async () => {
+  it('throws when package.json is invalid JSON syntax', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': 'invalid json {{{',
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-    })
-
-    expect(result.success).toBe(false)
+    await expect(
+      monocrate({
+        cwd: monorepoRoot,
+        pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+        outputDir,
+        monorepoRoot,
+      })
+    ).rejects.toThrow('Unexpected token')
   })
 
-  it('returns error when package.json fails schema validation', async () => {
+  it('throws when package.json fails schema validation', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       // Missing required 'name' field
@@ -205,35 +267,31 @@ describe('error handling', () => {
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-    })
-
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error).toContain('Invalid package.json')
-    }
+    await expect(
+      monocrate({
+        cwd: monorepoRoot,
+        pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+        outputDir,
+        monorepoRoot,
+      })
+    ).rejects.toThrow('Invalid package.json')
   })
 
-  it('returns error when source package directory has no package.json', async () => {
+  it('throws when source package directory has no package.json', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       // No packages/app/package.json
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-    })
-
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error).toContain(`Could not find a monorepo package at ${monorepoRoot}/packages/app`)
-    }
+    await expect(
+      monocrate({
+        cwd: monorepoRoot,
+        pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+        outputDir,
+        monorepoRoot,
+      })
+    ).rejects.toThrow(`Could not find a monorepo package at ${monorepoRoot}/packages/app`)
   })
 
   it('works with workspace object format (packages field)', async () => {
@@ -301,12 +359,12 @@ describe('package.json transformation', () => {
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/app'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
     const pkgJson = output['package.json'] as Record<string, unknown>
@@ -336,12 +394,12 @@ describe('package.json transformation', () => {
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/app'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
     const pkgJson = output['package.json'] as Record<string, unknown>
@@ -749,12 +807,12 @@ export declare const bar: typeof foo;
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/a'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
 
@@ -789,12 +847,12 @@ export const bar = 'bar';
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/a'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
 
@@ -826,12 +884,12 @@ export const bar = foo;
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/a'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
     const indexJs = output['dist/index.js'] as string
@@ -865,12 +923,12 @@ export const helper = foo + '-helper';
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/a'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
 
@@ -908,12 +966,12 @@ export const bar = foo + util;
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/a'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
     const indexJs = output['dist/index.js'] as string
@@ -958,12 +1016,12 @@ export declare const bar: typeof foo;
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/a'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
 
@@ -995,12 +1053,12 @@ export const result = helper;
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/a'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
     const indexJs = output['dist/index.js'] as string
@@ -1032,12 +1090,12 @@ export const result = helper;
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/a'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
     const indexJs = output['dist/index.js'] as string
@@ -1067,12 +1125,12 @@ export const foo = b.foo;
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    const result = await monocrate({
-      sourceDir: path.join(monorepoRoot, 'packages/a'),
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
-    expect(result.success).toBe(true)
 
     const output = unfolderify(outputDir)
     const indexJs = output['dist/index.js'] as string
