@@ -89,6 +89,8 @@ Strict mode with additional checks: `noUncheckedIndexedAccess`, `exactOptionalPr
 
 **Early exits over nesting**: Prefer early returns to avoid extra nesting levels. Check for error conditions or edge cases at the top and return/throw immediately, keeping the main logic at the lowest indentation level.
 
-**Side-effecting functions throw on failure**: A side-effecting function should fail by throwing, not by returning an error value (e.g., `{success: false, error: ...}`). Callers of side-effecting functions typically just want the side effect and won't inspect the return value. 
+**Side-effecting functions throw on failure**: A side-effecting function should fail by throwing, not by returning an error value (e.g., `{success: false, error: ...}`). Callers of side-effecting functions typically just want the side effect and won't inspect the return value.
+
+**Always specify expected error messages in toThrow()**: Never use bare `toThrow()` without an argument. Always pass an expected error message (e.g., `toThrow("dependency not found")`). This verifies the test actually triggered the intended error path, not some unrelated failure. A partial string is acceptable as long as it's specific enough to confirm the correct sad-path was executed.
 
 
