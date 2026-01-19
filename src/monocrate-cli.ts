@@ -29,8 +29,8 @@ const command = defineCommand({
     },
   },
   async run({ args }) {
-    const outputDir: string | undefined = args.output || undefined
-    const result = await monocrate({
+    const outputDir = args.output || undefined
+    const actualOutputDir = await monocrate({
       pathToPackageToBundle: args.source,
       ...(outputDir ? { outputDir } : {}),
       monorepoRoot: args.root,
@@ -38,7 +38,7 @@ const command = defineCommand({
       cwd: process.cwd(),
     })
 
-    console.log(`Output directory: ${result}`)
+    console.log(actualOutputDir)
   },
 })
 
