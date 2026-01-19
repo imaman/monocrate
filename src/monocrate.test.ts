@@ -251,7 +251,7 @@ describe('error handling', () => {
         outputDir,
         monorepoRoot,
       })
-    ).rejects.toThrow()
+    ).rejects.toThrow('Unexpected token')
   })
 
   it('throws when package.json fails schema validation', async () => {

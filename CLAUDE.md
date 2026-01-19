@@ -87,7 +87,7 @@ Strict mode with additional checks: `noUncheckedIndexedAccess`, `exactOptionalPr
 
 **Partial Record over Record**: Use `Partial<Record<string, T>>` instead of `Record<string, T>` for dictionary-like objects. This mekes it explicit that properties may be undefined, preventing bugs from assuming all keys exist.
 
-**Early exits over nesting**: Prefer early returns to avoid extra nesting levels. Check for error conditions or edge cases at the top and return/throw immediately, keeping the main logic at the lowest indentation level.
+**Early exits over nesting**: Prefer early returns to avoid extra nesting levels. Check for error conditions or edge cases as early as possible and return/throw immediately, keeping the main logic at the lowest indentation level.
 
 **Side-effecting functions throw on failure**: A side-effecting function should fail by throwing, not by returning an error value (e.g., `{success: false, error: ...}`). Callers of side-effecting functions typically just want the side effect and won't inspect the return value.
 

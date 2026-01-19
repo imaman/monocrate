@@ -67,7 +67,11 @@ function getCurrentPublishedVersion(packageName: string): string {
  * @throws Error if bundling or publishing fails
  */
 export async function monocrate(options: MonocrateOptions): Promise<string> {
-  // Validate publish argument first, before any side effects
+  // Resolve paths immediately to prevent mixing relative/absolute paths
+  const sourceDir = path.resolve(options.pathToPackageToBundle)
+  const monorepoRoot = options.monorepoRoot ? path.resolve(options.monorepoRoot) : findMonorepoRoot(sourceDir)
+
+  // Validate publish argument before any side effects
   let publishArg: PublishArg | undefined
   if (options.publishToVersion !== undefined) {
     const parseResult = PublishArg.safeParse(options.publishToVersion)
@@ -77,11 +81,9 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     publishArg = parseResult.data
   }
 
-  const sourceDir = path.resolve(options.pathToPackageToBundle)
   const outputDir = options.outputDir
     ? path.resolve(options.outputDir)
     : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
-  const monorepoRoot = options.monorepoRoot ? path.resolve(options.monorepoRoot) : findMonorepoRoot(sourceDir)
 
   const graph = await buildDependencyGraph(sourceDir, monorepoRoot)
 
@@ -103,6 +105,7 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     const currentVersion = getCurrentPublishedVersion(packageName)
     await writePackageJson({ ...packageJson, version: currentVersion }, outputDir)
 
+    // --no-git-tag-version: bump version in package.json only, without creating a git tag (we're in a temp directory, not a git repo)
     const npmVersionResult = spawnSync('npm', ['version', publishArg, '--no-git-tag-version'], {
       cwd: outputDir,
       stdio: 'inherit',
