@@ -110,6 +110,76 @@ async function runMonocrate(
   return { stdout, stderr, output }
 }
 
+describe('optional output directory', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+    tempDirs.length = 0
+  })
+
+  it('creates a temp directory when outputDir is not provided', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+      },
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/app'),
+      monorepoRoot,
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      // Verify a temp directory was created
+      expect(result.outputDir).toContain('monocrate-')
+      expect(fs.existsSync(result.outputDir)).toBe(true)
+
+      // Verify the bundle was created there
+      const output = unfolderify(result.outputDir)
+      expect(output['package.json']).toEqual({
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+      })
+
+      // Clean up the temp directory
+      tempDirs.push(result.outputDir)
+    }
+  })
+
+  it('uses provided outputDir when specified', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+      },
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-explicit-output-')
+    const result = await monocrate({
+      sourceDir: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.outputDir).toBe(outputDir)
+    }
+  })
+})
+
 describe('monorepo discovery', () => {
   afterEach(() => {
     for (const dir of tempDirs) {

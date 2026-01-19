@@ -1,3 +1,5 @@
+import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import { findMonorepoRoot } from './monorepo.js'
 import { buildDependencyGraph } from './build-dependency-graph.js'
@@ -6,8 +8,8 @@ import { transformPackageJson, writePackageJson } from './transform-package-json
 
 export interface MonocrateOptions {
   sourceDir: string
-  outputDir: string
-  monorepoRoot: string
+  outputDir?: string
+  monorepoRoot?: string
 }
 
 export type MonocrateResult = { success: true; outputDir: string } | { success: false; error: string }
@@ -15,7 +17,9 @@ export type MonocrateResult = { success: true; outputDir: string } | { success: 
 export async function monocrate(options: MonocrateOptions): Promise<MonocrateResult> {
   try {
     const sourceDir = path.resolve(options.sourceDir)
-    const outputDir = path.resolve(options.outputDir)
+    const outputDir = options.outputDir
+      ? path.resolve(options.outputDir)
+      : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
     const monorepoRoot = options.monorepoRoot ? path.resolve(options.monorepoRoot) : findMonorepoRoot(sourceDir)
 
     const graph = await buildDependencyGraph(sourceDir, monorepoRoot)
