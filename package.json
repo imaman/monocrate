@@ -28,7 +28,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "publish-to-npm": "./scripts/publish-to-npm.sh"
   },
   "keywords": [
     "monorepo",
