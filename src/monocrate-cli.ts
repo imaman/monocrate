@@ -14,7 +14,7 @@ const command = defineCommand({
     },
     output: {
       type: 'positional',
-      description: 'Output directory (uses temp directory if not specified)',
+      description: 'Output directory (creates a dedicated temp directory if not specified)',
       required: false,
     },
     root: {
@@ -37,16 +37,7 @@ const command = defineCommand({
       publish: args.publish,
     })
 
-    if (!result.success) {
-      console.error(`Error: ${result.error}`)
-      process.exit(1)
-    }
-
-    if (outputDir) {
-      console.log(`Bundle created at: ${result.outputDir}`)
-    } else {
-      console.log(result.outputDir)
-    }
+    console.log(`Bundle created at: ${result}`)
   },
 })
 
