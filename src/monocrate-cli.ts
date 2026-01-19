@@ -35,6 +35,7 @@ const command = defineCommand({
       ...(outputDir ? { outputDir } : {}),
       monorepoRoot: args.root,
       publishToVersion: args.publish,
+      cwd: process.cwd(),
     })
 
     console.log(`Output directory: ${result}`)

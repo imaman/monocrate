@@ -11,18 +11,18 @@ import { transformPackageJson, writePackageJson } from './transform-package-json
 export interface MonocrateOptions {
   /**
    * Path to the package directory to bundle.
-   * Can be absolute or relative. Relative paths are resolved from the current working directory.
+   * Can be absolute or relative. Relative paths are resolved from the cwd option.
    */
   pathToPackageToBundle: string
   /**
    * Path to the output directory where the bundle will be written.
-   * Can be absolute or relative. Relative paths are resolved from the current working directory.
+   * Can be absolute or relative. Relative paths are resolved from the cwd option.
    * If not specified, a dedicated temp directory is created under the system temp directory.
    */
   outputDir?: string
   /**
    * Path to the monorepo root directory.
-   * Can be absolute or relative. Relative paths are resolved from the current working directory.
+   * Can be absolute or relative. Relative paths are resolved from the cwd option.
    * If not specified, auto-detected by searching for a root package.json with workspaces.
    */
   monorepoRoot?: string
@@ -33,6 +33,11 @@ export interface MonocrateOptions {
    * If not specified, no publishing occurs.
    */
   publishToVersion?: string
+  /**
+   * The current working directory used to resolve relative paths.
+   * If not specified, defaults to process.cwd().
+   */
+  cwd?: string
 }
 
 const explicitVersionRegex = /^\d+\.\d+\.\d+$/
@@ -67,9 +72,10 @@ function getCurrentPublishedVersion(packageName: string): string {
  * @throws Error if bundling or publishing fails
  */
 export async function monocrate(options: MonocrateOptions): Promise<string> {
-  // Resolve paths immediately to prevent mixing relative/absolute paths
-  const sourceDir = path.resolve(options.pathToPackageToBundle)
-  const monorepoRoot = options.monorepoRoot ? path.resolve(options.monorepoRoot) : findMonorepoRoot(sourceDir)
+  // Resolve cwd first, then use it to resolve all other paths
+  const cwd = options.cwd !== undefined ? path.resolve(options.cwd) : process.cwd()
+  const sourceDir = path.resolve(cwd, options.pathToPackageToBundle)
+  const monorepoRoot = options.monorepoRoot ? path.resolve(cwd, options.monorepoRoot) : findMonorepoRoot(sourceDir)
 
   // Validate publish argument before any side effects
   let publishArg: PublishArg | undefined
@@ -82,7 +88,7 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
   }
 
   const outputDir = options.outputDir
-    ? path.resolve(options.outputDir)
+    ? path.resolve(cwd, options.outputDir)
     : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
 
   const graph = await buildDependencyGraph(sourceDir, monorepoRoot)
