@@ -13,7 +13,7 @@ export default defineConfig({
       thresholds: {
         lines: 90,
         functions: 90,
-        branches: 85, // Lower due to bundlePackage requiring process.chdir (not supported in vitest workers)
+        branches: 85, // Lower threshold for branch coverage
         statements: 90,
       },
     },

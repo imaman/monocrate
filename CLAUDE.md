@@ -26,9 +26,9 @@ npx vitest run -t "pattern"
 
 ## What Monocrate Does
 
-Publishing a package from a monorepo to npm is painful when your package depends on other internal packages (like `@myorg/utils`). npm doesn't understand workspace dependencies, forcing you to either publish every internal dependency separately, manually bundle and merge dependencies, or use complex build pipelines that lose module structure.
+Publishing a package from a monorepo to npm is painful when your package depends on other internal packages (like `@myorg/utils`). npm doesn't understand workspace dependencies, forcing you to either publish every internal dependency separately, manually assemble and merge dependencies, or use complex build pipelines that lose module structure.
 
-Monocrate solves this by bundling a package and all its in-repo dependencies into a single publishable unit. In-repo dependencies get inlined via esbuild; third-party dependencies are collected from all packages and merged into a single output package.json.
+Monocrate solves this by assembling a package and all its in-repo dependencies into a single publishable unit. In-repo dependencies get copied and their imports rewritten; third-party dependencies are collected from all packages and merged into a single output package.json.
 
 Only `dependencies` are traversed and included—`devDependencies` are ignored entirely. This is because devDependencies are only needed during development (build tools, test frameworks, linters); consumers of the published package don't need them at runtime.
 
@@ -42,10 +42,7 @@ Only `dependencies` are traversed and included—`devDependencies` are ignored e
 
 ### Core Flow
 
-The `monocrate()` function orchestrates: discover monorepo root → build dependency graph → bundle with esbuild → transform package.json → write output.
-
-Key architectural decisions:
-- **esbuild plugin**: Custom resolver plugin maps in-repo package names to their entry points
+The `monocrate()` function orchestrates: discover monorepo root → build dependency graph → assemble (copy dist directories and rewrite imports) → transform package.json → write output.
 
 ### Testing
 
