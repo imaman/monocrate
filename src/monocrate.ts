@@ -41,14 +41,14 @@ export interface MonocrateOptions {
 
 const explicitVersionRegex = /^\d+\.\d+\.\d+$/
 
-const PublishArg = z.union([
+const VersionSpecifier = z.union([
   z.literal('patch'),
   z.literal('minor'),
   z.literal('major'),
   z.string().regex(explicitVersionRegex, 'Must be x.y.z format'),
 ])
 
-type PublishArg = z.infer<typeof PublishArg>
+type VersionSpecifier = z.infer<typeof VersionSpecifier>
 
 function isExplicitVersion(value: string): boolean {
   return explicitVersionRegex.test(value)
@@ -85,13 +85,15 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
   const monorepoRoot = options.monorepoRoot ? path.resolve(cwd, options.monorepoRoot) : findMonorepoRoot(sourceDir)
 
   // Validate publish argument before any side effects
-  let publishArg: PublishArg | undefined
+  let versionSpecifier: VersionSpecifier | undefined
   if (options.publishToVersion !== undefined) {
-    const parseResult = PublishArg.safeParse(options.publishToVersion)
+    const parseResult = VersionSpecifier.safeParse(options.publishToVersion)
     if (!parseResult.success) {
-      throw new Error(`Invalid --publish value: ${options.publishToVersion}. Expected x.y.z, patch, minor, or major`)
+      throw new Error(
+        `Invalid publish value: "${options.publishToVersion}". Expected "patch", "minor", "major" or an explicit version such as "1.2.3"`
+      )
     }
-    publishArg = parseResult.data
+    versionSpecifier = parseResult.data
   }
 
   const outputDir = options.outputDir
@@ -104,7 +106,7 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
 
   const packageJson = transformPackageJson(graph)
 
-  if (publishArg === undefined) {
+  if (!versionSpecifier) {
     await writePackageJson(packageJson, outputDir)
     return outputDir
   }
@@ -112,14 +114,14 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
   // Publishing flow
   const packageName = graph.packageToBundle.packageJson.name
 
-  if (isExplicitVersion(publishArg)) {
-    await writePackageJson({ ...packageJson, version: publishArg }, outputDir)
+  if (isExplicitVersion(versionSpecifier)) {
+    await writePackageJson({ ...packageJson, version: versionSpecifier }, outputDir)
   } else {
     const currentVersion = getCurrentPublishedVersion(packageName)
     await writePackageJson({ ...packageJson, version: currentVersion }, outputDir)
 
     // --no-git-tag-version: bump version in package.json only, without creating a git tag (we're in a temp directory, not a git repo)
-    const npmVersionResult = spawnSync('npm', ['version', publishArg, '--no-git-tag-version'], {
+    const npmVersionResult = spawnSync('npm', ['version', versionSpecifier, '--no-git-tag-version'], {
       cwd: outputDir,
       stdio: 'inherit',
     })
@@ -128,10 +130,7 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     }
   }
 
-  const npmPublishResult = spawnSync('npm', ['publish'], {
-    cwd: outputDir,
-    stdio: 'inherit',
-  })
+  const npmPublishResult = spawnSync('npm', ['publish'], { cwd: outputDir, stdio: 'inherit' })
   if (npmPublishResult.status !== 0) {
     throw new Error(`npm publish failed with exit code ${String(npmPublishResult.status ?? 1)}`)
   }
