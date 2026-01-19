@@ -4,7 +4,7 @@ import { monocrate } from './monocrate.js'
 const command = defineCommand({
   meta: {
     name: 'monocrate',
-    description: 'Assemble a monorepo package for npm publishing',
+    description: 'Assemble and optionally publish a monorepo package to npm',
   },
   args: {
     source: {
