@@ -1,6 +1,6 @@
 {
   "name": "monocrate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "From monorepo to npm in one command",
   "type": "module",
   "main": "dist/index.js",
