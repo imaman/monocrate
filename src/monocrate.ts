@@ -34,10 +34,9 @@ export interface MonocrateOptions {
    */
   publishToVersion?: string
   /**
-   * The current working directory used to resolve relative paths.
-   * If not specified, defaults to process.cwd().
+   * Base directory for resolving relative paths. Must be a valid, existing directory.
    */
-  cwd?: string
+  cwd: string
 }
 
 const explicitVersionRegex = /^\d+\.\d+\.\d+$/
@@ -72,8 +71,16 @@ function getCurrentPublishedVersion(packageName: string): string {
  * @throws Error if bundling or publishing fails
  */
 export async function monocrate(options: MonocrateOptions): Promise<string> {
-  // Resolve cwd first, then use it to resolve all other paths
-  const cwd = options.cwd !== undefined ? path.resolve(options.cwd) : process.cwd()
+  // Resolve and validate cwd first, then use it to resolve all other paths
+  const cwd = path.resolve(options.cwd)
+  const cwdExists = await fs
+    .stat(cwd)
+    .then(() => true)
+    .catch(() => false)
+  if (!cwdExists) {
+    throw new Error(`cwd does not exist: ${cwd}`)
+  }
+
   const sourceDir = path.resolve(cwd, options.pathToPackageToBundle)
   const monorepoRoot = options.monorepoRoot ? path.resolve(cwd, options.monorepoRoot) : findMonorepoRoot(sourceDir)
 
