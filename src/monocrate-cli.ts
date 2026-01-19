@@ -24,20 +24,20 @@ const command = defineCommand({
     },
     publish: {
       type: 'string',
-      description: 'Version bump and publish: x.y.z | patch | minor | major',
+      description: 'Publish to npm with version: x.y.z (explicit) or patch|minor|major (increment)',
       alias: 'p',
     },
   },
   async run({ args }) {
     const outputDir: string | undefined = args.output || undefined
     const result = await monocrate({
-      sourceDir: args.source,
+      pathToPackageToBundle: args.source,
       ...(outputDir ? { outputDir } : {}),
       monorepoRoot: args.root,
-      publish: args.publish,
+      publishToVersion: args.publish,
     })
 
-    console.log(`Bundle created at: ${result}`)
+    console.log(`Output directory: ${result}`)
   },
 })
 

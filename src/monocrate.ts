@@ -9,14 +9,30 @@ import { bundle } from './bundle.js'
 import { transformPackageJson, writePackageJson } from './transform-package-json.js'
 
 export interface MonocrateOptions {
-  /** The source package directory to bundle */
-  sourceDir: string
-  /** Output directory for the bundle. Creates a dedicated temp directory if not specified. */
+  /**
+   * Path to the package directory to bundle.
+   * Can be absolute or relative. Relative paths are resolved from the current working directory.
+   */
+  pathToPackageToBundle: string
+  /**
+   * Path to the output directory where the bundle will be written.
+   * Can be absolute or relative. Relative paths are resolved from the current working directory.
+   * If not specified, a dedicated temp directory is created under the system temp directory.
+   */
   outputDir?: string
-  /** Monorepo root directory. Auto-detected if not specified. */
+  /**
+   * Path to the monorepo root directory.
+   * Can be absolute or relative. Relative paths are resolved from the current working directory.
+   * If not specified, auto-detected by searching for a root package.json with workspaces.
+   */
   monorepoRoot?: string
-  /** Version bump and publish: explicit version (x.y.z) or increment (patch, minor, major) */
-  publish?: string
+  /**
+   * Publish the bundle to npm after building.
+   * Accepts either an explicit semver version (e.g., "1.2.3") or an increment keyword ("patch", "minor", "major").
+   * When specified, the bundle is published to npm with the resolved version.
+   * If not specified, no publishing occurs.
+   */
+  publishToVersion?: string
 }
 
 const explicitVersionRegex = /^\d+\.\d+\.\d+$/
@@ -35,7 +51,7 @@ function isExplicitVersion(value: string): boolean {
 }
 
 function getCurrentPublishedVersion(packageName: string): string {
-  const result = spawnSync('npm', ['info', packageName, 'version'], {
+  const result = spawnSync('npm', ['view', packageName, 'version'], {
     encoding: 'utf-8',
   })
   if (result.status !== 0 || !result.stdout.trim()) {
@@ -53,15 +69,15 @@ function getCurrentPublishedVersion(packageName: string): string {
 export async function monocrate(options: MonocrateOptions): Promise<string> {
   // Validate publish argument first, before any side effects
   let publishArg: PublishArg | undefined
-  if (options.publish !== undefined) {
-    const parseResult = PublishArg.safeParse(options.publish)
+  if (options.publishToVersion !== undefined) {
+    const parseResult = PublishArg.safeParse(options.publishToVersion)
     if (!parseResult.success) {
-      throw new Error(`Invalid --publish value: ${options.publish}. Expected x.y.z, patch, minor, or major`)
+      throw new Error(`Invalid --publish value: ${options.publishToVersion}. Expected x.y.z, patch, minor, or major`)
     }
     publishArg = parseResult.data
   }
 
-  const sourceDir = path.resolve(options.sourceDir)
+  const sourceDir = path.resolve(options.pathToPackageToBundle)
   const outputDir = options.outputDir
     ? path.resolve(options.outputDir)
     : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
@@ -71,22 +87,22 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
 
   await bundle(graph, monorepoRoot, outputDir)
 
-  let packageJson = transformPackageJson(graph)
+  const packageJson = transformPackageJson(graph)
 
-  if (publishArg !== undefined) {
-    const packageName = graph.packageToBundle.packageJson.name
-
-    if (isExplicitVersion(publishArg)) {
-      packageJson = { ...packageJson, version: publishArg }
-    } else {
-      const currentVersion = getCurrentPublishedVersion(packageName)
-      packageJson = { ...packageJson, version: currentVersion }
-    }
+  if (publishArg === undefined) {
+    await writePackageJson(packageJson, outputDir)
+    return outputDir
   }
 
-  await writePackageJson(packageJson, outputDir)
+  // Publishing flow
+  const packageName = graph.packageToBundle.packageJson.name
 
-  if (publishArg !== undefined && !isExplicitVersion(publishArg)) {
+  if (isExplicitVersion(publishArg)) {
+    await writePackageJson({ ...packageJson, version: publishArg }, outputDir)
+  } else {
+    const currentVersion = getCurrentPublishedVersion(packageName)
+    await writePackageJson({ ...packageJson, version: currentVersion }, outputDir)
+
     const npmVersionResult = spawnSync('npm', ['version', publishArg, '--no-git-tag-version'], {
       cwd: outputDir,
       stdio: 'inherit',
@@ -96,14 +112,12 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     }
   }
 
-  if (publishArg !== undefined) {
-    const npmPublishResult = spawnSync('npm', ['publish'], {
-      cwd: outputDir,
-      stdio: 'inherit',
-    })
-    if (npmPublishResult.status !== 0) {
-      throw new Error(`npm publish failed with exit code ${String(npmPublishResult.status ?? 1)}`)
-    }
+  const npmPublishResult = spawnSync('npm', ['publish'], {
+    cwd: outputDir,
+    stdio: 'inherit',
+  })
+  if (npmPublishResult.status !== 0) {
+    throw new Error(`npm publish failed with exit code ${String(npmPublishResult.status ?? 1)}`)
   }
 
   return outputDir
