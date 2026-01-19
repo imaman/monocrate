@@ -4,7 +4,7 @@ import { monocrate } from './monocrate.js'
 const command = defineCommand({
   meta: {
     name: 'monocrate',
-    description: 'Bundle a monorepo package for npm publishing',
+    description: 'Assemble and optionally publish a monorepo package to npm',
   },
   args: {
     source: {
@@ -31,7 +31,7 @@ const command = defineCommand({
   async run({ args }) {
     const outputDir = args.output || undefined
     const actualOutputDir = await monocrate({
-      pathToPackageToBundle: args.source,
+      pathToSubjectPackage: args.source,
       ...(outputDir ? { outputDir } : {}),
       monorepoRoot: args.root,
       publishToVersion: args.publish,

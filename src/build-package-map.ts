@@ -47,7 +47,7 @@ function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): str
 export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): PackageMap {
   const packageMap: PackageMap = new Map()
 
-  registerPackageLocation(packageMap, graph.packageToBundle, '')
+  registerPackageLocation(packageMap, graph.subjectPackage, '')
 
   for (const dep of graph.inRepoDeps) {
     registerPackageLocation(packageMap, dep, computeDepOutputPrefix(dep, monorepoRoot))

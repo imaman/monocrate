@@ -4,7 +4,7 @@ import type { PackageJson } from './package-json.js'
 import type { DependencyGraph } from './build-dependency-graph.js'
 
 export function transformPackageJson(graph: DependencyGraph): PackageJson {
-  const source = graph.packageToBundle.packageJson
+  const source = graph.subjectPackage.packageJson
 
   const { dependencies: _1, devDependencies: _2, ...rest } = source
 

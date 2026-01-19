@@ -5,17 +5,17 @@ import * as path from 'node:path'
 import { z } from 'zod'
 import { findMonorepoRoot } from './monorepo.js'
 import { buildDependencyGraph } from './build-dependency-graph.js'
-import { bundle } from './bundle.js'
+import { assemble } from './assemble.js'
 import { transformPackageJson, writePackageJson } from './transform-package-json.js'
 
 export interface MonocrateOptions {
   /**
-   * Path to the package directory to bundle.
+   * Path to the package directory to assemble.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    */
-  pathToPackageToBundle: string
+  pathToSubjectPackage: string
   /**
-   * Path to the output directory where the bundle will be written.
+   * Path to the output directory where the assembly will be written.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    * If not specified, a dedicated temp directory is created under the system temp directory.
    */
@@ -27,9 +27,9 @@ export interface MonocrateOptions {
    */
   monorepoRoot?: string
   /**
-   * Publish the bundle to npm after building.
+   * Publish the assembly to npm after building.
    * Accepts either an explicit semver version (e.g., "1.2.3") or an increment keyword ("patch", "minor", "major").
-   * When specified, the bundle is published to npm with the resolved version.
+   * When specified, the assembly is published to npm with the resolved version.
    * If not specified, no publishing occurs.
    */
   publishToVersion?: string
@@ -65,10 +65,10 @@ function getCurrentPublishedVersion(packageName: string): string {
 }
 
 /**
- * Bundles a monorepo package and its in-repo dependencies for npm publishing.
- * @param options - Configuration options for the bundling process
- * @returns The output directory path where the bundle was created
- * @throws Error if bundling or publishing fails
+ * Assembles a monorepo package and its in-repo dependencies for npm publishing.
+ * @param options - Configuration options for the assembly process
+ * @returns The output directory path where the assembly was created
+ * @throws Error if assembly or publishing fails
  */
 export async function monocrate(options: MonocrateOptions): Promise<string> {
   // Resolve and validate cwd first, then use it to resolve all other paths
@@ -81,7 +81,7 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     throw new Error(`cwd does not exist: ${cwd}`)
   }
 
-  const sourceDir = path.resolve(cwd, options.pathToPackageToBundle)
+  const sourceDir = path.resolve(cwd, options.pathToSubjectPackage)
   const monorepoRoot = options.monorepoRoot ? path.resolve(cwd, options.monorepoRoot) : findMonorepoRoot(sourceDir)
 
   // Validate publish argument before any side effects
@@ -102,7 +102,7 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
 
   const graph = await buildDependencyGraph(sourceDir, monorepoRoot)
 
-  await bundle(graph, monorepoRoot, outputDir)
+  await assemble(graph, monorepoRoot, outputDir)
 
   const packageJson = transformPackageJson(graph)
 
@@ -112,7 +112,7 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
   }
 
   // Publishing flow
-  const packageName = graph.packageToBundle.packageJson.name
+  const packageName = graph.subjectPackage.packageJson.name
 
   if (isExplicitVersion(versionSpecifier)) {
     await writePackageJson({ ...packageJson, version: versionSpecifier }, outputDir)

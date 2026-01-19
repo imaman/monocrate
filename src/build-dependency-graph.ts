@@ -2,15 +2,15 @@ import type { MonorepoPackage } from './monorepo.js'
 import { discoverMonorepoPackages } from './monorepo.js'
 
 export interface DependencyGraph {
-  packageToBundle: MonorepoPackage
+  subjectPackage: MonorepoPackage
   inRepoDeps: MonorepoPackage[]
   allThirdPartyDeps: Partial<Record<string, string>>
 }
 
 export async function buildDependencyGraph(sourceDir: string, monorepoRoot: string): Promise<DependencyGraph> {
   const allRepoPackages = await discoverMonorepoPackages(monorepoRoot)
-  const packageToBundle = [...allRepoPackages.values()].find((at) => at.path === sourceDir)
-  if (!packageToBundle) {
+  const subjectPackage = [...allRepoPackages.values()].find((at) => at.path === sourceDir)
+  if (!subjectPackage) {
     throw new Error(`Could not find a monorepo package at ${sourceDir}`)
   }
 
@@ -39,11 +39,11 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
     }
   }
 
-  collectDeps(packageToBundle)
+  collectDeps(subjectPackage)
 
   return {
-    packageToBundle,
-    inRepoDeps: [...visited.values()].filter((at) => at !== packageToBundle),
+    subjectPackage,
+    inRepoDeps: [...visited.values()].filter((at) => at !== subjectPackage),
     allThirdPartyDeps,
   }
 }

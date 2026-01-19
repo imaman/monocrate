@@ -87,7 +87,7 @@ async function runMonocrate(
 
   await monocrate({
     cwd: monorepoRoot,
-    pathToPackageToBundle: path.join(monorepoRoot, sourcePackage),
+    pathToSubjectPackage: path.join(monorepoRoot, sourcePackage),
     outputDir,
     monorepoRoot,
   })
@@ -129,7 +129,7 @@ describe('optional output directory', () => {
 
     const outputDir = await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       monorepoRoot,
     })
 
@@ -137,7 +137,7 @@ describe('optional output directory', () => {
     expect(outputDir).toContain('monocrate-')
     expect(fs.existsSync(outputDir)).toBe(true)
 
-    // Verify the bundle was created there
+    // Verify the assembly was created there
     const output = unfolderify(outputDir)
     expect(output['package.json']).toEqual({
       name: '@test/app',
@@ -164,7 +164,7 @@ describe('optional output directory', () => {
     const outputDir = createTempDir('monocrate-explicit-output-')
     const result = await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       outputDir,
       monorepoRoot,
     })
@@ -235,7 +235,7 @@ describe('error handling', () => {
     await expect(
       monocrate({
         cwd: monorepoRoot,
-        pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         outputDir,
         monorepoRoot,
       })
@@ -252,7 +252,7 @@ describe('error handling', () => {
     await expect(
       monocrate({
         cwd: monorepoRoot,
-        pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         outputDir,
         monorepoRoot,
       })
@@ -270,7 +270,7 @@ describe('error handling', () => {
     await expect(
       monocrate({
         cwd: monorepoRoot,
-        pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         outputDir,
         monorepoRoot,
       })
@@ -287,7 +287,7 @@ describe('error handling', () => {
     await expect(
       monocrate({
         cwd: monorepoRoot,
-        pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         outputDir,
         monorepoRoot,
       })
@@ -361,7 +361,7 @@ describe('package.json transformation', () => {
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       outputDir,
       monorepoRoot,
     })
@@ -396,7 +396,7 @@ describe('package.json transformation', () => {
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/app'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       outputDir,
       monorepoRoot,
     })
@@ -419,7 +419,7 @@ describe('monocrate e2e', () => {
     tempDirs.length = 0
   })
 
-  it('bundles a simple package with an in-repo dependency', async () => {
+  it('assembles a simple package with an in-repo dependency', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': {
@@ -470,7 +470,7 @@ console.log(greet('World'));
     expect(stdout.trim()).toBe('Hello, World!')
   })
 
-  it('bundles only the requested package when monorepo has multiple packages', async () => {
+  it('assembles only the requested package when monorepo has multiple packages', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       // First app with its own lib and external dep
@@ -525,7 +525,7 @@ console.log('Beta: ' + getBeta());
 `,
     })
 
-    // Bundle only app-alpha
+    // Assemble only app-alpha
     const alpha = await runMonocrate(monorepoRoot, 'packages/app-alpha')
 
     expect(alpha.output['package.json']).toEqual({
@@ -539,7 +539,7 @@ console.log('Beta: ' + getBeta());
     })
     expect(alpha.stdout.trim()).toBe('Alpha: ALPHA')
 
-    // Bundle only app-beta
+    // Assemble only app-beta
     const beta = await runMonocrate(monorepoRoot, 'packages/app-beta')
 
     expect(beta.output['package.json']).toEqual({
@@ -554,7 +554,7 @@ console.log('Beta: ' + getBeta());
     expect(beta.stdout.trim()).toBe('Beta: BETA')
   })
 
-  it('bundles deep chain of in-repo dependencies', async () => {
+  it('assembles deep chain of in-repo dependencies', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': {
@@ -809,7 +809,7 @@ export declare const bar: typeof foo;
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
@@ -849,7 +849,7 @@ export const bar = 'bar';
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
@@ -886,7 +886,7 @@ export const bar = foo;
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
@@ -925,7 +925,7 @@ export const helper = foo + '-helper';
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
@@ -968,7 +968,7 @@ export const bar = foo + util;
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
@@ -1018,7 +1018,7 @@ export declare const bar: typeof foo;
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
@@ -1055,7 +1055,7 @@ export const result = helper;
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
@@ -1092,7 +1092,7 @@ export const result = helper;
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })
@@ -1127,7 +1127,7 @@ export const foo = b.foo;
     const outputDir = createTempDir('monocrate-output-')
     await monocrate({
       cwd: monorepoRoot,
-      pathToPackageToBundle: path.join(monorepoRoot, 'packages/a'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
       outputDir,
       monorepoRoot,
     })

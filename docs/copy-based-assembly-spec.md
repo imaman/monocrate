@@ -1,14 +1,14 @@
-# Monocrate: Copy-Based Bundling
+# Monocrate: Copy-Based Assembly
 
 ## Problem Statement
 
-Monocrate currently uses esbuild to bundle a package and its in-repo dependencies into a single `index.js` file. This works for JavaScript but **produces no type declarations**. The published package has no `.d.ts` files, making it unusable for TypeScript consumers.
+An earlier version of Monocrate used esbuild to bundle a package and its in-repo dependencies into a single `index.js` file. This worked for JavaScript but **produced no type declarations**. The published package had no `.d.ts` files, making it unusable for TypeScript consumers.
 
 Bundling `.d.ts` files is possible (via `dts-bundle-generator`, `rollup-plugin-dts`, or `api-extractor`) but adds complexity and another tool to maintain.
 
-### New Approach
+### Current Approach
 
-Instead of bundling, **copy the compiled `dist/` directories** from the source package and all its in-repo dependencies. Rewrite import specifiers from package names (`@myorg/b`) to relative paths (`../deps/packages/b/dist/index.js`).
+Instead of bundling, **copy the compiled `dist/` directories** from the subject package and all its in-repo dependencies. Rewrite import specifiers from package names (`@myorg/b`) to relative paths (`../deps/packages/b/dist/index.js`).
 
 Benefits:
 - Unified handling for `.js` and `.d.ts` files
@@ -257,22 +257,22 @@ const x: string = bar  // Should typecheck
 
 ## Migration Path
 
-This is a breaking change to monocrate's output format. The output changes from:
+This was a breaking change to monocrate's output format. The output changed from:
 ```
 output/
-  index.js          ← single bundled file
+  index.js          ← single bundled file (old approach)
   package.json
 ```
 
 To:
 ```
 output/
-  dist/             ← module structure preserved
+  dist/             ← module structure preserved (current approach)
   deps/
   package.json
 ```
 
-Consumers of monocrate will need to update any assumptions about output structure.
+Consumers of monocrate needed to update any assumptions about output structure.
 
 ---
 
