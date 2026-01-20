@@ -6,6 +6,7 @@ import type { PackageMap } from './package-map.js'
 interface CopyOperation {
   source: string
   destination: string
+  isDirectory: boolean
 }
 
 export class FileCopier {
@@ -18,7 +19,7 @@ export class FileCopier {
     const operations = this.collectCopyOperations()
     const copiedFiles: string[] = []
     for (const op of operations) {
-      await this.copyEntry(op.source, op.destination, copiedFiles)
+      await this.executeOperation(op, copiedFiles)
     }
     return copiedFiles
   }
@@ -31,9 +32,9 @@ export class FileCopier {
         const source = path.join(location.packageDir, filePattern)
         const destination = path.join(this.outputDir, location.outputPrefix, filePattern)
 
-        // Only add operations for paths that exist
         if (fs.existsSync(source)) {
-          operations.push({ source, destination })
+          const stat = fs.statSync(source)
+          operations.push({ source, destination, isDirectory: stat.isDirectory() })
         }
       }
     }
@@ -41,16 +42,18 @@ export class FileCopier {
     return operations
   }
 
-  private async copyEntry(src: string, dest: string, copiedFiles: string[]): Promise<void> {
-    const stat = await fsPromises.stat(src)
-
-    if (stat.isDirectory()) {
-      await this.copyDir(src, dest, copiedFiles)
+  private async executeOperation(operation: CopyOperation, copiedFiles: string[]): Promise<void> {
+    if (operation.isDirectory) {
+      await this.copyDir(operation.source, operation.destination, copiedFiles)
     } else {
-      await fsPromises.mkdir(path.dirname(dest), { recursive: true })
-      await fsPromises.copyFile(src, dest)
-      copiedFiles.push(dest)
+      await this.copyFile(operation.source, operation.destination, copiedFiles)
     }
+  }
+
+  private async copyFile(src: string, dest: string, copiedFiles: string[]): Promise<void> {
+    await fsPromises.mkdir(path.dirname(dest), { recursive: true })
+    await fsPromises.copyFile(src, dest)
+    copiedFiles.push(dest)
   }
 
   private async copyDir(src: string, dest: string, copiedFiles: string[]): Promise<void> {
@@ -64,8 +67,7 @@ export class FileCopier {
       if (entry.isDirectory()) {
         await this.copyDir(srcPath, destPath, copiedFiles)
       } else {
-        await fsPromises.copyFile(srcPath, destPath)
-        copiedFiles.push(destPath)
+        await this.copyFile(srcPath, destPath, copiedFiles)
       }
     }
   }
