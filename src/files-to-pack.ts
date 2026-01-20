@@ -23,9 +23,9 @@ const NpmPackError = z.object({
  *
  * @param packageDir - Absolute path to the package directory
  * @returns Array of relative file paths that npm would include
- * @example getPackFiles("/home/user/my-package") => ["dist/index.js", "README.md", "package.json"]
+ * @example getFilesToPack("/home/user/my-package") => ["dist/index.js", "README.md", "package.json"]
  */
-export function getPackFiles(packageDir: string): string[] {
+export function getFilesToPack(packageDir: string): string[] {
   const output = execSync('npm pack --dry-run --json', {
     cwd: packageDir,
     encoding: 'utf-8',

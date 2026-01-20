@@ -15,9 +15,16 @@ export class FileCopier {
 
   async copy(): Promise<string[]> {
     const operations = this.collectCopyOperations()
+
+    // Phase 1: Collect and create unique directories
+    const directories = new Set(operations.map((op) => path.dirname(op.destination)))
+    for (const dir of directories) {
+      await fsPromises.mkdir(dir, { recursive: true })
+    }
+
+    // Phase 2: Copy all files
     const copiedFiles: string[] = []
     for (const op of operations) {
-      await fsPromises.mkdir(path.dirname(op.destination), { recursive: true })
       await fsPromises.copyFile(op.source, op.destination)
       copiedFiles.push(op.destination)
     }
