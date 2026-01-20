@@ -21,7 +21,7 @@ export interface PackageLocation {
 
   /**
    * Files and directories to copy, from the package.json `files` field
-   * or defaulting to the dist directory
+   * or derived from the `main` field's directory
    * @example ["dist"]
    * @example ["dist", "bin", "types.d.ts"]
    */

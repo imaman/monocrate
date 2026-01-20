@@ -4,35 +4,57 @@ import type { PackageMap } from './package-map.js'
 import type { DependencyGraph } from './build-dependency-graph.js'
 import type { MonorepoPackage } from './monorepo.js'
 
-const DEFAULT_DIST_DIR = 'dist'
 const DEFAULT_ENTRY_POINT = 'dist/index.js'
 
-function resolveDistDir(main: string | undefined): string {
+/**
+ * Resolves the dist directory from the main field.
+ * Returns undefined if main is not specified or is at the root level.
+ */
+function resolveDistDirFromMain(main: string | undefined): string | undefined {
   if (main === undefined) {
-    return DEFAULT_DIST_DIR
+    return undefined
   }
   const dir = path.dirname(main)
-  return dir === '' || dir === '.' ? DEFAULT_DIST_DIR : dir
+  return dir === '' || dir === '.' ? undefined : dir
 }
 
 function resolveEntryPoint(main: string | undefined): string {
   return main ?? DEFAULT_ENTRY_POINT
 }
 
+/**
+ * Determines which files/directories to copy based on package.json.
+ * Uses npm's `files` field semantics:
+ * 1. If `files` is specified, use those entries
+ * 2. Otherwise, derive from `main` field's directory
+ * 3. If neither provides useful info, throw an error
+ */
 function resolveFilesToCopy(pkg: MonorepoPackage): string[] {
-  const files = pkg.packageJson.files
+  const { files, main } = pkg.packageJson
+
+  // If files is explicitly specified, use it
   if (files !== undefined && files.length > 0) {
     return files
   }
-  // Fall back to dist directory derived from main
-  return [resolveDistDir(pkg.packageJson.main)]
+
+  // Try to derive from main field
+  const distDir = resolveDistDirFromMain(main)
+  if (distDir !== undefined) {
+    return [distDir]
+  }
+
+  // Cannot determine what to copy
+  throw new Error(
+    `Cannot determine which files to copy for ${pkg.name}. ` +
+      `Either specify a "files" array in package.json, or ensure "main" points to a subdirectory (e.g., "dist/index.js").`
+  )
 }
 
 function validateFilesToCopy(packageDir: string, filesToCopy: string[], packageName: string): void {
-  const existingFiles = filesToCopy.filter((file) => fs.existsSync(path.resolve(packageDir, file)))
+  const existingFiles = filesToCopy.filter((file) => fs.existsSync(path.join(packageDir, file)))
 
   if (existingFiles.length === 0) {
-    const triedPaths = filesToCopy.map((f) => path.resolve(packageDir, f)).join(', ')
+    const triedPaths = filesToCopy.map((f) => path.join(packageDir, f)).join(', ')
     throw new Error(`No files to copy found for ${packageName}. Tried: ${triedPaths}. Did you run the build?`)
   }
 }
@@ -40,7 +62,7 @@ function validateFilesToCopy(packageDir: string, filesToCopy: string[], packageN
 function registerPackageLocation(packageMap: PackageMap, pkg: MonorepoPackage, outputPrefix: string): void {
   const packageDir = path.resolve(pkg.path)
   const filesToCopy = resolveFilesToCopy(pkg)
-  const distDir = resolveDistDir(pkg.packageJson.main)
+  const distDir = resolveDistDirFromMain(pkg.packageJson.main) ?? 'dist'
   const outputDistDir = path.join(outputPrefix, distDir)
 
   validateFilesToCopy(packageDir, filesToCopy, pkg.name)
