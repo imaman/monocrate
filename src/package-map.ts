@@ -20,10 +20,9 @@ export interface PackageLocation {
   outputPrefix: string
 
   /**
-   * Files and directories to copy, from the package.json `files` field
-   * or derived from the `main` field's directory
-   * @example ["dist"]
-   * @example ["dist", "bin", "types.d.ts"]
+   * Individual file paths to copy, as determined by `npm pack --dry-run`.
+   * These are the exact files npm would include in the published tarball.
+   * @example ["dist/index.js", "dist/utils.js", "package.json"]
    */
   filesToCopy: string[]
 
