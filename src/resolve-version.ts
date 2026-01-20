@@ -1,13 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { z } from 'zod'
 
-const explicitVersionRegex = /^\d+\.\d+\.\d+$/
-
 const SemVerPart = z.union([z.literal('patch'), z.literal('minor'), z.literal('major')])
-
-const VersionSpecifier = SemVerPart.or(z.string().regex(explicitVersionRegex, 'Must be x.y.z format'))
-
-export type VersionSpecifier = z.infer<typeof VersionSpecifier>
 
 function getCurrentPublishedVersion(packageName: string): string {
   const result = spawnSync('npm', ['view', packageName, 'version'], {
@@ -19,37 +13,41 @@ function getCurrentPublishedVersion(packageName: string): string {
   return result.stdout.trim()
 }
 
-export function resolveVersion(packageName: string, versionSpecifier: VersionSpecifier | undefined) {
-  if (!versionSpecifier) {
-    return undefined
+type VersionSpecifier = { tag: 'major' | 'minor' | 'patch' } | { tag: 'explicit'; value: string }
+
+export function resolveVersion(packageName: string, versionSpecifier: VersionSpecifier) {
+  if (versionSpecifier.tag === 'explicit') {
+    return versionSpecifier.value
   }
 
-  const parsed = SemVerPart.safeParse(versionSpecifier)
-  if (parsed.success) {
-    const currentVersion = getCurrentPublishedVersion(packageName)
-    const nums = currentVersion.split('.').slice(0, 3).map(Number)
+  const currentVersion = getCurrentPublishedVersion(packageName)
+  const nums = currentVersion.split('.').slice(0, 3).map(Number)
 
-    const index = { patch: 2, minor: 1, major: 0 }[parsed.data]
-    const n = nums[index]
-    if (n === undefined) {
-      throw new Error(`Bad version string: ${versionSpecifier}`)
-    }
-    nums[index] = n + 1
-    return nums.join('.')
-  } else {
-    return versionSpecifier
+  const index = { major: 0, minor: 1, patch: 2 }[versionSpecifier.tag]
+  const n = nums[index]
+  if (n === undefined) {
+    throw new Error(`Bad versionSpecifier: ${versionSpecifier.tag}`)
   }
+  nums[index] = n + 1
+  return nums.join('.')
 }
 
 export function parseVersionSpecifier(value: string | undefined): VersionSpecifier | undefined {
   if (value === undefined) {
     return undefined
   }
-  const parseResult = VersionSpecifier.safeParse(value)
-  if (!parseResult.success) {
+
+  const parsedPart = SemVerPart.safeParse(value)
+  if (parsedPart.success) {
+    return { tag: parsedPart.data }
+  }
+
+  const isSemver = /^\d+\.\d+\.\d+(-[\w.-]+)?(\+[\w.-]+)?$/.test(value)
+  if (!isSemver) {
     throw new Error(
       `Invalid publish value: "${value}". Expected "patch", "minor", "major" or an explicit version such as "1.2.3"`
     )
   }
-  return parseResult.data
+
+  return { tag: 'explicit', value }
 }

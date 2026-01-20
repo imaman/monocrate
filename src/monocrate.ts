@@ -67,13 +67,13 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
 
   const closure = await computePackageClosure(sourceDir, monorepoRoot)
-
   await assemble(closure, monorepoRoot, outputDir)
 
-  const version = resolveVersion(closure.subjectPackageName, versionSpecifier)
-  rewritePackageJson(closure, version, outputDir)
+  const newVersion =
+    versionSpecifier === undefined ? undefined : resolveVersion(closure.subjectPackageName, versionSpecifier)
+  rewritePackageJson(closure, newVersion, outputDir)
 
-  if (version) {
+  if (newVersion) {
     publish(outputDir)
   }
 
