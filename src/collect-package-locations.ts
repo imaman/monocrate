@@ -53,7 +53,7 @@ function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): str
 }
 
 export function collectPackageLocations(closure: PackageClosure, monorepoRoot: string) {
-  return closure.packagesToAssemble.map((dep) =>
+  return closure.members.map((dep) =>
     createPackageLocation(dep, dep.name === closure.subjectPackageName ? '' : computeDepOutputPrefix(dep, monorepoRoot))
   )
 }

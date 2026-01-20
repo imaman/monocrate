@@ -38,7 +38,7 @@ export async function computePackageClosure(sourceDir: string, monorepoRoot: str
 
   return {
     subjectPackageName: subjectPackage.name,
-    packagesToAssemble: [...visited.values()],
+    members: [...visited.values()],
     allThirdPartyDeps,
   }
 }
