@@ -36,8 +36,8 @@ export function resolveImport(location: PackageLocation, subpath: string): strin
   return path.join(location.outputPrefix, `${subpath}.js`)
 }
 
-function createPackageLocation(pkg: MonorepoPackage, outputPrefix: string) {
-  const filesToCopy = getFilesToPack(pkg.path)
+async function createPackageLocation(pkg: MonorepoPackage, outputPrefix: string) {
+  const filesToCopy = await getFilesToPack(pkg.path)
 
   return {
     name: pkg.name,
@@ -52,8 +52,13 @@ function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): str
   return path.join('deps', path.relative(monorepoRoot, dep.path))
 }
 
-export function collectPackageLocations(closure: PackageClosure, monorepoRoot: string) {
-  return closure.members.map((dep) =>
-    createPackageLocation(dep, dep.name === closure.subjectPackageName ? '' : computeDepOutputPrefix(dep, monorepoRoot))
+export async function collectPackageLocations(closure: PackageClosure, monorepoRoot: string) {
+  return Promise.all(
+    closure.members.map((dep) =>
+      createPackageLocation(
+        dep,
+        dep.name === closure.subjectPackageName ? '' : computeDepOutputPrefix(dep, monorepoRoot)
+      )
+    )
   )
 }

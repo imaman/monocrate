@@ -13,7 +13,7 @@ export async function assemble(
   outputDir: string,
   versionSpecifier: VersionSpecifier | undefined
 ): Promise<void> {
-  const locations = collectPackageLocations(closure, monorepoRoot)
+  const locations = await collectPackageLocations(closure, monorepoRoot)
   const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
   await fsPromises.mkdir(outputDir, { recursive: true })
