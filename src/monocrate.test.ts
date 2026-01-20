@@ -1360,4 +1360,6 @@ console.log(greet());
 
     expect(pkgJson.files).toEqual(['dist', 'bin'])
   })
+
+  // TODO(imaman): publish to a test registry
 })
