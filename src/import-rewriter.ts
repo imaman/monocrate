@@ -76,7 +76,7 @@ export class ImportRewriter {
       return undefined
     }
 
-    const pathAtImportee = resolveImport(importeeLocation.packageJson, importeeLocation.outputPrefix, subPath)
+    const pathAtImportee = resolveImport(importeeLocation, subPath)
     return this.computeRelativePath(pathToImporter, pathAtImportee)
   }
 
