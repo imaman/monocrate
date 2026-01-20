@@ -7,13 +7,15 @@ import { getFilesToPack } from './get-files-to-pack.js'
 
 const DEFAULT_ENTRY_POINT = 'dist/index.js'
 
-function resolveEntryPoint(main: string | undefined): string {
-  return main ?? DEFAULT_ENTRY_POINT
-}
+/**
+ * Resolves an import specifier to a file path using Node.js resolution semantics.
+ * Handles both bare imports (subpath='') and subpath imports (subpath='utils/helper').
+ */
+function resolveImport(packageJson: Record<string, unknown>, outputPrefix: string, subpath: string): string {
+  const entry = subpath === '' ? '.' : `./${subpath}`
 
-function resolveSubpathImport(packageJson: Record<string, unknown>, outputPrefix: string, subpath: string): string {
   // Try exports field resolution (resolve.exports only handles the exports field, not main)
-  const resolved = ResolveExports.resolve(packageJson, `./${subpath}`)
+  const resolved = ResolveExports.resolve(packageJson, entry)
   if (resolved) {
     // The exports field can map to an array of fallback paths. Node.js tries them in order and uses
     // the first "processable" path (e.g., skips unsupported protocols), but does NOT fall back if the
@@ -26,7 +28,15 @@ function resolveSubpathImport(packageJson: Record<string, unknown>, outputPrefix
       return path.join(outputPrefix, cleanPath)
     }
   }
-  // Fallback: subpath relative to package root (Node.js semantics when no exports field)
+
+  // Fallback when no exports field (or no matching export):
+  // - Bare import: use main field, then DEFAULT_ENTRY_POINT
+  // - Subpath import: subpath relative to package root (Node.js semantics)
+  if (subpath === '') {
+    const main = packageJson.main
+    const entryPoint = typeof main === 'string' ? main : DEFAULT_ENTRY_POINT
+    return path.join(outputPrefix, entryPoint)
+  }
   return path.join(outputPrefix, `${subpath}.js`)
 }
 
@@ -38,9 +48,9 @@ function registerPackageLocation(packageMap: PackageMap, pkg: MonorepoPackage, o
     packageDir: pkg.path,
     outputPrefix,
     filesToCopy,
-    outputEntryPoint: path.join(outputPrefix, resolveEntryPoint(pkg.packageJson.main)),
+    outputEntryPoint: resolveImport(pkg.packageJson, outputPrefix, ''),
     resolveSubpath(subpath: string): string {
-      return resolveSubpathImport(pkg.packageJson, outputPrefix, subpath)
+      return resolveImport(pkg.packageJson, outputPrefix, subpath)
     },
   })
 }
