@@ -15,6 +15,10 @@ function resolveSubpathImport(packageJson: Record<string, unknown>, outputPrefix
   // Try exports field resolution first (standard Node.js resolution)
   const resolved = resolve(packageJson, `./${subpath}`)
   if (resolved) {
+    // The exports field can map to an array of fallback paths. Node.js tries them in order and uses
+    // the first "processable" path (e.g., skips unsupported protocols), but does NOT fall back if the
+    // file is missing. Picking the first entry matches Node.js behavior.
+    // See: https://nodejs.org/api/packages.html#package-entry-points
     const resolvedPath = Array.isArray(resolved) ? resolved[0] : resolved
     if (resolvedPath !== undefined) {
       // The resolved path starts with './', remove it
