@@ -1052,7 +1052,7 @@ export declare const bar: typeof foo;
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/a/package.json': makePackageJson({ name: '@myorg/a' }),
-      'packages/a/dist/index.js': `import { helper } from '@myorg/a/utils/helper';
+      'packages/a/dist/index.js': `import { helper } from '@myorg/a/dist/utils/helper';
 export const result = helper;
 `,
       'packages/a/dist/utils/helper.js': `export const helper = 'helper';
@@ -1072,17 +1072,17 @@ export const result = helper;
 
     // Self-import should be rewritten to relative path
     expect(indexJs).toContain('./utils/helper')
-    expect(indexJs).not.toContain("'@myorg/a/utils/helper'")
+    expect(indexJs).not.toContain("'@myorg/a/dist/utils/helper'")
   })
 
-  it('handles subpath imports like @myorg/b/submodule', async () => {
+  it('handles subpath imports like @myorg/b/dist/submodule', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/a/package.json': makePackageJson({
         name: '@myorg/a',
         dependencies: { '@myorg/b': '*' },
       }),
-      'packages/a/dist/index.js': `import { helper } from '@myorg/b/utils/helper';
+      'packages/a/dist/index.js': `import { helper } from '@myorg/b/dist/utils/helper';
 export const result = helper;
 `,
       'packages/b/package.json': makePackageJson({ name: '@myorg/b' }),
@@ -1105,7 +1105,7 @@ export const result = helper;
 
     // Subpath import should be rewritten with preserved subpath
     expect(indexJs).toContain('../deps/packages/b/dist/utils/helper')
-    expect(indexJs).not.toContain("'@myorg/b/utils/helper'")
+    expect(indexJs).not.toContain("'@myorg/b/dist/utils/helper'")
   })
 
   it('handles dynamic imports', async () => {
