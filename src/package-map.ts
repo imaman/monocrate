@@ -35,8 +35,7 @@ export interface PackageLocation {
 
   /**
    * Resolves a subpath import to the output location.
-   * The subpath is the full path from the package root.
-   * @example resolveSubpath("dist/helpers/math") => "deps/packages/utils/dist/helpers/math"
+   * @example resolveSubpath("helpers/math") => "deps/packages/utils/dist/helpers/math"
    */
   resolveSubpath(subpath: string): string
 }
