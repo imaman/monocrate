@@ -70,6 +70,3 @@ export class FileCopier {
     }
   }
 }
-
-// Re-export with old name for compatibility
-export { FileCopier as DistCopier }
