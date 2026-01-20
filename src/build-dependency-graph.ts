@@ -43,7 +43,7 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
 
   return {
     subjectPackage,
-    inRepoDeps: [...visited.values()].filter((at) => at !== subjectPackage),
+    inRepoDeps: [...visited.values()],
     allThirdPartyDeps,
   }
 }
