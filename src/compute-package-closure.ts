@@ -1,9 +1,16 @@
 import type { MonorepoPackage } from './monorepo.js'
 import { discoverMonorepoPackages } from './monorepo.js'
 
+/**
+ * The transitive closure of packages needed to publish a monorepo package.
+ * Computed by traversing dependencies starting from a subject package.
+ */
 export interface PackageClosure {
+  /** The package being published (the root of the closure). */
   subjectPackage: MonorepoPackage
+  /** All in-repo packages in the closure, including the subject package. */
   packagesToAssemble: MonorepoPackage[]
+  /** Merged third-party dependencies from all packages in the closure. */
   allThirdPartyDeps: Partial<Record<string, string>>
 }
 
