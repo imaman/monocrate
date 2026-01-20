@@ -1,5 +1,5 @@
 import * as path from 'node:path'
-import { resolve } from 'resolve.exports'
+import * as ResolveExports from 'resolve.exports'
 import type { PackageMap } from './package-map.js'
 import type { DependencyGraph } from './build-dependency-graph.js'
 import type { MonorepoPackage } from './monorepo.js'
@@ -13,7 +13,7 @@ function resolveEntryPoint(main: string | undefined): string {
 
 function resolveSubpathImport(packageJson: Record<string, unknown>, outputPrefix: string, subpath: string): string {
   // Try exports field resolution first (standard Node.js resolution)
-  const resolved = resolve(packageJson, `./${subpath}`)
+  const resolved = ResolveExports.resolve(packageJson, `./${subpath}`)
   if (resolved) {
     // The exports field can map to an array of fallback paths. Node.js tries them in order and uses
     // the first "processable" path (e.g., skips unsupported protocols), but does NOT fall back if the
@@ -32,16 +32,15 @@ function resolveSubpathImport(packageJson: Record<string, unknown>, outputPrefix
 
 function registerPackageLocation(packageMap: PackageMap, pkg: MonorepoPackage, outputPrefix: string): void {
   const filesToCopy = getFilesToPack(pkg.path)
-  const packageJson = pkg.packageJson
 
   packageMap.set(pkg.name, {
     name: pkg.name,
     packageDir: pkg.path,
     outputPrefix,
     filesToCopy,
-    outputEntryPoint: path.join(outputPrefix, resolveEntryPoint(packageJson.main)),
+    outputEntryPoint: path.join(outputPrefix, resolveEntryPoint(pkg.packageJson.main)),
     resolveSubpath(subpath: string): string {
-      return resolveSubpathImport(packageJson, outputPrefix, subpath)
+      return resolveSubpathImport(pkg.packageJson, outputPrefix, subpath)
     },
   })
 }
