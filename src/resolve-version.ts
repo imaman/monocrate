@@ -1,16 +1,36 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
+import { z } from 'zod'
 import type { VersionSpecifier } from './version-specifier.js'
 
 const execAsync = promisify(exec)
 
+const NpmErrorResponse = z.object({
+  error: z.object({
+    code: z.string().optional(),
+    detail: z.string().optional(),
+  }),
+})
+
 async function getCurrentPublishedVersion(packageName: string): Promise<string> {
-  try {
-    const { stdout } = await execAsync(`npm view ${packageName} version`)
-    return stdout.trim()
-  } catch {
-    return '0.0.0'
+  const { stdout } = await execAsync(`npm view -s --json ${packageName} version`)
+  const parsed: unknown = JSON.parse(stdout)
+
+  const errorResult = NpmErrorResponse.safeParse(parsed)
+  if (errorResult.success) {
+    if (errorResult.data.error.code === 'E404') {
+      return '0.0.0'
+    }
+    throw new Error(
+      `npm view failed (${errorResult.data.error.code ?? '<No Error Code>'}): ${errorResult.data.error.detail ?? '<No Further Details>'}`
+    )
   }
+
+  if (typeof parsed !== 'string') {
+    throw new Error(`Unexpected response from npm view: ${stdout}`)
+  }
+
+  return parsed
 }
 
 export async function resolveVersion(packageName: string, versionSpecifier: VersionSpecifier) {
