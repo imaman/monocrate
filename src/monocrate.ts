@@ -5,7 +5,7 @@ import { findMonorepoRoot } from './monorepo.js'
 import { computePackageClosure } from './compute-package-closure.js'
 import { assemble } from './assemble.js'
 import { publish } from './publish.js'
-import { parseVersionSpecifier } from './resolve-version.js'
+import { parseVersionSpecifier } from './version-specifier.js'
 
 export interface MonocrateOptions {
   /**
