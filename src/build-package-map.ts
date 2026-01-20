@@ -10,7 +10,7 @@ import type { PackageJson } from './package-json.js'
  * Resolves an import specifier to a file path using Node.js resolution semantics.
  * Handles both bare imports (subpath='') and subpath imports (subpath='utils/helper').
  */
-function resolveImport(packageJson: PackageJson, outputPrefix: string, subpath: string): string {
+export function resolveImport(packageJson: PackageJson, outputPrefix: string, subpath: string): string {
   const entry = subpath === '' ? '.' : `./${subpath}`
 
   // Try exports field resolution (resolve.exports only handles the exports field, not main)
@@ -45,10 +45,7 @@ function registerPackageLocation(packageMap: PackageMap, pkg: MonorepoPackage, o
     packageDir: pkg.path,
     outputPrefix,
     filesToCopy,
-    outputEntryPoint: resolveImport(pkg.packageJson, outputPrefix, ''),
-    resolveSubpath(subpath: string): string {
-      return resolveImport(pkg.packageJson, outputPrefix, subpath)
-    },
+    packageJson: pkg.packageJson,
   })
 }
 

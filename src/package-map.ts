@@ -1,3 +1,5 @@
+import type { PackageJson } from './package-json.js'
+
 export interface PackageLocation {
   /**
    * The package name from package.json
@@ -27,17 +29,9 @@ export interface PackageLocation {
   filesToCopy: string[]
 
   /**
-   * Path to the entry point in the output, used for import rewriting
-   * @example "dist/index.js" (subject package)
-   * @example "deps/packages/utils/dist/index.js" (in-repo dependency)
+   * The package.json contents, used for import resolution
    */
-  outputEntryPoint: string
-
-  /**
-   * Resolves a subpath import to the output location.
-   * @example resolveSubpath("helpers/math") => "deps/packages/utils/dist/helpers/math"
-   */
-  resolveSubpath(subpath: string): string
+  packageJson: PackageJson
 }
 
 export type PackageMap = Map<string, PackageLocation>
