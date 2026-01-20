@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import type { PackageMap } from './package-map.js'
 import type { DependencyGraph } from './build-dependency-graph.js'
 import type { MonorepoPackage } from './monorepo.js'
-import { getFilesToPack } from './files-to-pack.js'
+import { getFilesToPack } from './get-files-to-pack.js'
 
 const DEFAULT_DIST_DIR = 'dist'
 const DEFAULT_ENTRY_POINT = 'dist/index.js'
@@ -20,14 +20,13 @@ function resolveEntryPoint(main: string | undefined): string {
 }
 
 function registerPackageLocation(packageMap: PackageMap, pkg: MonorepoPackage, outputPrefix: string): void {
-  const packageDir = path.resolve(pkg.path)
-  const filesToCopy = getFilesToPack(packageDir)
+  const filesToCopy = getFilesToPack(pkg.path)
   const distDir = resolveDistDir(pkg.packageJson.main)
   const outputDistDir = path.join(outputPrefix, distDir)
 
   packageMap.set(pkg.name, {
     name: pkg.name,
-    packageDir,
+    packageDir: pkg.path,
     outputPrefix,
     filesToCopy,
     outputEntryPoint: path.join(outputPrefix, resolveEntryPoint(pkg.packageJson.main)),
