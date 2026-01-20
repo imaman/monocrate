@@ -3,9 +3,9 @@ import { collectPackageLocations } from './collect-package-locations.js'
 import { FileCopier } from './file-copier.js'
 import { ImportRewriter } from './import-rewriter.js'
 import type { PackageClosure } from './package-closure.js'
-import type { VersionSpecifier } from './resolve-version.js';
 import { resolveVersion } from './resolve-version.js'
 import { rewritePackageJson } from './rewrite-package-json.js'
+import type { VersionSpecifier } from './version-specifier.js'
 
 export async function assemble(
   closure: PackageClosure,

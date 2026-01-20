@@ -1,7 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { z } from 'zod'
-
-const SemVerPart = z.union([z.literal('patch'), z.literal('minor'), z.literal('major')])
+import type { VersionSpecifier } from './version-specifier.js'
 
 function getCurrentPublishedVersion(packageName: string): string {
   const result = spawnSync('npm', ['view', packageName, 'version'], {
@@ -12,8 +10,6 @@ function getCurrentPublishedVersion(packageName: string): string {
   }
   return result.stdout.trim()
 }
-
-export type VersionSpecifier = { tag: 'major' | 'minor' | 'patch' } | { tag: 'explicit'; value: string }
 
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function resolveVersion(packageName: string, versionSpecifier: VersionSpecifier) {
@@ -31,24 +27,4 @@ export async function resolveVersion(packageName: string, versionSpecifier: Vers
   }
   nums[index] = n + 1
   return nums.join('.')
-}
-
-export function parseVersionSpecifier(value: string | undefined): VersionSpecifier | undefined {
-  if (value === undefined) {
-    return undefined
-  }
-
-  const parsedPart = SemVerPart.safeParse(value)
-  if (parsedPart.success) {
-    return { tag: parsedPart.data }
-  }
-
-  const isSemver = /^\d+\.\d+\.\d+(-[\w.-]+)?(\+[\w.-]+)?$/.test(value)
-  if (!isSemver) {
-    throw new Error(
-      `Invalid publish value: "${value}". Expected "patch", "minor", "major" or an explicit version such as "1.2.3"`
-    )
-  }
-
-  return { tag: 'explicit', value }
 }
