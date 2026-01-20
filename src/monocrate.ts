@@ -4,9 +4,8 @@ import * as path from 'node:path'
 import { findMonorepoRoot } from './monorepo.js'
 import { computePackageClosure } from './compute-package-closure.js'
 import { assemble } from './assemble.js'
-import { rewritePackageJson } from './rewrite-package-json.js'
 import { publish } from './publish.js'
-import { parseVersionSpecifier, resolveVersion } from './resolve-version.js'
+import { parseVersionSpecifier } from './resolve-version.js'
 
 export interface MonocrateOptions {
   /**
@@ -67,13 +66,9 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
 
   const closure = await computePackageClosure(sourceDir, monorepoRoot)
-  await assemble(closure, monorepoRoot, outputDir)
+  await assemble(closure, monorepoRoot, outputDir, versionSpecifier)
 
-  const newVersion =
-    versionSpecifier === undefined ? undefined : resolveVersion(closure.subjectPackageName, versionSpecifier)
-  rewritePackageJson(closure, newVersion, outputDir)
-
-  if (newVersion) {
+  if (versionSpecifier) {
     publish(outputDir)
   }
 

@@ -13,9 +13,10 @@ function getCurrentPublishedVersion(packageName: string): string {
   return result.stdout.trim()
 }
 
-type VersionSpecifier = { tag: 'major' | 'minor' | 'patch' } | { tag: 'explicit'; value: string }
+export type VersionSpecifier = { tag: 'major' | 'minor' | 'patch' } | { tag: 'explicit'; value: string }
 
-export function resolveVersion(packageName: string, versionSpecifier: VersionSpecifier) {
+// eslint-disable-next-line @typescript-eslint/require-await
+export async function resolveVersion(packageName: string, versionSpecifier: VersionSpecifier) {
   if (versionSpecifier.tag === 'explicit') {
     return versionSpecifier.value
   }
