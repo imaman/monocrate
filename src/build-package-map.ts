@@ -1,37 +1,43 @@
 import * as path from 'node:path'
+import { resolve } from 'resolve.exports'
 import type { PackageMap } from './package-map.js'
 import type { DependencyGraph } from './build-dependency-graph.js'
 import type { MonorepoPackage } from './monorepo.js'
 import { getFilesToPack } from './get-files-to-pack.js'
 
-const DEFAULT_DIST_DIR = 'dist'
 const DEFAULT_ENTRY_POINT = 'dist/index.js'
-
-function resolveDistDir(main: string | undefined): string {
-  if (main === undefined) {
-    return DEFAULT_DIST_DIR
-  }
-  const dir = path.dirname(main)
-  return dir === '' || dir === '.' ? DEFAULT_DIST_DIR : dir
-}
 
 function resolveEntryPoint(main: string | undefined): string {
   return main ?? DEFAULT_ENTRY_POINT
 }
 
+function resolveSubpathImport(packageJson: Record<string, unknown>, outputPrefix: string, subpath: string): string {
+  // Try exports field resolution first (standard Node.js resolution)
+  const resolved = resolve(packageJson, `./${subpath}`)
+  if (resolved) {
+    const resolvedPath = Array.isArray(resolved) ? resolved[0] : resolved
+    if (resolvedPath !== undefined) {
+      // The resolved path starts with './', remove it
+      const cleanPath = resolvedPath.startsWith('./') ? resolvedPath.slice(2) : resolvedPath
+      return path.join(outputPrefix, cleanPath)
+    }
+  }
+  // Fallback: subpath relative to package root (Node.js semantics when no exports field)
+  return path.join(outputPrefix, `${subpath}.js`)
+}
+
 function registerPackageLocation(packageMap: PackageMap, pkg: MonorepoPackage, outputPrefix: string): void {
   const filesToCopy = getFilesToPack(pkg.path)
-  const distDir = resolveDistDir(pkg.packageJson.main)
-  const outputDistDir = path.join(outputPrefix, distDir)
+  const packageJson = pkg.packageJson
 
   packageMap.set(pkg.name, {
     name: pkg.name,
     packageDir: pkg.path,
     outputPrefix,
     filesToCopy,
-    outputEntryPoint: path.join(outputPrefix, resolveEntryPoint(pkg.packageJson.main)),
+    outputEntryPoint: path.join(outputPrefix, resolveEntryPoint(packageJson.main)),
     resolveSubpath(subpath: string): string {
-      return path.join(outputDistDir, subpath)
+      return resolveSubpathImport(packageJson, outputPrefix, subpath)
     },
   })
 }
