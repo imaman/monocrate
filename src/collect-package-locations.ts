@@ -53,7 +53,7 @@ function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): str
 }
 
 export function collectPackageLocations(graph: DependencyGraph, monorepoRoot: string) {
-  return graph.inRepoDeps.map((dep) =>
+  return graph.packagesToAssemble.map((dep) =>
     createPackageLocation(dep, dep === graph.subjectPackage ? '' : computeDepOutputPrefix(dep, monorepoRoot))
   )
 }

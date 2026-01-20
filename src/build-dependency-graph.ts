@@ -3,7 +3,7 @@ import { discoverMonorepoPackages } from './monorepo.js'
 
 export interface DependencyGraph {
   subjectPackage: MonorepoPackage
-  inRepoDeps: MonorepoPackage[]
+  packagesToAssemble: MonorepoPackage[]
   allThirdPartyDeps: Partial<Record<string, string>>
 }
 
@@ -43,7 +43,7 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
 
   return {
     subjectPackage,
-    inRepoDeps: [...visited.values()],
+    packagesToAssemble: [...visited.values()],
     allThirdPartyDeps,
   }
 }
