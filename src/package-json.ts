@@ -21,6 +21,7 @@ export const PackageJson = z
     bin: z.union([z.string(), z.partialRecord(z.string(), z.string())]).optional(),
     type: z.enum(['module', 'commonjs']).optional(),
     workspaces: z.union([z.array(z.string()), z.object({ packages: z.array(z.string()) })]).optional(),
+    files: z.array(z.string()).optional(),
   })
   .loose()
 

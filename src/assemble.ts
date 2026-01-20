@@ -1,14 +1,29 @@
 import * as fsPromises from 'node:fs/promises'
-import { buildPackageMap } from './build-package-map.js'
-import { DistCopier } from './dist-copier.js'
+import { collectPackageLocations } from './collect-package-locations.js'
+import { FileCopier } from './file-copier.js'
 import { ImportRewriter } from './import-rewriter.js'
-import type { DependencyGraph } from './build-dependency-graph.js'
+import type { PackageClosure } from './package-closure.js'
+import { resolveVersion } from './resolve-version.js'
+import { rewritePackageJson } from './rewrite-package-json.js'
+import type { VersionSpecifier } from './version-specifier.js'
 
-export async function assemble(graph: DependencyGraph, monorepoRoot: string, outputDir: string): Promise<void> {
-  const packageMap = buildPackageMap(graph, monorepoRoot)
+export async function assemble(
+  closure: PackageClosure,
+  monorepoRoot: string,
+  outputDir: string,
+  versionSpecifier: VersionSpecifier | undefined
+): Promise<void> {
+  const locations = await collectPackageLocations(closure, monorepoRoot)
+  const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
   await fsPromises.mkdir(outputDir, { recursive: true })
-
-  const copiedFiles = await new DistCopier(packageMap, outputDir).copy()
-  await new ImportRewriter(packageMap, outputDir).rewriteAll(copiedFiles)
+  const [newVersion] = await Promise.all([
+    versionSpecifier ? await resolveVersion(closure.subjectPackageName, versionSpecifier) : Promise.resolve(undefined),
+    (async () => {
+      const copiedFiles = await new FileCopier(packageMap, outputDir).copy()
+      await new ImportRewriter(packageMap, outputDir).rewriteAll(copiedFiles)
+    })(),
+  ])
+  // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
+  rewritePackageJson(closure, newVersion, outputDir)
 }

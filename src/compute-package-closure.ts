@@ -1,13 +1,8 @@
 import type { MonorepoPackage } from './monorepo.js'
 import { discoverMonorepoPackages } from './monorepo.js'
+import type { PackageClosure } from './package-closure.js'
 
-export interface DependencyGraph {
-  subjectPackage: MonorepoPackage
-  inRepoDeps: MonorepoPackage[]
-  allThirdPartyDeps: Partial<Record<string, string>>
-}
-
-export async function buildDependencyGraph(sourceDir: string, monorepoRoot: string): Promise<DependencyGraph> {
+export async function computePackageClosure(sourceDir: string, monorepoRoot: string): Promise<PackageClosure> {
   const allRepoPackages = await discoverMonorepoPackages(monorepoRoot)
   const subjectPackage = [...allRepoPackages.values()].find((at) => at.path === sourceDir)
   if (!subjectPackage) {
@@ -33,6 +28,7 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
         collectDeps(depPackage)
       } else {
         if (!(depName in allThirdPartyDeps)) {
+          // TODO(imaman): validate consistency of versions
           allThirdPartyDeps[depName] = depVersion
         }
       }
@@ -42,8 +38,8 @@ export async function buildDependencyGraph(sourceDir: string, monorepoRoot: stri
   collectDeps(subjectPackage)
 
   return {
-    subjectPackage,
-    inRepoDeps: [...visited.values()].filter((at) => at !== subjectPackage),
+    subjectPackageName: subjectPackage.name,
+    members: [...visited.values()],
     allThirdPartyDeps,
   }
 }
