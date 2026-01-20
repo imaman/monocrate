@@ -6,8 +6,6 @@ import type { MonorepoPackage } from './monorepo.js'
 import { getFilesToPack } from './get-files-to-pack.js'
 import type { PackageJson } from './package-json.js'
 
-const DEFAULT_ENTRY_POINT = 'dist/index.js'
-
 /**
  * Resolves an import specifier to a file path using Node.js resolution semantics.
  * Handles both bare imports (subpath='') and subpath imports (subpath='utils/helper').
@@ -31,12 +29,10 @@ function resolveImport(packageJson: PackageJson, outputPrefix: string, subpath: 
   }
 
   // Fallback when no exports field (or no matching export):
-  // - Bare import: use main field, then DEFAULT_ENTRY_POINT
-  // - Subpath import: subpath relative to package root (Node.js semantics)
+  // - Bare import: use main field, then index.js (Node.js default)
+  // - Subpath import: subpath relative to package root
   if (subpath === '') {
-    const main = packageJson.main
-    const entryPoint = typeof main === 'string' ? main : DEFAULT_ENTRY_POINT
-    return path.join(outputPrefix, entryPoint)
+    return path.join(outputPrefix, packageJson.main ?? 'index.js')
   }
   return path.join(outputPrefix, `${subpath}.js`)
 }
