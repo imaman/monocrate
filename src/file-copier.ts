@@ -6,7 +6,6 @@ import type { PackageMap } from './package-map.js'
 interface CopyOperation {
   source: string
   destination: string
-  isDirectory: boolean
 }
 
 export class FileCopier {
@@ -19,7 +18,7 @@ export class FileCopier {
     const operations = this.collectCopyOperations()
     const copiedFiles: string[] = []
     for (const op of operations) {
-      await this.executeOperation(op, copiedFiles)
+      await this.copyFromTo(op.source, op.destination, copiedFiles)
     }
     return copiedFiles
   }
@@ -33,8 +32,7 @@ export class FileCopier {
         const destination = path.join(this.outputDir, location.outputPrefix, filePattern)
 
         if (fs.existsSync(source)) {
-          const stat = fs.statSync(source)
-          operations.push({ source, destination, isDirectory: stat.isDirectory() })
+          operations.push({ source, destination })
         }
       }
     }
@@ -42,33 +40,19 @@ export class FileCopier {
     return operations
   }
 
-  private async executeOperation(operation: CopyOperation, copiedFiles: string[]): Promise<void> {
-    if (operation.isDirectory) {
-      await this.copyDir(operation.source, operation.destination, copiedFiles)
-    } else {
-      await this.copyFile(operation.source, operation.destination, copiedFiles)
+  private async copyFromTo(src: string, dest: string, copiedFiles: string[]): Promise<void> {
+    const isDir = fs.statSync(src).isDirectory()
+    if (!isDir) {
+      await fsPromises.mkdir(path.dirname(dest), { recursive: true })
+      await fsPromises.copyFile(src, dest)
+      copiedFiles.push(dest)
+      return
     }
-  }
 
-  private async copyFile(src: string, dest: string, copiedFiles: string[]): Promise<void> {
-    await fsPromises.mkdir(path.dirname(dest), { recursive: true })
-    await fsPromises.copyFile(src, dest)
-    copiedFiles.push(dest)
-  }
-
-  private async copyDir(src: string, dest: string, copiedFiles: string[]): Promise<void> {
     await fsPromises.mkdir(dest, { recursive: true })
-    const entries = await fsPromises.readdir(src, { withFileTypes: true })
-
-    for (const entry of entries) {
-      const srcPath = path.join(src, entry.name)
-      const destPath = path.join(dest, entry.name)
-
-      if (entry.isDirectory()) {
-        await this.copyDir(srcPath, destPath, copiedFiles)
-      } else {
-        await this.copyFile(srcPath, destPath, copiedFiles)
-      }
+    const list = await fsPromises.readdir(src, { withFileTypes: true })
+    for (const at of list) {
+      await this.copyFromTo(path.join(src, at.name), path.join(dest, at.name), copiedFiles)
     }
   }
 }
