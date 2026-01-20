@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { findMonorepoRoot } from './monorepo.js'
-import { buildDependencyGraph } from './build-dependency-graph.js'
+import { computePackageClosure } from './compute-package-closure.js'
 import { assemble } from './assemble.js'
 import { transformPackageJson, writePackageJson } from './transform-package-json.js'
 import { parseVersionSpecifier, publish } from './publish.js'
@@ -65,18 +65,18 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     ? path.resolve(cwd, options.outputDir)
     : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
 
-  const graph = await buildDependencyGraph(sourceDir, monorepoRoot)
+  const closure = await computePackageClosure(sourceDir, monorepoRoot)
 
-  await assemble(graph, monorepoRoot, outputDir)
+  await assemble(closure, monorepoRoot, outputDir)
 
-  const packageJson = transformPackageJson(graph)
+  const packageJson = transformPackageJson(closure)
 
   if (!versionSpecifier) {
     await writePackageJson(packageJson, outputDir)
     return outputDir
   }
 
-  await publish(packageJson, graph.subjectPackage.packageJson.name, versionSpecifier, outputDir)
+  await publish(packageJson, closure.subjectPackage.packageJson.name, versionSpecifier, outputDir)
 
   return outputDir
 }

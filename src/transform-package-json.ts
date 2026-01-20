@@ -1,10 +1,10 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import type { PackageJson } from './package-json.js'
-import type { DependencyGraph } from './build-dependency-graph.js'
+import type { PackageClosure } from './compute-package-closure.js'
 
-export function transformPackageJson(graph: DependencyGraph): PackageJson {
-  const source = graph.subjectPackage.packageJson
+export function transformPackageJson(closure: PackageClosure): PackageJson {
+  const source = closure.subjectPackage.packageJson
 
   const { dependencies: _1, devDependencies: _2, ...rest } = source
 
@@ -13,8 +13,8 @@ export function transformPackageJson(graph: DependencyGraph): PackageJson {
   }
 
   // Replace dependencies with flattened third-party deps (no workspace deps)
-  if (Object.keys(graph.allThirdPartyDeps).length > 0) {
-    transformed.dependencies = graph.allThirdPartyDeps
+  if (Object.keys(closure.allThirdPartyDeps).length > 0) {
+    transformed.dependencies = closure.allThirdPartyDeps
   }
 
   return transformed

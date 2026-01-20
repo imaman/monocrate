@@ -1,13 +1,13 @@
 import type { MonorepoPackage } from './monorepo.js'
 import { discoverMonorepoPackages } from './monorepo.js'
 
-export interface DependencyGraph {
+export interface PackageClosure {
   subjectPackage: MonorepoPackage
   packagesToAssemble: MonorepoPackage[]
   allThirdPartyDeps: Partial<Record<string, string>>
 }
 
-export async function buildDependencyGraph(sourceDir: string, monorepoRoot: string): Promise<DependencyGraph> {
+export async function computePackageClosure(sourceDir: string, monorepoRoot: string): Promise<PackageClosure> {
   const allRepoPackages = await discoverMonorepoPackages(monorepoRoot)
   const subjectPackage = [...allRepoPackages.values()].find((at) => at.path === sourceDir)
   if (!subjectPackage) {

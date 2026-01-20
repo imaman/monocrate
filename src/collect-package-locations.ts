@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import * as ResolveExports from 'resolve.exports'
 import type { PackageLocation } from './package-map.js'
-import type { DependencyGraph } from './build-dependency-graph.js'
+import type { PackageClosure } from './compute-package-closure.js'
 import type { MonorepoPackage } from './monorepo.js'
 import { getFilesToPack } from './get-files-to-pack.js'
 
@@ -52,8 +52,8 @@ function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): str
   return path.join('deps', path.relative(monorepoRoot, dep.path))
 }
 
-export function collectPackageLocations(graph: DependencyGraph, monorepoRoot: string) {
-  return graph.packagesToAssemble.map((dep) =>
-    createPackageLocation(dep, dep === graph.subjectPackage ? '' : computeDepOutputPrefix(dep, monorepoRoot))
+export function collectPackageLocations(closure: PackageClosure, monorepoRoot: string) {
+  return closure.packagesToAssemble.map((dep) =>
+    createPackageLocation(dep, dep === closure.subjectPackage ? '' : computeDepOutputPrefix(dep, monorepoRoot))
   )
 }
