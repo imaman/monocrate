@@ -6,8 +6,8 @@ import { discoverMonorepoPackages } from './monorepo.js'
  * Computed by traversing dependencies starting from a subject package.
  */
 export interface PackageClosure {
-  /** The package being published (the root of the closure). */
-  subjectPackage: MonorepoPackage
+  /** The name of package we care about (the root of the closure). */
+  subjectPackageName: string
   /** All in-repo packages in the closure, including the subject package. */
   packagesToAssemble: MonorepoPackage[]
   /** Merged third-party dependencies from all packages in the closure. */
@@ -49,7 +49,7 @@ export async function computePackageClosure(sourceDir: string, monorepoRoot: str
   collectDeps(subjectPackage)
 
   return {
-    subjectPackage,
+    subjectPackageName: subjectPackage.name,
     packagesToAssemble: [...visited.values()],
     allThirdPartyDeps,
   }

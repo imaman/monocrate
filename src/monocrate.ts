@@ -76,7 +76,7 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     return outputDir
   }
 
-  await publish(packageJson, closure.subjectPackage.packageJson.name, versionSpecifier, outputDir)
+  await publish(packageJson, closure.subjectPackageName, versionSpecifier, outputDir)
 
   return outputDir
 }

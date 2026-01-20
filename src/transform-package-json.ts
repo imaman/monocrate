@@ -4,7 +4,10 @@ import type { PackageJson } from './package-json.js'
 import type { PackageClosure } from './compute-package-closure.js'
 
 export function transformPackageJson(closure: PackageClosure): PackageJson {
-  const source = closure.subjectPackage.packageJson
+  const source = closure.packagesToAssemble.find((at) => at.name === closure.subjectPackageName)?.packageJson
+  if (!source) {
+    throw new Error(`Incosistency in subject package name: "${closure.subjectPackageName}"`)
+  }
 
   const { dependencies: _1, devDependencies: _2, ...rest } = source
 
