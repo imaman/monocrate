@@ -72,12 +72,6 @@ function unfolderify(dir: string): FolderifyRecipe {
   return result
 }
 
-interface RunMonocrateResult {
-  stdout: string
-  stderr: string
-  output: FolderifyRecipe
-}
-
 interface PackageJsonOptions {
   name: string
   dependencies?: Record<string, string>
@@ -106,11 +100,7 @@ function makePackageJson(options: PackageJsonOptions): Jsonable {
   return pkg
 }
 
-async function runMonocrate(
-  monorepoRoot: string,
-  sourcePackage: string,
-  entryPoint = 'dist/index.js'
-): Promise<RunMonocrateResult> {
+async function runMonocrate(monorepoRoot: string, sourcePackage: string, entryPoint = 'dist/index.js') {
   const outputDir = createTempDir('monocrate-output-')
 
   await monocrate({
@@ -128,7 +118,7 @@ async function runMonocrate(
       stdio: 'pipe',
     })
   } catch (error) {
-    stderr = (error as { stderr: string }).stderr
+    stderr = (error as { stderr?: string }).stderr ?? stderr
   }
   const output = unfolderify(outputDir)
 
@@ -321,14 +311,9 @@ describe('error handling', () => {
         name: '@test/app',
         dependencies: { '@test/lib': 'workspace:*' },
       }),
-      'packages/app/dist/index.js': `import { greet } from '@test/lib';
-console.log(greet());
-`,
+      'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
       'packages/lib/package.json': makePackageJson({ name: '@test/lib' }),
-      'packages/lib/dist/index.js': `export function greet() {
-  return 'Hello!';
-}
-`,
+      'packages/lib/dist/index.js': `export function greet() { return 'Hello!' }`,
     })
 
     const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')

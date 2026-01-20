@@ -17,16 +17,13 @@ export async function assemble(
   const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
   await fsPromises.mkdir(outputDir, { recursive: true })
-  await Promise.all([
-    (async () => {
-      const newVersion = versionSpecifier
-        ? await resolveVersion(closure.subjectPackageName, versionSpecifier)
-        : undefined
-      rewritePackageJson(closure, newVersion, outputDir)
-    })(),
+  const [newVersion] = await Promise.all([
+    versionSpecifier ? await resolveVersion(closure.subjectPackageName, versionSpecifier) : Promise.resolve(undefined),
     (async () => {
       const copiedFiles = await new FileCopier(packageMap, outputDir).copy()
       await new ImportRewriter(packageMap, outputDir).rewriteAll(copiedFiles)
     })(),
   ])
+  // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
+  rewritePackageJson(closure, newVersion, outputDir)
 }
