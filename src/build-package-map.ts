@@ -4,6 +4,7 @@ import type { PackageMap } from './package-map.js'
 import type { DependencyGraph } from './build-dependency-graph.js'
 import type { MonorepoPackage } from './monorepo.js'
 import { getFilesToPack } from './get-files-to-pack.js'
+import type { PackageJson } from './package-json.js'
 
 const DEFAULT_ENTRY_POINT = 'dist/index.js'
 
@@ -11,7 +12,7 @@ const DEFAULT_ENTRY_POINT = 'dist/index.js'
  * Resolves an import specifier to a file path using Node.js resolution semantics.
  * Handles both bare imports (subpath='') and subpath imports (subpath='utils/helper').
  */
-function resolveImport(packageJson: Record<string, unknown>, outputPrefix: string, subpath: string): string {
+function resolveImport(packageJson: PackageJson, outputPrefix: string, subpath: string): string {
   const entry = subpath === '' ? '.' : `./${subpath}`
 
   // Try exports field resolution (resolve.exports only handles the exports field, not main)
