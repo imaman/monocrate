@@ -12,7 +12,7 @@ function resolveEntryPoint(main: string | undefined): string {
 }
 
 function resolveSubpathImport(packageJson: Record<string, unknown>, outputPrefix: string, subpath: string): string {
-  // Try exports field resolution first (standard Node.js resolution)
+  // Try exports field resolution (resolve.exports only handles the exports field, not main)
   const resolved = ResolveExports.resolve(packageJson, `./${subpath}`)
   if (resolved) {
     // The exports field can map to an array of fallback paths. Node.js tries them in order and uses
