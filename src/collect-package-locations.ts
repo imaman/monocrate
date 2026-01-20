@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import * as ResolveExports from 'resolve.exports'
-import type { PackageMap } from './package-map.js'
+import type { PackageLocation } from './package-map.js'
 import type { DependencyGraph } from './build-dependency-graph.js'
 import type { MonorepoPackage } from './monorepo.js'
 import { getFilesToPack } from './get-files-to-pack.js'
@@ -37,30 +37,28 @@ export function resolveImport(packageJson: PackageJson, outputPrefix: string, su
   return path.join(outputPrefix, `${subpath}.js`)
 }
 
-function registerPackageLocation(packageMap: PackageMap, pkg: MonorepoPackage, outputPrefix: string): void {
+function createPackageLocation(pkg: MonorepoPackage, outputPrefix: string) {
   const filesToCopy = getFilesToPack(pkg.path)
 
-  packageMap.set(pkg.name, {
+  return {
     name: pkg.name,
     packageDir: pkg.path,
     outputPrefix,
     filesToCopy,
     packageJson: pkg.packageJson,
-  })
+  }
 }
 
 function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): string {
   return path.join('deps', path.relative(monorepoRoot, dep.path))
 }
 
-export function buildPackageMap(graph: DependencyGraph, monorepoRoot: string): PackageMap {
-  const packageMap: PackageMap = new Map()
-
-  registerPackageLocation(packageMap, graph.subjectPackage, '')
+export function collectPackageLocations(graph: DependencyGraph, monorepoRoot: string) {
+  const ret: PackageLocation[] = [createPackageLocation(graph.subjectPackage, '')]
 
   for (const dep of graph.inRepoDeps) {
-    registerPackageLocation(packageMap, dep, computeDepOutputPrefix(dep, monorepoRoot))
+    ret.push(createPackageLocation(dep, computeDepOutputPrefix(dep, monorepoRoot)))
   }
 
-  return packageMap
+  return ret
 }
