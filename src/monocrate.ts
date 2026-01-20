@@ -4,8 +4,9 @@ import * as path from 'node:path'
 import { findMonorepoRoot } from './monorepo.js'
 import { computePackageClosure } from './compute-package-closure.js'
 import { assemble } from './assemble.js'
-import { transformPackageJson, writePackageJson } from './transform-package-json.js'
-import { parseVersionSpecifier, publish } from './publish.js'
+import { rewritePackageJson } from './rewrite-package-json.js'
+import { publish } from './publish.js'
+import { parseVersionSpecifier, resolveVersion } from './resolve-version.js'
 
 export interface MonocrateOptions {
   /**
@@ -69,14 +70,12 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
 
   await assemble(closure, monorepoRoot, outputDir)
 
-  const packageJson = transformPackageJson(closure)
+  const version = resolveVersion(closure.subjectPackageName, versionSpecifier)
+  rewritePackageJson(closure, version, outputDir)
 
-  if (!versionSpecifier) {
-    await writePackageJson(packageJson, outputDir)
-    return outputDir
+  if (version) {
+    publish(outputDir)
   }
-
-  await publish(packageJson, closure.subjectPackageName, versionSpecifier, outputDir)
 
   return outputDir
 }
