@@ -239,7 +239,7 @@ describe('error handling', () => {
         outputDir,
         monorepoRoot,
       })
-    ).rejects.toThrow('dist directory not found')
+    ).rejects.toThrow('No files to copy found')
   })
 
   it('throws when package.json is invalid JSON syntax', async () => {
@@ -1176,5 +1176,212 @@ export const a = 'a-' + b;
 
     // Verify execution works
     expect(stdout.trim()).toBe('a-b')
+  })
+})
+
+describe('files property support', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+    tempDirs.length = 0
+  })
+
+  it('uses files property to determine what to copy', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        files: ['dist', 'bin'],
+      },
+      'packages/app/dist/index.js': `console.log('Hello from dist');
+`,
+      'packages/app/bin/cli.js': `#!/usr/bin/env node
+console.log('Hello from bin');
+`,
+      'packages/app/src/index.ts': `// Source file should not be copied
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    const output = unfolderify(outputDir)
+
+    // Files from `files` property should be copied
+    expect(output).toHaveProperty('dist/index.js')
+    expect(output).toHaveProperty('bin/cli.js')
+
+    // Source files not in `files` should not be copied
+    expect(output).not.toHaveProperty('src/index.ts')
+  })
+
+  it('copies files at package root when specified in files', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        files: ['dist', 'types.d.ts'],
+      },
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+      'packages/app/types.d.ts': `export declare const foo: string;
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    const output = unfolderify(outputDir)
+
+    expect(output).toHaveProperty('dist/index.js')
+    expect(output).toHaveProperty('types.d.ts')
+  })
+
+  it('uses files property for in-repo dependencies too', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: { '@test/lib': 'workspace:*' },
+      },
+      'packages/app/dist/index.js': `import { greet } from '@test/lib';
+console.log(greet());
+`,
+      'packages/lib/package.json': {
+        name: '@test/lib',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        files: ['dist', 'extra'],
+      },
+      'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }
+`,
+      'packages/lib/extra/utils.js': `export const helper = 'helper';
+`,
+      'packages/lib/src/index.ts': `// Source should not be copied
+`,
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+
+    // Lib's dist should be copied
+    expect(output).toHaveProperty('deps/packages/lib/dist/index.js')
+
+    // Lib's extra folder (from files) should be copied
+    expect(output).toHaveProperty('deps/packages/lib/extra/utils.js')
+
+    // Lib's source files should not be copied
+    expect(output).not.toHaveProperty('deps/packages/lib/src/index.ts')
+
+    expect(stdout.trim()).toBe('Hello!')
+  })
+
+  it('falls back to dist dir when files property is not specified', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        // No files property
+      },
+      'packages/app/dist/index.js': `console.log('Hello');
+`,
+      'packages/app/dist/utils.js': `export const x = 1;
+`,
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+
+    expect(output).toHaveProperty('dist/index.js')
+    expect(output).toHaveProperty('dist/utils.js')
+    expect(stdout.trim()).toBe('Hello')
+  })
+
+  it('handles non-standard output directory specified in main', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'lib/index.js',
+        files: ['lib'],
+      },
+      'packages/app/lib/index.js': `console.log('Hello from lib');
+`,
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', 'lib/index.js')
+
+    expect(output).toHaveProperty('lib/index.js')
+    expect(stdout.trim()).toBe('Hello from lib')
+  })
+
+  it('skips non-existent entries in files array gracefully', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        files: ['dist', 'docs', 'optional'],
+      },
+      'packages/app/dist/index.js': `console.log('Hello');
+`,
+      // docs and optional directories don't exist
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+
+    // Should still work with just dist
+    expect(output).toHaveProperty('dist/index.js')
+    expect(output).not.toHaveProperty('docs')
+    expect(output).not.toHaveProperty('optional')
+    expect(stdout.trim()).toBe('Hello')
+  })
+
+  it('preserves files property in output package.json', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        files: ['dist', 'bin'],
+      },
+      'packages/app/dist/index.js': `export const x = 1;
+`,
+      'packages/app/bin/cli.js': `#!/usr/bin/env node
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    const output = unfolderify(outputDir)
+    const pkgJson = output['package.json'] as Record<string, unknown>
+
+    expect(pkgJson.files).toEqual(['dist', 'bin'])
   })
 })

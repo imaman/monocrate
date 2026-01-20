@@ -1,3 +1,4 @@
+import * as fs from 'node:fs'
 import * as fsPromises from 'node:fs/promises'
 import * as path from 'node:path'
 import type { PackageMap } from './package-map.js'
@@ -7,7 +8,7 @@ interface CopyOperation {
   destination: string
 }
 
-export class DistCopier {
+export class FileCopier {
   constructor(
     private packageMap: PackageMap,
     private outputDir: string
@@ -17,7 +18,7 @@ export class DistCopier {
     const operations = this.collectCopyOperations()
     const copiedFiles: string[] = []
     for (const op of operations) {
-      await this.copyDir(op.source, op.destination, copiedFiles)
+      await this.copyEntry(op.source, op.destination, copiedFiles)
     }
     return copiedFiles
   }
@@ -26,13 +27,30 @@ export class DistCopier {
     const operations: CopyOperation[] = []
 
     for (const location of this.packageMap.values()) {
-      operations.push({
-        source: location.sourceDistDir,
-        destination: path.join(this.outputDir, location.outputDistDir),
-      })
+      for (const filePattern of location.filesToCopy) {
+        const source = path.join(location.packageDir, filePattern)
+        const destination = path.join(this.outputDir, location.outputPrefix, filePattern)
+
+        // Only add operations for paths that exist
+        if (fs.existsSync(source)) {
+          operations.push({ source, destination })
+        }
+      }
     }
 
     return operations
+  }
+
+  private async copyEntry(src: string, dest: string, copiedFiles: string[]): Promise<void> {
+    const stat = await fsPromises.stat(src)
+
+    if (stat.isDirectory()) {
+      await this.copyDir(src, dest, copiedFiles)
+    } else {
+      await fsPromises.mkdir(path.dirname(dest), { recursive: true })
+      await fsPromises.copyFile(src, dest)
+      copiedFiles.push(dest)
+    }
   }
 
   private async copyDir(src: string, dest: string, copiedFiles: string[]): Promise<void> {
@@ -52,3 +70,6 @@ export class DistCopier {
     }
   }
 }
+
+// Re-export with old name for compatibility
+export { FileCopier as DistCopier }
