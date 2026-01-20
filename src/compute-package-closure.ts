@@ -28,6 +28,7 @@ export async function computePackageClosure(sourceDir: string, monorepoRoot: str
         collectDeps(depPackage)
       } else {
         if (!(depName in allThirdPartyDeps)) {
+          // TODO(imaman): validate consistency of versions
           allThirdPartyDeps[depName] = depVersion
         }
       }
