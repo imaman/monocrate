@@ -2,7 +2,7 @@ import * as fsPromises from 'node:fs/promises'
 import { collectPackageLocations } from './collect-package-locations.js'
 import { FileCopier } from './file-copier.js'
 import { ImportRewriter } from './import-rewriter.js'
-import type { PackageClosure } from './compute-package-closure.js'
+import type { PackageClosure } from './package-closure.js'
 
 export async function assemble(closure: PackageClosure, monorepoRoot: string, outputDir: string): Promise<void> {
   const locations = collectPackageLocations(closure, monorepoRoot)

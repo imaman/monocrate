@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import type { PackageJson } from './package-json.js'
-import type { PackageClosure } from './compute-package-closure.js'
+import type { PackageClosure } from './package-closure.js'
 
 export function transformPackageJson(closure: PackageClosure): PackageJson {
   const source = closure.packagesToAssemble.find((at) => at.name === closure.subjectPackageName)?.packageJson
