@@ -75,9 +75,7 @@ export class ImportRewriter {
       return undefined
     }
 
-    // Empty subpath means bare package import (e.g., '@myorg/utils' -> 'dist/index.js')
-    // Non-empty subpath means subpath import (e.g., '@myorg/utils/foo' -> 'dist/foo')
-    const pathAtImportee = subPath === '' ? importeeLocation.outputEntryPoint : importeeLocation.resolveSubpath(subPath)
+    const pathAtImportee = importeeLocation.resolveSubpath(subPath)
     return this.computeRelativePath(pathToImporter, pathAtImportee)
   }
 
