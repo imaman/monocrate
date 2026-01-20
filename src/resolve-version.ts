@@ -1,24 +1,16 @@
-import { spawn } from 'node:child_process'
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
 import type { VersionSpecifier } from './version-specifier.js'
 
+const execAsync = promisify(exec)
+
 async function getCurrentPublishedVersion(packageName: string): Promise<string> {
-  return new Promise((resolve) => {
-    const proc = spawn('npm', ['view', packageName, 'version'])
-
-    const stdout: string[] = []
-    proc.stdout.on('data', (data: Buffer) => {
-      stdout.push(data.toString())
-    })
-
-    proc.on('close', (code: number | null) => {
-      const output = stdout.join('').trim()
-      if (code !== 0 || !output) {
-        resolve('0.0.0')
-      } else {
-        resolve(output)
-      }
-    })
-  })
+  try {
+    const { stdout } = await execAsync(`npm view ${packageName} version`)
+    return stdout.trim()
+  } catch {
+    return '0.0.0'
+  }
 }
 
 export async function resolveVersion(packageName: string, versionSpecifier: VersionSpecifier) {
