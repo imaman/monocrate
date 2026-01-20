@@ -53,6 +53,7 @@ function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): str
 }
 
 export async function collectPackageLocations(closure: PackageClosure, monorepoRoot: string) {
+  // TODO(imaman): use promises()
   return Promise.all(
     closure.members.map((dep) =>
       createPackageLocation(
