@@ -28,12 +28,12 @@ function resolveImport(packageJson: PackageJson, outputPrefix: string, subpath: 
     }
   }
 
-  // Fallback when no exports field (or no matching export):
-  // - Bare import: use main field, then index.js (Node.js default)
-  // - Subpath import: subpath relative to package root
+  // No exports field or no matching export
   if (subpath === '') {
+    // Bare import (e.g., import ... from '@myorg/pkg'): use main field, then index.js (Node.js default)
     return path.join(outputPrefix, packageJson.main ?? 'index.js')
   }
+  // Subpath import (e.g., import ... from '@myorg/pkg/utils/helper'): subpath relative to package root
   return path.join(outputPrefix, `${subpath}.js`)
 }
 
