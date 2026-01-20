@@ -1,23 +1,32 @@
-import { spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import type { VersionSpecifier } from './version-specifier.js'
 
-function getCurrentPublishedVersion(packageName: string): string {
-  const result = spawnSync('npm', ['view', packageName, 'version'], {
-    encoding: 'utf-8',
+async function getCurrentPublishedVersion(packageName: string): Promise<string> {
+  return new Promise((resolve) => {
+    const proc = spawn('npm', ['view', packageName, 'version'])
+
+    const stdout: string[] = []
+    proc.stdout.on('data', (data: Buffer) => {
+      stdout.push(data.toString())
+    })
+
+    proc.on('close', (code: number | null) => {
+      const output = stdout.join('').trim()
+      if (code !== 0 || !output) {
+        resolve('0.0.0')
+      } else {
+        resolve(output)
+      }
+    })
   })
-  if (result.status !== 0 || !result.stdout.trim()) {
-    return '0.0.0'
-  }
-  return result.stdout.trim()
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
 export async function resolveVersion(packageName: string, versionSpecifier: VersionSpecifier) {
   if (versionSpecifier.tag === 'explicit') {
     return versionSpecifier.value
   }
 
-  const currentVersion = getCurrentPublishedVersion(packageName)
+  const currentVersion = await getCurrentPublishedVersion(packageName)
   const nums = currentVersion.split('.').slice(0, 3).map(Number)
 
   const index = { major: 0, minor: 1, patch: 2 }[versionSpecifier.tag]
