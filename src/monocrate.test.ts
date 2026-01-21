@@ -252,8 +252,7 @@ describe('package.json transformation', () => {
       monorepoRoot,
     })
 
-    const output = unfolderify(outputDir)
-    const pkgJson = output['package.json'] as Record<string, unknown>
+    const pkgJson = unfolderify(outputDir)['package.json'] as Record<string, unknown>
 
     expect(pkgJson.exports).toEqual({
       '.': {
@@ -275,11 +274,10 @@ describe('package.json transformation', () => {
         author: 'Test Author',
         license: 'MIT',
       },
-      'packages/app/dist/index.js': `export const foo = 'foo';
-`,
+      'packages/app/dist/index.js': `export const foo = 'foo';`,
     })
 
-    const outputDir = createTempDir('monocrate-output-')
+    const outputDir = createTempDir()
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
@@ -311,11 +309,8 @@ describe('monocrate e2e', () => {
           chalk: '^5.0.0',
         },
       },
-      'packages/app/dist/index.js': `import { greet } from '@test/lib';
-console.log(greet('World'));
-`,
-      'packages/app/dist/index.d.ts': `import { greet } from '@test/lib';
-`,
+      'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet('World'));`,
+      'packages/app/dist/index.d.ts': `import { greet } from '@test/lib';`,
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
@@ -325,12 +320,8 @@ console.log(greet('World'));
           lodash: '^4.17.21',
         },
       },
-      'packages/lib/dist/index.js': `export function greet(name) {
-  return 'Hello, ' + name + '!';
-}
-`,
-      'packages/lib/dist/index.d.ts': `export declare function greet(name: string): string;
-`,
+      'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
+      'packages/lib/dist/index.d.ts': `export declare function greet(name: string): string;`,
     })
 
     const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
@@ -362,9 +353,7 @@ console.log(greet('World'));
           chalk: '^5.0.0',
         },
       },
-      'packages/app-alpha/dist/index.js': `import { getAlpha } from '@test/lib-alpha';
-console.log('Alpha: ' + getAlpha());
-`,
+      'packages/app-alpha/dist/index.js': `import { getAlpha } from '@test/lib-alpha'; console.log('Alpha: ' + getAlpha());`,
       'packages/lib-alpha/package.json': {
         name: '@test/lib-alpha',
         version: '1.0.0',
@@ -373,10 +362,7 @@ console.log('Alpha: ' + getAlpha());
           lodash: '^4.17.21',
         },
       },
-      'packages/lib-alpha/dist/index.js': `export function getAlpha() {
-  return 'ALPHA';
-}
-`,
+      'packages/lib-alpha/dist/index.js': `export function getAlpha() { return 'ALPHA' }`,
       // Second app with its own lib and different external dep
       'packages/app-beta/package.json': {
         name: '@test/app-beta',
@@ -387,9 +373,7 @@ console.log('Alpha: ' + getAlpha());
           zod: '^3.0.0',
         },
       },
-      'packages/app-beta/dist/index.js': `import { getBeta } from '@test/lib-beta';
-console.log('Beta: ' + getBeta());
-`,
+      'packages/app-beta/dist/index.js': `import { getBeta } from '@test/lib-beta'; console.log('Beta: ' + getBeta());`,
       'packages/lib-beta/package.json': {
         name: '@test/lib-beta',
         version: '2.0.0',
@@ -398,10 +382,7 @@ console.log('Beta: ' + getBeta());
           uuid: '^9.0.0',
         },
       },
-      'packages/lib-beta/dist/index.js': `export function getBeta() {
-  return 'BETA';
-}
-`,
+      'packages/lib-beta/dist/index.js': `export function getBeta() { return 'BETA'; }`,
     })
 
     // Assemble only app-alpha
