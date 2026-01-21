@@ -1369,6 +1369,7 @@ console.log('Hello from bin');
   // TODO(imaman): publish to a test registry
 })
 
+// TODO(imaman): move this to a separate test file
 describe('version conflict detection', () => {
   afterEach(() => {
     for (const dir of tempDirs) {
@@ -1377,7 +1378,7 @@ describe('version conflict detection', () => {
     tempDirs.length = 0
   })
 
-  it('throws when different packages require different versions of the same dependency', async () => {
+  it('throws with detailed error message when packages require different versions', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': makePackageJson({
@@ -1393,40 +1394,24 @@ describe('version conflict detection', () => {
     })
 
     const outputDir = createTempDir('monocrate-output-')
-    await expect(
-      monocrate({
+
+    try {
+      await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         outputDir,
         monorepoRoot,
       })
-    ).rejects.toThrow('Third-party dependency version conflicts detected')
-  })
-
-  it('includes conflicting package names and versions in error message', async () => {
-    const monorepoRoot = folderify({
-      'package.json': { workspaces: ['packages/*'] },
-      'packages/app/package.json': makePackageJson({
-        name: '@test/app',
-        dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.0' },
-      }),
-      'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
-      'packages/lib/package.json': makePackageJson({
-        name: '@test/lib',
-        dependencies: { lodash: '^3.10.0' },
-      }),
-      'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
-    })
-
-    const outputDir = createTempDir('monocrate-output-')
-    await expect(
-      monocrate({
-        cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
-        monorepoRoot,
-      })
-    ).rejects.toThrow('lodash')
+      expect.fail('Expected an error to be thrown')
+    } catch (error) {
+      const message = (error as Error).message
+      expect(message).toBe(
+        'Third-party dependency version conflicts detected:\n' +
+          '  lodash:\n' +
+          '    - ^3.10.0 (required by @test/lib)\n' +
+          '    - ^4.17.0 (required by @test/app)'
+      )
+    }
   })
 
   it('lists all conflicting dependencies when multiple conflicts exist', async () => {
@@ -1458,8 +1443,6 @@ describe('version conflict detection', () => {
       const message = (error as Error).message
       expect(message).toContain('lodash')
       expect(message).toContain('chalk')
-      expect(message).toContain('@test/app')
-      expect(message).toContain('@test/lib')
     }
   })
 

@@ -80,9 +80,10 @@ export async function computePackageClosure(sourceDir: AbsolutePath, monorepoRoo
   const allThirdPartyDeps: Partial<Record<string, string>> = {}
   for (const [depName, versionInfos] of versionsByDep.entries()) {
     const first = versionInfos[0]
-    if (first) {
-      allThirdPartyDeps[depName] = first.version
+    if (!first) {
+      throw new Error(`Internal error: no version info for ${depName}`)
     }
+    allThirdPartyDeps[depName] = first.version
   }
 
   return {
