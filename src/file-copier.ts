@@ -1,16 +1,17 @@
 import * as fsPromises from 'node:fs/promises'
 import * as path from 'node:path'
 import type { PackageMap } from './package-location.js'
+import { AbsolutePath, PathInRepo } from './paths.js'
 
 interface CopyOperation {
-  source: string
-  destination: string
+  source: AbsolutePath
+  destination: AbsolutePath
 }
 
 export class FileCopier {
   constructor(private packageMap: PackageMap) {}
 
-  async copy(): Promise<string[]> {
+  async copy(): Promise<AbsolutePath[]> {
     const operations = this.collectCopyOperations()
 
     // Phase 1: Collect and create unique directories
@@ -20,7 +21,7 @@ export class FileCopier {
     }
 
     // Phase 2: Copy all files
-    const copiedFiles: string[] = []
+    const copiedFiles: AbsolutePath[] = []
     for (const op of operations) {
       await fsPromises.copyFile(op.source, op.destination)
       copiedFiles.push(op.destination)
@@ -34,8 +35,8 @@ export class FileCopier {
     for (const location of this.packageMap.values()) {
       for (const at of location.filesToCopy) {
         operations.push({
-          source: path.join(location.fromDir, at),
-          destination: path.join(location.toDir, at),
+          source: AbsolutePath.join(location.fromDir, PathInRepo(at)),
+          destination: AbsolutePath.join(location.toDir, PathInRepo(at)),
         })
       }
     }

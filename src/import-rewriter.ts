@@ -2,18 +2,19 @@ import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
 import type { PackageMap } from './package-location.js'
 import { resolveImport } from './collect-package-locations.js'
+import { AbsolutePath, PathInRepo } from './paths.js'
 
 export class ImportRewriter {
   constructor(private packageMap: PackageMap) {}
 
-  async rewriteAll(files: string[]): Promise<void> {
+  async rewriteAll(files: AbsolutePath[]): Promise<void> {
     const jsAndDtsFiles = files.filter((f) => f.endsWith('.js') || f.endsWith('.d.ts'))
     for (const file of jsAndDtsFiles) {
       await this.rewriteFile(file)
     }
   }
 
-  private async rewriteFile(pathToImporter: string): Promise<void> {
+  private async rewriteFile(pathToImporter: AbsolutePath): Promise<void> {
     const project = new Project({ useInMemoryFileSystem: false })
     const sourceFile = project.addSourceFileAtPath(pathToImporter)
 
@@ -66,7 +67,7 @@ export class ImportRewriter {
     }
   }
 
-  private computeNewSpecifier(pathToImporter: string, importSpecifier: string) {
+  private computeNewSpecifier(pathToImporter: AbsolutePath, importSpecifier: string) {
     const { packageName, subPath } = this.extractPackageName(importSpecifier)
     const importeeLocation = this.packageMap.get(packageName)
     if (!importeeLocation) {
@@ -74,7 +75,10 @@ export class ImportRewriter {
     }
 
     const pathAtImportee = resolveImport(importeeLocation.packageJson, subPath)
-    return this.computeRelativePath(pathToImporter, path.join(importeeLocation.toDir, pathAtImportee))
+    return this.computeRelativePath(
+      pathToImporter,
+      AbsolutePath.join(importeeLocation.toDir, PathInRepo(pathAtImportee))
+    )
   }
 
   private extractPackageName(specifier: string) {
@@ -83,7 +87,7 @@ export class ImportRewriter {
     return { packageName: parts.slice(0, cutoff).join('/'), subPath: parts.slice(cutoff).join('/') }
   }
 
-  private computeRelativePath(importerPath: string, absoluteImporteePath: string): string {
+  private computeRelativePath(importerPath: AbsolutePath, absoluteImporteePath: AbsolutePath): string {
     let relative = path.relative(path.dirname(importerPath), absoluteImporteePath)
     if (!relative.startsWith('.')) {
       relative = './' + relative
