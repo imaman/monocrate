@@ -93,12 +93,12 @@ describe('npm publishing with Verdaccio', () => {
   it('publishes multiple versions of the same package', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
-      'packages/versioned/package.json': {
-        name: '@test/versioned',
+      'packages/foo/package.json': {
+        name: '@test/foo',
         version: '1.0.0',
         main: 'dist/index.js',
       },
-      'packages/versioned/dist/index.js': `export const version = '1';`,
+      'packages/foo/dist/index.js': `export const version = '1';`,
     })
 
     // Publish version 1.0.0
@@ -108,13 +108,13 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
         outputDir: outputDir1,
         monorepoRoot,
         publishToVersion: '1.0.0',
       })
     ).toMatchObject({ resolvedVersion: '1.0.0' })
-    expect(verdaccio.runView('@test/versioned@1.0.0')).toMatchObject({ version: '1.0.0' })
+    expect(verdaccio.runView('@test/foo@1.0.0')).toMatchObject({ version: '1.0.0' })
 
     // Publish version 1.0.1
     const outputDir2 = createTempDir('monocrate-output-')
@@ -123,13 +123,13 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
         outputDir: outputDir2,
         monorepoRoot,
         publishToVersion: '1.0.1',
       })
     ).toMatchObject({ resolvedVersion: '1.0.1' })
-    expect(verdaccio.runView('@test/versioned@1.0.1')).toMatchObject({ version: '1.0.1' })
+    expect(verdaccio.runView('@test/foo@1.0.1')).toMatchObject({ version: '1.0.1' })
 
     // Publish version 2.0.0
     const outputDir3 = createTempDir('monocrate-output-')
@@ -138,16 +138,16 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
         outputDir: outputDir3,
         monorepoRoot,
         publishToVersion: '2.0.0',
       })
     ).toMatchObject({ resolvedVersion: '2.0.0' })
-    expect(verdaccio.runView('@test/versioned@2.0.0')).toMatchObject({ version: '2.0.0' })
+    expect(verdaccio.runView('@test/foo@2.0.0')).toMatchObject({ version: '2.0.0' })
 
     // Verify all versions are available
-    const allVersions = verdaccio.runView('@test/versioned') as Record<string, unknown>
+    const allVersions = verdaccio.runView('@test/foo') as Record<string, unknown>
     expect(allVersions.versions).toContain('1.0.0')
     expect(allVersions.versions).toContain('1.0.1')
     expect(allVersions.versions).toContain('2.0.0')
