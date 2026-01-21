@@ -16,7 +16,8 @@
   },
   "files": [
     "dist",
-    "!dist/**/*.test.*"
+    "!dist/**/*.test.*",
+    "!dist/testing/**"
   ],
   "scripts": {
     "build": "tsc",
