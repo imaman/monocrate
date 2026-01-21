@@ -90,6 +90,7 @@ Strict mode with additional checks: `noUncheckedIndexedAccess`, `exactOptionalPr
 
 **Always specify expected error messages in toThrow()**: Never use bare `toThrow()` without an argument. Always pass an expected error message (e.g., `toThrow("dependency not found")`). This verifies the test actually triggered the intended error path, not some unrelated failure. A partial string is acceptable as long as it's specific enough to confirm the correct sad-path was executed.
 
-**Prefer concise, inline test cases**: For simple unit tests, prefer inlining values directly rather than extracting them into temporary variables. A oneliner (or near-oneliner) test body is often more readable than one with multiple setup variables that don't add explanatory value. Use judgment: variables are valuable when they clarify intent or when the same value is used multiple times, but for straightforward cases they just add noise.
+**Prioritize intent clarity in tests**: Decide deliberately how each test communicates its intent. In simple cases, inlining values often expresses intent more directly than introducing temporary variables. Use variables when they actively improve readability—by naming intent, representing domain concepts, or avoiding repetition. Prefer the style that best explains why the test exists, not just how it's written.```
+
 
 
