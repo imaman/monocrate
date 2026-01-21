@@ -31,10 +31,9 @@ describe('npm publishing with Verdaccio', () => {
       'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', main: 'dist/index.js' },
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
+    verdaccio.createNpmRc(monorepoRoot)
 
     const outputDir = createTempDir()
-    verdaccio.createNpmRc(outputDir)
-
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
@@ -59,10 +58,9 @@ describe('npm publishing with Verdaccio', () => {
       'packages/mylib/package.json': { name: 'mylib', version: '1.0.0', main: 'dist/index.js' },
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
+    verdaccio.createNpmRc(monorepoRoot)
 
     const outputDir = createTempDir()
-    verdaccio.createNpmRc(outputDir)
-
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
@@ -93,14 +91,11 @@ describe('npm publishing with Verdaccio', () => {
       'packages/lib/package.json': { name: '@test/lib', version: '1.0.0', main: 'dist/index.js' },
       'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
     })
-
-    const outputDir = createTempDir('monocrate-output-')
-    verdaccio.createNpmRc(outputDir)
+    verdaccio.createNpmRc(monorepoRoot)
 
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
       monorepoRoot,
       publishToVersion: '88.88.88',
     })
@@ -117,7 +112,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello, World!')
   }, 60000)
 
-  it.only('publishes multiple versions of the same package', async () => {
+  it('publishes multiple versions of the same package', async () => {
     // Verdaccio does check against the production NPM registry so we add a UUID to avoid version collision with the foo
     // pacakge.
     const pkgName = `foo-${crypto.randomUUID()}`
@@ -132,42 +127,30 @@ describe('npm publishing with Verdaccio', () => {
     })
     verdaccio.createNpmRc(monorepoRoot)
 
-    // Publish version 1.0.0
-    const outputDir1 = createTempDir('monocrate-output-')
-
     expect(
       await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
-        outputDir: outputDir1,
         monorepoRoot,
         publishToVersion: '1.4.1',
       })
     ).toMatchObject({ resolvedVersion: '1.4.1' })
     expect(verdaccio.runView(pkgName)).toMatchObject({ version: '1.4.1' })
 
-    const outputDir2 = createTempDir('monocrate-output-')
-    verdaccio.createNpmRc(outputDir2)
-
     expect(
       await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
-        outputDir: outputDir2,
         monorepoRoot,
         publishToVersion: '2.7.1',
       })
     ).toMatchObject({ resolvedVersion: '2.7.1' })
     expect(verdaccio.runView(pkgName)).toMatchObject({ version: '2.7.1' })
 
-    const outputDir3 = createTempDir('monocrate-output-')
-    verdaccio.createNpmRc(outputDir3)
-
     expect(
       await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
-        outputDir: outputDir3,
         monorepoRoot,
         publishToVersion: '3.1.4',
       })
@@ -208,14 +191,11 @@ export function analyze(n) {
       'packages/lib/dist/index.js': `import isEven from 'is-even';
 export function checkEven(n) { return isEven(n); }`,
     })
-
-    const outputDir = createTempDir('monocrate-output-')
-    verdaccio.createNpmRc(outputDir)
+    verdaccio.createNpmRc(monorepoRoot)
 
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
       monorepoRoot,
       publishToVersion: '77.77.77',
     })
