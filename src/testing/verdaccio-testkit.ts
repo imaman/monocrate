@@ -70,17 +70,6 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
   const configPath = path.join(configDir, 'config.json')
   const config = {
     storage: storageDir,
-    auth: {
-      htpasswd: {
-        file: path.join(configDir, 'htpasswd'),
-        max_users: -1, //100,
-      },
-    },
-    uplinks: {
-      npmjs: {
-        url: 'https://registry.npmjs.org/',
-      },
-    },
     packages: {
       '@*/*': {
         access: '$all',
@@ -93,17 +82,6 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
         unpublish: '$all',
       },
     },
-    // packages: {
-    //   '@test/*': {
-    //     access: '$all',
-    //     publish: '$all',
-    //   },
-    //   '**': {
-    //     access: '$all',
-    //     publish: '$all',
-    //     proxy: 'npmjs',
-    //   },
-    // },
     log: {
       type: 'stdout',
       format: 'pretty',
@@ -111,9 +89,6 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
     },
   }
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
-
-  // Create empty htpasswd file
-  fs.writeFileSync(path.join(configDir, 'htpasswd'), '')
 
   return new Promise((resolve, reject) => {
     const verdaccioProcess = spawn('npx', ['verdaccio', '--config', configPath, '--listen', String(port)], {
