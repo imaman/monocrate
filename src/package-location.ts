@@ -14,9 +14,7 @@ export interface PackageLocation {
    */
   packageDir: AbsolutePath
 
-  pathInRepo: PathInRepo
-
-  nestedUnder: PathInRepo
+  // pathInRepo: PathInRepo
 
   /**
    * Prefix for the output location. Empty string for the subject package,
@@ -24,10 +22,10 @@ export interface PackageLocation {
    * @example "" (subject package)
    * @example "deps/packages/utils" (in-repo dependency)
    */
-  outputPrefix: PathInRepo
+  directoryInOutput: PathInRepo
 
   /**
-   * Individual file paths to copy, as determined by `npm pack --dry-run`.
+   * Individual file paths (relative to the package dir) to copy, as determined by `npm pack --dry-run`.
    * These are the exact files npm would include in the published tarball.
    * @example ["dist/index.js", "dist/utils.js", "package.json"]
    */

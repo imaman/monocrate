@@ -20,8 +20,8 @@ export function AbsolutePath(s: string): AbsolutePath {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace AbsolutePath {
-  export function join(base: AbsolutePath, relative: PathInRepo): AbsolutePath {
-    return AbsolutePath(path.join(base, relative))
+  export function join(base: AbsolutePath, p: PathInRepo, ...paths: string[]): AbsolutePath {
+    return AbsolutePath(path.join(base, PathInRepo.join(p, ...paths)))
   }
 
   export function dirname(p: AbsolutePath): AbsolutePath {
@@ -49,8 +49,13 @@ export function PathInRepo(s: string): PathInRepo {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace PathInRepo {
-  export function join(base: PathInRepo, relative: PathInRepo): PathInRepo {
-    return PathInRepo(path.join(base, relative))
+  export function join(base: PathInRepo, ...paths: string[]): PathInRepo {
+    for (const at of paths) {
+      if (path.isAbsolute(at)) {
+        throw new Error(`Cannot join absolute path ${at} to PathInRepo`)
+      }
+    }
+    return PathInRepo(path.join(base, ...paths))
   }
 
   export function dirname(p: PathInRepo): PathInRepo {

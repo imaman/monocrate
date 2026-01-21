@@ -24,38 +24,33 @@ export function resolveImport(location: PackageLocation, subpath: string): strin
     if (resolvedPath !== undefined) {
       // The resolved path starts with './', remove it
       const cleanPath = resolvedPath.startsWith('./') ? resolvedPath.slice(2) : resolvedPath
-      return path.join(location.outputPrefix, cleanPath)
+      return path.join(location.directoryInOutput, cleanPath)
     }
   }
 
   // No exports field or no matching export
   if (subpath === '') {
     // Bare import (e.g., import ... from '@myorg/pkg'): use main field, then index.js (Node.js default)
-    return path.join(location.outputPrefix, location.packageJson.main ?? 'index.js')
+    return path.join(location.directoryInOutput, location.packageJson.main ?? 'index.js')
   }
   // Subpath import (e.g., import ... from '@myorg/pkg/utils/helper'): subpath relative to package root
-  return path.join(location.outputPrefix, `${subpath}.js`)
+  return path.join(location.directoryInOutput, `${subpath}.js`)
 }
 
-async function createPackageLocation(
-  pkg: MonorepoPackage,
-  outputPrefix: PathInRepo,
-  nestedUnder: PathInRepo
-): Promise<PackageLocation> {
+async function createPackageLocation(pkg: MonorepoPackage, directoryInOutput: PathInRepo): Promise<PackageLocation> {
   const filesToCopy = await getFilesToPack(pkg.path)
 
   return {
     name: pkg.name,
-    pathInRepo: pkg.pathInRepo,
+    // pathInRepo: pkg.pathInRepo,
     packageDir: pkg.path,
-    nestedUnder,
-    outputPrefix,
+    directoryInOutput,
     filesToCopy,
     packageJson: pkg.packageJson,
   }
 }
 
-function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: AbsolutePath): PathInRepo {
+function computeDirInOutput(dep: MonorepoPackage, monorepoRoot: AbsolutePath): PathInRepo {
   return PathInRepo(path.join('deps', path.relative(monorepoRoot, dep.path)))
 }
 
@@ -68,8 +63,7 @@ export async function collectPackageLocations(
     closure.members.map((dep) =>
       createPackageLocation(
         dep,
-        dep.name === closure.subjectPackageName ? PathInRepo('.') : computeDepOutputPrefix(dep, monorepoRoot),
-        dep.name === closure.subjectPackageName ? PathInRepo('.') : PathInRepo('deps')
+        dep.name === closure.subjectPackageName ? PathInRepo('.') : computeDirInOutput(dep, monorepoRoot)
       )
     )
   )

@@ -33,6 +33,12 @@ describe('paths', () => {
           '/home/user/project/other'
         )
       })
+
+      it('joins with additional path segments', () => {
+        expect(AbsolutePath.join(AbsolutePath('/home/user'), PathInRepo('project'), 'src', 'index.ts')).toBe(
+          '/home/user/project/src/index.ts'
+        )
+      })
     })
 
     describe('dirname', () => {
@@ -90,6 +96,22 @@ describe('paths', () => {
 
       it('normalizes the result', () => {
         expect(PathInRepo.join(PathInRepo('packages/utils'), PathInRepo('../other/src'))).toBe('packages/other/src')
+      })
+
+      it('joins multiple path segments', () => {
+        expect(PathInRepo.join(PathInRepo('packages'), 'utils', 'src', 'index.ts')).toBe('packages/utils/src/index.ts')
+      })
+
+      it('throws when any segment is an absolute path', () => {
+        expect(() => PathInRepo.join(PathInRepo('packages'), '/absolute/path')).toThrow(
+          'Cannot join absolute path /absolute/path to PathInRepo'
+        )
+      })
+
+      it('throws when a later segment is an absolute path', () => {
+        expect(() => PathInRepo.join(PathInRepo('packages'), 'utils', '/etc/passwd')).toThrow(
+          'Cannot join absolute path /etc/passwd to PathInRepo'
+        )
       })
     })
 
