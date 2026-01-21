@@ -5,16 +5,17 @@ import type { PackageClosure } from './package-closure.js'
 import type { MonorepoPackage } from './monorepo.js'
 import { getFilesToPack } from './get-files-to-pack.js'
 import { type AbsolutePath, PathInRepo } from './paths.js'
+import type { PackageJson } from './package-json.js'
 
 /**
- * Resolves an import specifier to a file path using Node.js resolution semantics.
+ * Resolves an import specifier to a package-relative path using Node.js resolution semantics.
  * Handles both bare imports (subpath='') and subpath imports (subpath='utils/helper').
  */
-export function resolveImport(location: PackageLocation, subpath: string): string {
+export function resolveImport(packageJson: PackageJson, subpath: string): string {
   const entry = subpath === '' ? '.' : `./${subpath}`
 
   // Try exports field resolution (resolve.exports only handles the exports field, not main)
-  const resolved = ResolveExports.resolve(location.packageJson, entry)
+  const resolved = ResolveExports.resolve(packageJson, entry)
   if (resolved) {
     // The exports field can map to an array of fallback paths. Node.js tries them in order and uses
     // the first "processable" path (e.g., skips unsupported protocols), but does NOT fall back if the
@@ -22,19 +23,18 @@ export function resolveImport(location: PackageLocation, subpath: string): strin
     // See: https://nodejs.org/api/packages.html#package-entry-points
     const resolvedPath = Array.isArray(resolved) ? resolved[0] : resolved
     if (resolvedPath !== undefined) {
-      // The resolved path starts with './', remove it
-      const cleanPath = resolvedPath.startsWith('./') ? resolvedPath.slice(2) : resolvedPath
-      return path.join(location.directoryInOutput, cleanPath)
+      // If the resolved path starts with './', remove it
+      return resolvedPath.startsWith('./') ? resolvedPath.slice(2) : resolvedPath
     }
   }
 
-  // No exports field or no matching export
+  // Otherwise (no exports field or no matching export) -
   if (subpath === '') {
     // Bare import (e.g., import ... from '@myorg/pkg'): use main field, then index.js (Node.js default)
-    return path.join(location.directoryInOutput, location.packageJson.main ?? 'index.js')
+    return packageJson.main ?? 'index.js'
   }
   // Subpath import (e.g., import ... from '@myorg/pkg/utils/helper'): subpath relative to package root
-  return path.join(location.directoryInOutput, `${subpath}.js`)
+  return `${subpath}.js`
 }
 
 async function createPackageLocation(pkg: MonorepoPackage, directoryInOutput: PathInRepo): Promise<PackageLocation> {
