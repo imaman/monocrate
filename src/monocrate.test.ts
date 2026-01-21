@@ -67,8 +67,7 @@ describe('output file option', () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': makePackageJson({ name: '@test/app' }),
-      'packages/app/dist/index.js': `export const foo = 'foo';
-`,
+      'packages/app/dist/index.js': `export const foo = 'foo';`,
     })
 
     const outputDir = createTempDir()
