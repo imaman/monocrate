@@ -1430,7 +1430,7 @@ describe('version conflict detection', () => {
         outputDir,
         monorepoRoot,
       })
-    ).rejects.toThrow('lodash')
+    ).rejects.toThrow('  - lodash: ^3.10.0 (by @test/lib), ^4.17.0 (by @test/app)')
   })
 
   it('allows same dependency with identical versions across packages', async () => {
@@ -1449,7 +1449,6 @@ describe('version conflict detection', () => {
     })
 
     const { stdout } = await runMonocrate(monorepoRoot, 'packages/app')
-
     expect(stdout.trim()).toBe('Hello!')
   })
 
@@ -1481,6 +1480,6 @@ describe('version conflict detection', () => {
         outputDir,
         monorepoRoot,
       })
-    ).rejects.toThrow('zod')
+    ).rejects.toThrow('  - zod: ^2.0.0 (by @test/level2), ^3.0.0 (by @test/app)')
   })
 })
