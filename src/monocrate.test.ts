@@ -221,27 +221,7 @@ describe('output file option', () => {
     expect(fs.readFileSync(versionFilePath, 'utf-8')).toBe('2.3.4')
   })
 
-  it('returns resolvedVersion as undefined when publishToVersion is not specified', async () => {
-    const monorepoRoot = folderify({
-      'package.json': { workspaces: ['packages/*'] },
-      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
-      'packages/app/dist/index.js': `export const foo = 'foo';
-`,
-    })
-
-    const outputDir = createTempDir('monocrate-output-')
-
-    const result = await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-    })
-
-    expect(result.resolvedVersion).toBeUndefined()
-  })
-
-  it('does not create outputFile when publishToVersion is not specified', async () => {
+  it('returns resolvedVersion as undefined and does not create outputFile when publishToVersion is not specified', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': makePackageJson({ name: '@test/app' }),
@@ -252,7 +232,7 @@ describe('output file option', () => {
     const outputDir = createTempDir('monocrate-output-')
     const versionFilePath = path.join(outputDir, 'version.txt')
 
-    await monocrate({
+    const result = await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       outputDir,
@@ -260,6 +240,7 @@ describe('output file option', () => {
       outputFile: versionFilePath,
     })
 
+    expect(result.resolvedVersion).toBeUndefined()
     expect(fs.existsSync(versionFilePath)).toBe(false)
   })
 })

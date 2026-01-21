@@ -52,7 +52,7 @@ export interface MonocrateResult {
    */
   outputDir: string
   /**
-   * The resolved version that was/will be published.
+   * The new version (AKA: 'resolved version') for the package.
    * Undefined when publishToVersion was not specified.
    */
   resolvedVersion: string | undefined
@@ -61,7 +61,7 @@ export interface MonocrateResult {
 /**
  * Assembles a monorepo package and its in-repo dependencies for npm publishing.
  * @param options - Configuration options for the assembly process
- * @returns The result containing output directory and optional resolved version
+ * @returns The result of the assembly operation
  * @throws Error if assembly or publishing fails
  */
 export async function monocrate(options: MonocrateOptions): Promise<MonocrateResult> {
