@@ -113,9 +113,7 @@ describe('npm publishing with Verdaccio', () => {
   }, 60000)
 
   it('publishes multiple versions of the same package', async () => {
-    // Verdaccio does check against the production NPM registry so we add a UUID to avoid version collision with the foo
-    // pacakge.
-    const pkgName = `foo-${crypto.randomUUID()}`
+    const pkgName = `foo`
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/foo/package.json': {
