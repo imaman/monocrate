@@ -61,7 +61,7 @@ describe('output file option', () => {
     vi.restoreAllMocks()
   })
 
-  it('writes resolved version to outputFile when specified', async () => {
+  it('writes resolved version to outputFile only when publishToVersion is set', async () => {
     vi.spyOn(publishModule, 'publish').mockImplementation(() => {})
 
     const monorepoRoot = folderify({
@@ -72,42 +72,29 @@ describe('output file option', () => {
     })
 
     const outputDir = createTempDir()
-    const versionFilePath = path.join(outputDir, 'version.txt')
+    const dir = createTempDir()
 
     const result = await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       outputDir,
       monorepoRoot,
-      publishToVersion: '2.3.4',
-      outputFile: versionFilePath,
+      outputFile: path.join(dir, 'stdout'),
     })
-
-    expect(result.resolvedVersion).toBe('2.3.4')
-    expect(unfolderify(outputDir)).toMatchObject({ 'version.txt': '2.3.4' })
-  })
-
-  it('returns resolvedVersion as undefined and does not create outputFile when publishToVersion is not specified', async () => {
-    const monorepoRoot = folderify({
-      'package.json': { workspaces: ['packages/*'] },
-      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
-      'packages/app/dist/index.js': `export const foo = 'foo';
-`,
-    })
-
-    const outputDir = createTempDir('monocrate-output-')
-    const versionFilePath = path.join(outputDir, 'version.txt')
-
-    const result = await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-      outputFile: versionFilePath,
-    })
-
     expect(result.resolvedVersion).toBeUndefined()
-    expect(fs.existsSync(versionFilePath)).toBe(false)
+    expect(unfolderify(dir)).toEqual({})
+
+    expect(
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+        outputDir,
+        monorepoRoot,
+        publishToVersion: '2.3.4',
+        outputFile: path.join(dir, 'stdout'),
+      })
+    ).toMatchObject({ resolvedVersion: '2.3.4' })
+    expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
   })
 })
 
