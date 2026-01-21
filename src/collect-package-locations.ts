@@ -3,7 +3,7 @@ import type { PackageLocation } from './package-location.js'
 import type { PackageClosure } from './package-closure.js'
 import type { MonorepoPackage } from './monorepo.js'
 import { getFilesToPack } from './get-files-to-pack.js'
-import { AbsolutePath, PathInRepo } from './paths.js'
+import { AbsolutePath, RelativePath } from './paths.js'
 import type { PackageJson } from './package-json.js'
 
 /**
@@ -59,7 +59,7 @@ export async function collectPackageLocations(
         dep,
         dep.name === closure.subjectPackageName
           ? outputDir
-          : AbsolutePath.join(outputDir, PathInRepo('deps'), dep.pathInRepo)
+          : AbsolutePath.join(outputDir, RelativePath('deps'), dep.pathInRepo)
       )
     )
   )

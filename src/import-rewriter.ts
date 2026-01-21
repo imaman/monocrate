@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
 import type { PackageMap } from './package-location.js'
 import { resolveImport } from './collect-package-locations.js'
-import { AbsolutePath, PathInRepo } from './paths.js'
+import { AbsolutePath, RelativePath } from './paths.js'
 
 export class ImportRewriter {
   constructor(private packageMap: PackageMap) {}
@@ -77,7 +77,7 @@ export class ImportRewriter {
     const pathAtImportee = resolveImport(importeeLocation.packageJson, subPath)
     return this.computeRelativePath(
       pathToImporter,
-      AbsolutePath.join(importeeLocation.toDir, PathInRepo(pathAtImportee))
+      AbsolutePath.join(importeeLocation.toDir, RelativePath(pathAtImportee))
     )
   }
 

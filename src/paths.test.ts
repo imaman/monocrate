@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { AbsolutePath, PathInRepo } from './paths.js'
+import { AbsolutePath, RelativePath } from './paths.js'
 
 describe('paths', () => {
   describe('AbsolutePath', () => {
@@ -22,20 +22,20 @@ describe('paths', () => {
     })
 
     describe('join', () => {
-      it('joins an AbsolutePath with a PathInRepo', () => {
-        expect(AbsolutePath.join(AbsolutePath('/home/user/project'), PathInRepo('packages/utils'))).toBe(
+      it('joins an AbsolutePath with a RelativePath', () => {
+        expect(AbsolutePath.join(AbsolutePath('/home/user/project'), RelativePath('packages/utils'))).toBe(
           '/home/user/project/packages/utils'
         )
       })
 
       it('normalizes the result', () => {
-        expect(AbsolutePath.join(AbsolutePath('/home/user/project'), PathInRepo('packages/../other'))).toBe(
+        expect(AbsolutePath.join(AbsolutePath('/home/user/project'), RelativePath('packages/../other'))).toBe(
           '/home/user/project/other'
         )
       })
 
       it('joins with additional path segments', () => {
-        expect(AbsolutePath.join(AbsolutePath('/home/user'), PathInRepo('project'), 'src', 'index.ts')).toBe(
+        expect(AbsolutePath.join(AbsolutePath('/home/user'), RelativePath('project'), 'src', 'index.ts')).toBe(
           '/home/user/project/src/index.ts'
         )
       })
@@ -64,64 +64,68 @@ describe('paths', () => {
     })
   })
 
-  describe('PathInRepo', () => {
+  describe('RelativePath', () => {
     describe('creation', () => {
-      it('creates a PathInRepo from a relative path', () => {
-        expect(PathInRepo('packages/utils')).toBe('packages/utils')
+      it('creates a RelativePath from a relative path', () => {
+        expect(RelativePath('packages/utils')).toBe('packages/utils')
       })
 
       it('normalizes the input path', () => {
-        expect(PathInRepo('packages/../packages/utils/./src')).toBe('packages/utils/src')
+        expect(RelativePath('packages/../packages/utils/./src')).toBe('packages/utils/src')
       })
 
       it('throws when given an absolute path', () => {
-        expect(() => PathInRepo('/absolute/path')).toThrow('Expected relative path')
+        expect(() => RelativePath('/absolute/path')).toThrow('Expected relative path')
       })
 
       it('accepts empty string as current directory', () => {
-        expect(PathInRepo('')).toBe('.')
+        expect(RelativePath('')).toBe('.')
       })
 
       it('normalizes dot to dot', () => {
-        expect(PathInRepo('.')).toBe('.')
+        expect(RelativePath('.')).toBe('.')
       })
     })
 
     describe('join', () => {
-      it('joins two PathInRepo values', () => {
-        expect(PathInRepo.join(PathInRepo('packages/utils'), PathInRepo('src/index.ts'))).toBe(
+      it('joins two RelativePath values', () => {
+        expect(RelativePath.join(RelativePath('packages/utils'), RelativePath('src/index.ts'))).toBe(
           'packages/utils/src/index.ts'
         )
       })
 
       it('normalizes the result', () => {
-        expect(PathInRepo.join(PathInRepo('packages/utils'), PathInRepo('../other/src'))).toBe('packages/other/src')
+        expect(RelativePath.join(RelativePath('packages/utils'), RelativePath('../other/src'))).toBe(
+          'packages/other/src'
+        )
       })
 
       it('joins multiple path segments', () => {
-        expect(PathInRepo.join(PathInRepo('packages'), 'utils', 'src', 'index.ts')).toBe('packages/utils/src/index.ts')
+        expect(RelativePath.join(RelativePath('packages'), 'utils', 'src', 'index.ts')).toBe(
+          'packages/utils/src/index.ts'
+        )
       })
 
       it('throws when any segment is an absolute path', () => {
-        expect(() => PathInRepo.join(PathInRepo('packages'), '/absolute/path')).toThrow(
-          'Cannot join absolute path /absolute/path to PathInRepo'
+        expect(() => RelativePath.join(RelativePath('packages'), '/absolute/path')).toThrow(
+          'Cannot join absolute path /absolute/path to RelativePath'
         )
       })
 
       it('throws when a later segment is an absolute path', () => {
-        expect(() => PathInRepo.join(PathInRepo('packages'), 'utils', '/etc/passwd')).toThrow(
-          'Cannot join absolute path /etc/passwd to PathInRepo'
+        expect(() => RelativePath.join(RelativePath('packages'), 'utils', '/etc/passwd')).toThrow(
+          'Cannot join absolute path /etc/passwd to RelativePath'
         )
       })
     })
 
     describe('dirname', () => {
       it('returns the parent directory', () => {
-        expect(PathInRepo.dirname(PathInRepo('packages/utils/src/index.ts'))).toBe('packages/utils/src')
+        expect(RelativePath.dirname(RelativePath('packages/utils/src/index.ts'))).toBe('packages/utils/src')
       })
 
       it('returns dot for single segment path', () => {
-        expect(PathInRepo.dirname(PathInRepo('packages'))).toBe('.')
+        expect(RelativePath.dirname(RelativePath('packages'))).toBe('.')
       })
     })
   })
