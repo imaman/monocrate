@@ -69,7 +69,7 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
   )
 
   const closure = await computePackageClosure(sourceDir, monorepoRoot)
-  await assemble(closure, monorepoRoot, outputDir, versionSpecifier)
+  await assemble(closure, outputDir, versionSpecifier)
 
   if (versionSpecifier) {
     publish(outputDir)

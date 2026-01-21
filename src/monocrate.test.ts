@@ -219,7 +219,9 @@ describe('monorepo discovery', () => {
     const tempDir = createTempDir('no-monorepo-')
     fs.mkdirSync(path.join(tempDir, 'some-package'))
 
-    expect(() => findMonorepoRoot(AbsolutePath(path.join(tempDir, 'some-package')))).toThrow('Could not find monorepo root')
+    expect(() => findMonorepoRoot(AbsolutePath(path.join(tempDir, 'some-package')))).toThrow(
+      'Could not find monorepo root'
+    )
   })
 })
 
@@ -1238,34 +1240,36 @@ console.log('Hello from bin');
         main: 'dist/index.js',
         dependencies: { '@test/lib': 'workspace:*' },
       },
-      'packages/app/dist/index.js': `import { greet } from '@test/lib';
-console.log(greet());
-`,
+      'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
         main: 'dist/index.js',
         files: ['dist', 'extra'],
       },
-      'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }
-`,
-      'packages/lib/extra/utils.js': `export const helper = 'helper';
-`,
-      'packages/lib/src/index.ts': `// Source should not be copied
-`,
+      'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
+      'packages/lib/extra/utils.js': `export const helper = 'helper';`,
+      'packages/lib/src/index.ts': `// Source should not be copied`,
     })
 
     const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
 
-    // Lib's dist should be copied
-    expect(output).toHaveProperty('deps/packages/lib/dist/index.js')
-
-    // Lib's extra folder (from files) should be copied
-    expect(output).toHaveProperty('deps/packages/lib/extra/utils.js')
-
-    // Lib's source files should not be copied
-    expect(output).not.toHaveProperty('deps/packages/lib/src/index.ts')
-
+    expect(output).toMatchObject({
+      'dist/index.js': `import { greet } from '../deps/packages/lib/dist/index.js'; console.log(greet());`,
+      'package.json': {
+        main: 'dist/index.js',
+        name: '@test/app',
+        version: '1.0.0',
+      },
+      'deps/packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
+      'deps/packages/lib/extra/utils.js': `export const helper = 'helper';`,
+      'deps/packages/lib/package.json': {
+        files: ['dist', 'extra'],
+        main: 'dist/index.js',
+        name: '@test/lib',
+        version: '1.0.0',
+      },
+    })
     expect(stdout.trim()).toBe('Hello!')
   })
 

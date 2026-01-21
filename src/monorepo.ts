@@ -2,11 +2,12 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { glob } from 'glob'
 import { PackageJson } from './package-json.js'
-import { AbsolutePath } from './paths.js'
+import { AbsolutePath, RelativePath } from './paths.js'
 
 export interface MonorepoPackage {
   name: string
   path: AbsolutePath
+  pathInRepo: RelativePath
   packageJson: PackageJson
 }
 
@@ -92,6 +93,7 @@ export async function discoverMonorepoPackages(monorepoRoot: AbsolutePath): Prom
         packages.set(packageJson.name, {
           name: packageJson.name,
           path: packageDir,
+          pathInRepo: RelativePath(path.relative(monorepoRoot, packageDir)),
           packageJson,
         })
       }

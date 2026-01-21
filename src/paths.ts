@@ -20,8 +20,8 @@ export function AbsolutePath(s: string): AbsolutePath {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace AbsolutePath {
-  export function join(base: AbsolutePath, relative: PathInRepo): AbsolutePath {
-    return AbsolutePath(path.join(base, relative))
+  export function join(base: AbsolutePath, p: RelativePath, ...paths: string[]): AbsolutePath {
+    return AbsolutePath(path.join(base, RelativePath.join(p, ...paths)))
   }
 
   export function dirname(p: AbsolutePath): AbsolutePath {
@@ -31,29 +31,34 @@ export namespace AbsolutePath {
 
 /**
  * Branded type for paths relative to the monorepo root.
- * Use PathInRepo(s) to create, PathInRepo.join() and PathInRepo.dirname() for manipulation.
+ * Use RelativePath(s) to create, RelativePath.join() and RelativePath.dirname() for manipulation.
  */
-export type PathInRepo = string & { readonly __brand: 'PathInRepo' }
+export type RelativePath = string & { readonly __brand: 'RelativePath' }
 
 /**
- * Creates a PathInRepo from a string. Normalizes the input.
+ * Creates a RelativePath from a string. Normalizes the input.
  * @throws if the path is absolute
  */
-export function PathInRepo(s: string): PathInRepo {
+export function RelativePath(s: string): RelativePath {
   const normalized = path.normalize(s)
   if (path.isAbsolute(normalized)) {
     throw new Error(`Expected relative path, got: ${s}`)
   }
-  return normalized as PathInRepo
+  return normalized as RelativePath
 }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
-export namespace PathInRepo {
-  export function join(base: PathInRepo, relative: PathInRepo): PathInRepo {
-    return PathInRepo(path.join(base, relative))
+export namespace RelativePath {
+  export function join(base: RelativePath, ...paths: string[]): RelativePath {
+    for (const at of paths) {
+      if (path.isAbsolute(at)) {
+        throw new Error(`Cannot join absolute path ${at} to RelativePath`)
+      }
+    }
+    return RelativePath(path.join(base, ...paths))
   }
 
-  export function dirname(p: PathInRepo): PathInRepo {
-    return PathInRepo(path.dirname(p))
+  export function dirname(p: RelativePath): RelativePath {
+    return RelativePath(path.dirname(p))
   }
 }
