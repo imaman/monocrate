@@ -46,7 +46,11 @@ describe('paths', () => {
 
       it('converges to root', () => {
         let p = AbsolutePath('/home/user/project/deeply/nested/path')
+        let iterations = 0
         while (p !== AbsolutePath.dirname(p)) {
+          if (iterations++ > 20) {
+            throw new Error('dirname did not converge')
+          }
           p = AbsolutePath.dirname(p)
         }
         expect(p).toBe('/')
