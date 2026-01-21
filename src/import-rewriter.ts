@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
-import type { PackageMap } from './package-map.js'
+import type { PackageMap } from './package-location.js'
 import { resolveImport } from './collect-package-locations.js'
 import type { AbsolutePath } from './paths.js'
 

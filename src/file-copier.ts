@@ -1,6 +1,6 @@
 import * as fsPromises from 'node:fs/promises'
 import * as path from 'node:path'
-import type { PackageMap } from './package-map.js'
+import type { PackageMap } from './package-location.js'
 import type { AbsolutePath } from './paths.js'
 
 interface CopyOperation {

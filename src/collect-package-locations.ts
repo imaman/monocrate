@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import * as ResolveExports from 'resolve.exports'
-import type { PackageLocation } from './package-map.js'
+import type { PackageLocation } from './package-location.js'
 import type { PackageClosure } from './package-closure.js'
 import type { MonorepoPackage } from './monorepo.js'
 import { getFilesToPack } from './get-files-to-pack.js'
