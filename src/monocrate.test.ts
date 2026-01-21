@@ -2,10 +2,11 @@ import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { monocrate } from './index.js'
 import { findMonorepoRoot } from './monorepo.js'
 import { AbsolutePath } from './paths.js'
+import * as publishModule from './publish.js'
 
 type Jsonable = Record<string, unknown>
 type FolderifyRecipe = Record<string, string | Jsonable>
@@ -181,6 +182,85 @@ describe('optional output directory', () => {
     })
 
     expect(result.outputDir).toBe(outputDir)
+  })
+})
+
+describe('output file option', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+    tempDirs.length = 0
+    vi.restoreAllMocks()
+  })
+
+  it('writes resolved version to outputFile when specified', async () => {
+    vi.spyOn(publishModule, 'publish').mockImplementation(() => {})
+
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const versionFilePath = path.join(outputDir, 'version.txt')
+
+    const result = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+      publishToVersion: '2.3.4',
+      outputFile: versionFilePath,
+    })
+
+    expect(result.resolvedVersion).toBe('2.3.4')
+    expect(fs.existsSync(versionFilePath)).toBe(true)
+    expect(fs.readFileSync(versionFilePath, 'utf-8')).toBe('2.3.4')
+  })
+
+  it('returns resolvedVersion as undefined when publishToVersion is not specified', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+
+    const result = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    expect(result.resolvedVersion).toBeUndefined()
+  })
+
+  it('does not create outputFile when publishToVersion is not specified', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const versionFilePath = path.join(outputDir, 'version.txt')
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+      outputFile: versionFilePath,
+    })
+
+    expect(fs.existsSync(versionFilePath)).toBe(false)
   })
 })
 

@@ -1,4 +1,5 @@
 import * as fs from 'node:fs/promises'
+import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { findMonorepoRoot } from './monorepo.js'
@@ -34,6 +35,12 @@ export interface MonocrateOptions {
    */
   publishToVersion?: string
   /**
+   * Path to write the output (resolved version) to a file instead of stdout.
+   * Can be absolute or relative. Relative paths are resolved from the cwd option.
+   * If not specified, output is written to stdout.
+   */
+  outputFile?: string
+  /**
    * Base directory for resolving relative paths. Must be a valid, existing directory.
    */
   cwd: string
@@ -46,9 +53,9 @@ export interface MonocrateResult {
   outputDir: string
   /**
    * The resolved version that was/will be published.
-   * Only present when publishToVersion was specified.
+   * Undefined when publishToVersion was not specified.
    */
-  resolvedVersion?: string
+  resolvedVersion: string | undefined
 }
 
 /**
@@ -87,5 +94,14 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     publish(outputDir)
   }
 
-  return resolvedVersion !== undefined ? { outputDir, resolvedVersion } : { outputDir }
+  if (resolvedVersion !== undefined) {
+    if (options.outputFile) {
+      const outputFilePath = path.resolve(cwd, options.outputFile)
+      fsSync.writeFileSync(outputFilePath, resolvedVersion)
+    } else {
+      console.log(resolvedVersion)
+    }
+  }
+
+  return { outputDir, resolvedVersion }
 }
