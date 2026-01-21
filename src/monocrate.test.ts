@@ -29,8 +29,7 @@ describe('optional output directory', () => {
     expect(fs.existsSync(result.outputDir)).toBe(true)
 
     // Verify the assembly was created there
-    const output = unfolderify(result.outputDir)
-    expect(output['package.json']).toEqual({
+    expect(unfolderify(result.outputDir)['package.json']).toEqual({
       name: '@test/app',
       version: '1.0.0',
       main: 'dist/index.js',
@@ -72,7 +71,7 @@ describe('output file option', () => {
 `,
     })
 
-    const outputDir = createTempDir('monocrate-output-')
+    const outputDir = createTempDir()
     const versionFilePath = path.join(outputDir, 'version.txt')
 
     const result = await monocrate({
@@ -85,8 +84,7 @@ describe('output file option', () => {
     })
 
     expect(result.resolvedVersion).toBe('2.3.4')
-    expect(fs.existsSync(versionFilePath)).toBe(true)
-    expect(fs.readFileSync(versionFilePath, 'utf-8')).toBe('2.3.4')
+    expect(unfolderify(outputDir)).toMatchObject({ 'version.txt': '2.3.4' })
   })
 
   it('returns resolvedVersion as undefined and does not create outputFile when publishToVersion is not specified', async () => {

@@ -12,7 +12,7 @@ export class MonocreateTeskit {
   async shutdown() {}
 }
 
-export function createTempDir(prefix: string): string {
+export function createTempDir(prefix = 'monocrate-testing-'): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix))
 }
 
