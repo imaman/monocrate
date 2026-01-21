@@ -9,16 +9,16 @@ export interface PackageLocation {
   name: string
 
   /**
-   * Absolute path to the source package directory
+   * Absolute path to the package's directory in the repo.
    * @example "/home/user/monorepo/packages/my-package"
    */
-  packageDir: AbsolutePath
+  fromDir: AbsolutePath
 
   /**
    * Absolute path to the the package's output directory
    * @example "/tmp/monocrate-ab00003/deps/packages/my-package" (in-repo dependency)
    */
-  directoryInOutput: AbsolutePath
+  toDir: AbsolutePath
 
   /**
    * Individual file paths (relative to the package dir) to copy, as determined by `npm pack --dry-run`.

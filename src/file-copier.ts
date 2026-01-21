@@ -34,8 +34,8 @@ export class FileCopier {
     for (const location of this.packageMap.values()) {
       for (const at of location.filesToCopy) {
         operations.push({
-          source: path.join(location.packageDir, at),
-          destination: path.join(location.directoryInOutput, at),
+          source: path.join(location.fromDir, at),
+          destination: path.join(location.toDir, at),
         })
       }
     }
