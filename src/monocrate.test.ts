@@ -1,140 +1,15 @@
-import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { monocrate } from './index.js'
 import { findMonorepoRoot } from './monorepo.js'
 import { AbsolutePath } from './paths.js'
 import * as publishModule from './publish.js'
-
-type Jsonable = Record<string, unknown>
-type FolderifyRecipe = Record<string, string | Jsonable>
-
-const tempDirs: string[] = []
-
-function createTempDir(prefix: string): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix))
-  tempDirs.push(dir)
-  return dir
-}
-
-function folderify(recipe: FolderifyRecipe): string {
-  const ret = createTempDir('monocrate-test-')
-  const keys = Object.keys(recipe).map((p) => path.normalize(p))
-  const set = new Set<string>(keys)
-
-  for (const key of keys) {
-    if (key === '.') {
-      throw new Error(`bad input - the recipe contains a file name which is either empty ('') or a dot ('.')`)
-    }
-    for (let curr = path.dirname(key); curr !== '.'; curr = path.dirname(curr)) {
-      if (set.has(curr)) {
-        throw new Error(`bad input - a file (${key}) is nested under another file (${curr})`)
-      }
-    }
-  }
-
-  for (const [relativePath, content] of Object.entries(recipe)) {
-    const file = path.join(ret, relativePath)
-    const dir = path.dirname(file)
-    fs.mkdirSync(dir, { recursive: true })
-    if (typeof content === 'string') {
-      fs.writeFileSync(file, content)
-    } else {
-      fs.writeFileSync(file, JSON.stringify(content, null, 2))
-    }
-  }
-
-  return ret
-}
-
-function unfolderify(dir: string): FolderifyRecipe {
-  const result: FolderifyRecipe = {}
-
-  function walk(currentDir: string, prefix: string): void {
-    const entries = fs.readdirSync(currentDir, { withFileTypes: true })
-    for (const entry of entries) {
-      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name
-      const fullPath = path.join(currentDir, entry.name)
-      if (entry.isDirectory()) {
-        walk(fullPath, relativePath)
-      } else {
-        const content = fs.readFileSync(fullPath, 'utf-8')
-        if (entry.name.endsWith('.json')) {
-          result[relativePath] = JSON.parse(content) as Jsonable
-        } else {
-          result[relativePath] = content
-        }
-      }
-    }
-  }
-
-  walk(dir, '')
-  return result
-}
-
-interface PackageJsonOptions {
-  name: string
-  dependencies?: Record<string, string>
-  transform?: (pkg: Jsonable) => void
-}
-
-/**
- * Creates a package.json object with sensible defaults for npm pack compatibility.
- * Required fields (name, version) are always included.
- */
-function makePackageJson(options: PackageJsonOptions): Jsonable {
-  const pkg: Jsonable = {
-    name: options.name,
-    version: '1.0.0',
-    main: 'dist/index.js',
-  }
-
-  if (options.dependencies !== undefined) {
-    pkg.dependencies = options.dependencies
-  }
-
-  if (options.transform !== undefined) {
-    options.transform(pkg)
-  }
-
-  return pkg
-}
-
-async function runMonocrate(monorepoRoot: string, sourcePackage: string, entryPoint = 'dist/index.js') {
-  const outputDir = createTempDir('monocrate-output-')
-
-  await monocrate({
-    cwd: monorepoRoot,
-    pathToSubjectPackage: path.join(monorepoRoot, sourcePackage),
-    outputDir,
-    monorepoRoot,
-  })
-
-  let stdout = ''
-  let stderr = ''
-  try {
-    stdout = execSync(`node --enable-source-maps ${path.join(outputDir, entryPoint)}`, {
-      encoding: 'utf-8',
-      stdio: 'pipe',
-    })
-  } catch (error) {
-    stderr = (error as { stderr?: string }).stderr ?? stderr
-  }
-  const output = unfolderify(outputDir)
-
-  return { stdout, stderr, output }
-}
+import { folderify } from './testing/folderify.js'
+import { unfolderify } from './testing/unfolderify.js'
+import { createTempDir, makePackageJson, runMonocrate } from './testing/monocrate-teskit.js'
 
 describe('optional output directory', () => {
-  afterEach(() => {
-    for (const dir of tempDirs) {
-      fs.rmSync(dir, { recursive: true, force: true })
-    }
-    tempDirs.length = 0
-  })
-
   it('creates a temp directory when outputDir is not provided', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -154,15 +29,11 @@ describe('optional output directory', () => {
     expect(fs.existsSync(result.outputDir)).toBe(true)
 
     // Verify the assembly was created there
-    const output = unfolderify(result.outputDir)
-    expect(output['package.json']).toEqual({
+    expect(unfolderify(result.outputDir)['package.json']).toEqual({
       name: '@test/app',
       version: '1.0.0',
       main: 'dist/index.js',
     })
-
-    // Clean up the temp directory
-    tempDirs.push(result.outputDir)
   })
 
   it('uses provided outputDir when specified', async () => {
@@ -187,72 +58,38 @@ describe('optional output directory', () => {
 
 describe('output file option', () => {
   afterEach(() => {
-    for (const dir of tempDirs) {
-      fs.rmSync(dir, { recursive: true, force: true })
-    }
-    tempDirs.length = 0
     vi.restoreAllMocks()
   })
 
-  it('writes resolved version to outputFile when specified', async () => {
+  it('writes resolved version to outputFile only when publishToVersion is set', async () => {
     vi.spyOn(publishModule, 'publish').mockImplementation(() => {})
 
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': makePackageJson({ name: '@test/app' }),
-      'packages/app/dist/index.js': `export const foo = 'foo';
-`,
+      'packages/app/dist/index.js': `export const foo = 'foo';`,
     })
 
-    const outputDir = createTempDir('monocrate-output-')
-    const versionFilePath = path.join(outputDir, 'version.txt')
+    const outputDir = createTempDir()
+    const dir = createTempDir()
 
-    const result = await monocrate({
+    const opts = {
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       outputDir,
       monorepoRoot,
-      publishToVersion: '2.3.4',
-      outputFile: versionFilePath,
-    })
+      outputFile: path.join(dir, 'stdout'),
+    }
 
-    expect(result.resolvedVersion).toBe('2.3.4')
-    expect(fs.existsSync(versionFilePath)).toBe(true)
-    expect(fs.readFileSync(versionFilePath, 'utf-8')).toBe('2.3.4')
-  })
+    expect(await monocrate(opts)).toMatchObject({ resolvedVersion: undefined })
+    expect(unfolderify(dir)).toEqual({})
 
-  it('returns resolvedVersion as undefined and does not create outputFile when publishToVersion is not specified', async () => {
-    const monorepoRoot = folderify({
-      'package.json': { workspaces: ['packages/*'] },
-      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
-      'packages/app/dist/index.js': `export const foo = 'foo';
-`,
-    })
-
-    const outputDir = createTempDir('monocrate-output-')
-    const versionFilePath = path.join(outputDir, 'version.txt')
-
-    const result = await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-      outputFile: versionFilePath,
-    })
-
-    expect(result.resolvedVersion).toBeUndefined()
-    expect(fs.existsSync(versionFilePath)).toBe(false)
+    expect(await monocrate({ ...opts, publishToVersion: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
+    expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
   })
 })
 
 describe('monorepo discovery', () => {
-  afterEach(() => {
-    for (const dir of tempDirs) {
-      fs.rmSync(dir, { recursive: true, force: true })
-    }
-    tempDirs.length = 0
-  })
-
   it('finds monorepo root with npm workspaces', () => {
     const monorepoRoot = folderify({
       'package.json': { name: 'my-monorepo', workspaces: ['packages/*'] },
@@ -287,13 +124,6 @@ describe('monorepo discovery', () => {
 })
 
 describe('error handling', () => {
-  afterEach(() => {
-    for (const dir of tempDirs) {
-      fs.rmSync(dir, { recursive: true, force: true })
-    }
-    tempDirs.length = 0
-  })
-
   it('handles package with no dist directory (npm pack includes only package.json)', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -393,13 +223,6 @@ describe('error handling', () => {
 })
 
 describe('package.json transformation', () => {
-  afterEach(() => {
-    for (const dir of tempDirs) {
-      fs.rmSync(dir, { recursive: true, force: true })
-    }
-    tempDirs.length = 0
-  })
-
   it('preserves exports field in package.json', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -429,8 +252,7 @@ describe('package.json transformation', () => {
       monorepoRoot,
     })
 
-    const output = unfolderify(outputDir)
-    const pkgJson = output['package.json'] as Record<string, unknown>
+    const pkgJson = unfolderify(outputDir)['package.json'] as Record<string, unknown>
 
     expect(pkgJson.exports).toEqual({
       '.': {
@@ -452,11 +274,10 @@ describe('package.json transformation', () => {
         author: 'Test Author',
         license: 'MIT',
       },
-      'packages/app/dist/index.js': `export const foo = 'foo';
-`,
+      'packages/app/dist/index.js': `export const foo = 'foo';`,
     })
 
-    const outputDir = createTempDir('monocrate-output-')
+    const outputDir = createTempDir()
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
@@ -475,13 +296,6 @@ describe('package.json transformation', () => {
 })
 
 describe('monocrate e2e', () => {
-  afterEach(() => {
-    for (const dir of tempDirs) {
-      fs.rmSync(dir, { recursive: true, force: true })
-    }
-    tempDirs.length = 0
-  })
-
   it('assembles a simple package with an in-repo dependency', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -495,11 +309,8 @@ describe('monocrate e2e', () => {
           chalk: '^5.0.0',
         },
       },
-      'packages/app/dist/index.js': `import { greet } from '@test/lib';
-console.log(greet('World'));
-`,
-      'packages/app/dist/index.d.ts': `import { greet } from '@test/lib';
-`,
+      'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet('World'));`,
+      'packages/app/dist/index.d.ts': `import { greet } from '@test/lib';`,
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
@@ -509,12 +320,8 @@ console.log(greet('World'));
           lodash: '^4.17.21',
         },
       },
-      'packages/lib/dist/index.js': `export function greet(name) {
-  return 'Hello, ' + name + '!';
-}
-`,
-      'packages/lib/dist/index.d.ts': `export declare function greet(name: string): string;
-`,
+      'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
+      'packages/lib/dist/index.d.ts': `export declare function greet(name: string): string;`,
     })
 
     const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
@@ -546,9 +353,7 @@ console.log(greet('World'));
           chalk: '^5.0.0',
         },
       },
-      'packages/app-alpha/dist/index.js': `import { getAlpha } from '@test/lib-alpha';
-console.log('Alpha: ' + getAlpha());
-`,
+      'packages/app-alpha/dist/index.js': `import { getAlpha } from '@test/lib-alpha'; console.log('Alpha: ' + getAlpha());`,
       'packages/lib-alpha/package.json': {
         name: '@test/lib-alpha',
         version: '1.0.0',
@@ -557,10 +362,7 @@ console.log('Alpha: ' + getAlpha());
           lodash: '^4.17.21',
         },
       },
-      'packages/lib-alpha/dist/index.js': `export function getAlpha() {
-  return 'ALPHA';
-}
-`,
+      'packages/lib-alpha/dist/index.js': `export function getAlpha() { return 'ALPHA' }`,
       // Second app with its own lib and different external dep
       'packages/app-beta/package.json': {
         name: '@test/app-beta',
@@ -571,9 +373,7 @@ console.log('Alpha: ' + getAlpha());
           zod: '^3.0.0',
         },
       },
-      'packages/app-beta/dist/index.js': `import { getBeta } from '@test/lib-beta';
-console.log('Beta: ' + getBeta());
-`,
+      'packages/app-beta/dist/index.js': `import { getBeta } from '@test/lib-beta'; console.log('Beta: ' + getBeta());`,
       'packages/lib-beta/package.json': {
         name: '@test/lib-beta',
         version: '2.0.0',
@@ -582,10 +382,7 @@ console.log('Beta: ' + getBeta());
           uuid: '^9.0.0',
         },
       },
-      'packages/lib-beta/dist/index.js': `export function getBeta() {
-  return 'BETA';
-}
-`,
+      'packages/lib-beta/dist/index.js': `export function getBeta() { return 'BETA'; }`,
     })
 
     // Assemble only app-alpha
@@ -1220,13 +1017,6 @@ export const a = 'a-' + b;
 })
 
 describe('files property support', () => {
-  afterEach(() => {
-    for (const dir of tempDirs) {
-      fs.rmSync(dir, { recursive: true, force: true })
-    }
-    tempDirs.length = 0
-  })
-
   it('uses files property to determine what to copy', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -1432,13 +1222,6 @@ console.log('Hello from bin');
 
 // TODO(imaman): move this to a separate test file
 describe('version conflict detection', () => {
-  afterEach(() => {
-    for (const dir of tempDirs) {
-      fs.rmSync(dir, { recursive: true, force: true })
-    }
-    tempDirs.length = 0
-  })
-
   it('throws with detailed error message when packages require different versions', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
