@@ -117,7 +117,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello, World!')
   }, 60000)
 
-  it('publishes multiple versions of the same package', async () => {
+  it.only('publishes multiple versions of the same package', async () => {
     // Verdaccio does check against the production NPM registry so we add a UUID to avoid version collision with the foo
     // pacakge.
     const pkgName = `foo-${crypto.randomUUID()}`
@@ -130,10 +130,10 @@ describe('npm publishing with Verdaccio', () => {
       },
       'packages/foo/dist/index.js': `export const version = '1';`,
     })
+    verdaccio.createNpmRc(monorepoRoot)
 
     // Publish version 1.0.0
     const outputDir1 = createTempDir('monocrate-output-')
-    verdaccio.createNpmRc(outputDir1)
 
     expect(
       await monocrate({

@@ -73,7 +73,7 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
     auth: {
       htpasswd: {
         file: path.join(configDir, 'htpasswd'),
-        max_users: 100,
+        max_users: -1, //100,
       },
     },
     uplinks: {
@@ -83,14 +83,14 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
     },
     packages: {
       '@*/*': {
-        access: '$anonymous',
-        publish: '$anonymous',
-        unpublish: '$anonymous',
+        access: '$all',
+        publish: '$all',
+        unpublish: '$all',
       },
       '**': {
-        access: '$anonymous',
-        publish: '$anonymous',
-        unpublish: '$anonymous',
+        access: '$all',
+        publish: '$all',
+        unpublish: '$all',
       },
     },
     // packages: {
