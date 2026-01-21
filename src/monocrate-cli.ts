@@ -27,18 +27,23 @@ const command = defineCommand({
       description: 'Publish to npm with version: x.y.z (explicit) or patch|minor|major (increment)',
       alias: 'p',
     },
+    'output-file': {
+      type: 'string',
+      description: 'Write output to file instead of stdout',
+      alias: 'o',
+    },
   },
   async run({ args }) {
     const outputDir = args.output || undefined
-    const actualOutputDir = await monocrate({
+    const outputFile = args['output-file'] || undefined
+    await monocrate({
       pathToSubjectPackage: args.source,
       ...(outputDir ? { outputDir } : {}),
+      ...(outputFile ? { outputFile } : {}),
       monorepoRoot: args.root,
       publishToVersion: args.publish,
       cwd: process.cwd(),
     })
-
-    console.log(actualOutputDir)
   },
 })
 

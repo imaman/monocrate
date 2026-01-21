@@ -1,4 +1,5 @@
 import * as fs from 'node:fs/promises'
+import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { findMonorepoRoot } from './monorepo.js'
@@ -34,18 +35,36 @@ export interface MonocrateOptions {
    */
   publishToVersion?: string
   /**
+   * Path to write the output (resolved version) to a file instead of stdout.
+   * Can be absolute or relative. Relative paths are resolved from the cwd option.
+   * If not specified, output is written to stdout.
+   */
+  outputFile?: string
+  /**
    * Base directory for resolving relative paths. Must be a valid, existing directory.
    */
   cwd: string
 }
 
+export interface MonocrateResult {
+  /**
+   * The output directory path where the assembly was created.
+   */
+  outputDir: string
+  /**
+   * The new version (AKA: 'resolved version') for the package.
+   * Undefined when publishToVersion was not specified.
+   */
+  resolvedVersion: string | undefined
+}
+
 /**
  * Assembles a monorepo package and its in-repo dependencies for npm publishing.
  * @param options - Configuration options for the assembly process
- * @returns The output directory path where the assembly was created
+ * @returns The result of the assembly operation
  * @throws Error if assembly or publishing fails
  */
-export async function monocrate(options: MonocrateOptions): Promise<string> {
+export async function monocrate(options: MonocrateOptions): Promise<MonocrateResult> {
   // Resolve and validate cwd first, then use it to resolve all other paths
   const cwd = AbsolutePath(path.resolve(options.cwd))
   const cwdExists = await fs
@@ -69,11 +88,20 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
   )
 
   const closure = await computePackageClosure(sourceDir, monorepoRoot)
-  await assemble(closure, outputDir, versionSpecifier)
+  const resolvedVersion = await assemble(closure, outputDir, versionSpecifier)
 
   if (versionSpecifier) {
     publish(outputDir)
   }
 
-  return outputDir
+  if (resolvedVersion !== undefined) {
+    if (options.outputFile) {
+      const outputFilePath = path.resolve(cwd, options.outputFile)
+      fsSync.writeFileSync(outputFilePath, resolvedVersion)
+    } else {
+      console.log(resolvedVersion)
+    }
+  }
+
+  return { outputDir, resolvedVersion }
 }

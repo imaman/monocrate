@@ -2,10 +2,11 @@ import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { monocrate } from './index.js'
 import { findMonorepoRoot } from './monorepo.js'
 import { AbsolutePath } from './paths.js'
+import * as publishModule from './publish.js'
 
 type Jsonable = Record<string, unknown>
 type FolderifyRecipe = Record<string, string | Jsonable>
@@ -142,18 +143,18 @@ describe('optional output directory', () => {
 `,
     })
 
-    const outputDir = await monocrate({
+    const result = await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       monorepoRoot,
     })
 
     // Verify a temp directory was created
-    expect(outputDir).toContain('monocrate-')
-    expect(fs.existsSync(outputDir)).toBe(true)
+    expect(result.outputDir).toContain('monocrate-')
+    expect(fs.existsSync(result.outputDir)).toBe(true)
 
     // Verify the assembly was created there
-    const output = unfolderify(outputDir)
+    const output = unfolderify(result.outputDir)
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '1.0.0',
@@ -161,7 +162,7 @@ describe('optional output directory', () => {
     })
 
     // Clean up the temp directory
-    tempDirs.push(outputDir)
+    tempDirs.push(result.outputDir)
   })
 
   it('uses provided outputDir when specified', async () => {
@@ -180,7 +181,67 @@ describe('optional output directory', () => {
       monorepoRoot,
     })
 
-    expect(result).toBe(outputDir)
+    expect(result.outputDir).toBe(outputDir)
+  })
+})
+
+describe('output file option', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+    tempDirs.length = 0
+    vi.restoreAllMocks()
+  })
+
+  it('writes resolved version to outputFile when specified', async () => {
+    vi.spyOn(publishModule, 'publish').mockImplementation(() => {})
+
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const versionFilePath = path.join(outputDir, 'version.txt')
+
+    const result = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+      publishToVersion: '2.3.4',
+      outputFile: versionFilePath,
+    })
+
+    expect(result.resolvedVersion).toBe('2.3.4')
+    expect(fs.existsSync(versionFilePath)).toBe(true)
+    expect(fs.readFileSync(versionFilePath, 'utf-8')).toBe('2.3.4')
+  })
+
+  it('returns resolvedVersion as undefined and does not create outputFile when publishToVersion is not specified', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+      'packages/app/dist/index.js': `export const foo = 'foo';
+`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    const versionFilePath = path.join(outputDir, 'version.txt')
+
+    const result = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+      outputFile: versionFilePath,
+    })
+
+    expect(result.resolvedVersion).toBeUndefined()
+    expect(fs.existsSync(versionFilePath)).toBe(false)
   })
 })
 
