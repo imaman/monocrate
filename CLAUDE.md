@@ -90,4 +90,7 @@ Strict mode with additional checks: `noUncheckedIndexedAccess`, `exactOptionalPr
 
 **Always specify expected error messages in toThrow()**: Never use bare `toThrow()` without an argument. Always pass an expected error message (e.g., `toThrow("dependency not found")`). This verifies the test actually triggered the intended error path, not some unrelated failure. A partial string is acceptable as long as it's specific enough to confirm the correct sad-path was executed.
 
+**Prioritize intent clarity in tests**: Decide deliberately how each test communicates its intent. In simple cases, inlining values often expresses intent more directly than introducing temporary variables. Use variables when they actively improve readability—by naming intent, representing domain concepts, or avoiding repetition. Prefer the style that best explains why the test exists, not just how it's written.```
+
+
 
