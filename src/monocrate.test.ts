@@ -5,6 +5,7 @@ import * as path from 'node:path'
 import { describe, it, expect, afterEach } from 'vitest'
 import { monocrate } from './index.js'
 import { findMonorepoRoot } from './monorepo.js'
+import { AbsolutePath } from './paths.js'
 
 type Jsonable = Record<string, unknown>
 type FolderifyRecipe = Record<string, string | Jsonable>
@@ -197,7 +198,7 @@ describe('monorepo discovery', () => {
       'packages/app/package.json': { name: '@test/app' },
     })
 
-    const found = findMonorepoRoot(path.join(monorepoRoot, 'packages/app'))
+    const found = findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
     expect(found).toBe(monorepoRoot)
   })
 
@@ -210,7 +211,7 @@ describe('monorepo discovery', () => {
       'packages/app/package.json': { name: '@test/app' },
     })
 
-    const found = findMonorepoRoot(path.join(monorepoRoot, 'packages/app'))
+    const found = findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
     expect(found).toBe(monorepoRoot)
   })
 
@@ -218,7 +219,7 @@ describe('monorepo discovery', () => {
     const tempDir = createTempDir('no-monorepo-')
     fs.mkdirSync(path.join(tempDir, 'some-package'))
 
-    expect(() => findMonorepoRoot(path.join(tempDir, 'some-package'))).toThrow('Could not find monorepo root')
+    expect(() => findMonorepoRoot(AbsolutePath(path.join(tempDir, 'some-package')))).toThrow('Could not find monorepo root')
   })
 })
 

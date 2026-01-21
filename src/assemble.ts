@@ -6,11 +6,12 @@ import type { PackageClosure } from './package-closure.js'
 import { resolveVersion } from './resolve-version.js'
 import { rewritePackageJson } from './rewrite-package-json.js'
 import type { VersionSpecifier } from './version-specifier.js'
+import type { AbsolutePath } from './paths.js'
 
 export async function assemble(
   closure: PackageClosure,
-  monorepoRoot: string,
-  outputDir: string,
+  monorepoRoot: AbsolutePath,
+  outputDir: AbsolutePath,
   versionSpecifier: VersionSpecifier | undefined
 ): Promise<void> {
   const locations = await collectPackageLocations(closure, monorepoRoot)

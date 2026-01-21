@@ -4,6 +4,7 @@ import type { PackageLocation } from './package-map.js'
 import type { PackageClosure } from './package-closure.js'
 import type { MonorepoPackage } from './monorepo.js'
 import { getFilesToPack } from './get-files-to-pack.js'
+import { type AbsolutePath, PathInRepo } from './paths.js'
 
 /**
  * Resolves an import specifier to a file path using Node.js resolution semantics.
@@ -36,7 +37,7 @@ export function resolveImport(location: PackageLocation, subpath: string): strin
   return path.join(location.outputPrefix, `${subpath}.js`)
 }
 
-async function createPackageLocation(pkg: MonorepoPackage, outputPrefix: string) {
+async function createPackageLocation(pkg: MonorepoPackage, outputPrefix: PathInRepo): Promise<PackageLocation> {
   const filesToCopy = await getFilesToPack(pkg.path)
 
   return {
@@ -48,17 +49,17 @@ async function createPackageLocation(pkg: MonorepoPackage, outputPrefix: string)
   }
 }
 
-function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: string): string {
-  return path.join('deps', path.relative(monorepoRoot, dep.path))
+function computeDepOutputPrefix(dep: MonorepoPackage, monorepoRoot: AbsolutePath): PathInRepo {
+  return PathInRepo(path.join('deps', path.relative(monorepoRoot, dep.path)))
 }
 
-export async function collectPackageLocations(closure: PackageClosure, monorepoRoot: string) {
+export async function collectPackageLocations(closure: PackageClosure, monorepoRoot: AbsolutePath): Promise<PackageLocation[]> {
   // TODO(imaman): use promises()
   return Promise.all(
     closure.members.map((dep) =>
       createPackageLocation(
         dep,
-        dep.name === closure.subjectPackageName ? '' : computeDepOutputPrefix(dep, monorepoRoot)
+        dep.name === closure.subjectPackageName ? PathInRepo('.') : computeDepOutputPrefix(dep, monorepoRoot)
       )
     )
   )

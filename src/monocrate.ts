@@ -6,6 +6,7 @@ import { computePackageClosure } from './compute-package-closure.js'
 import { assemble } from './assemble.js'
 import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
+import { AbsolutePath } from './paths.js'
 
 export interface MonocrateOptions {
   /**
@@ -46,7 +47,7 @@ export interface MonocrateOptions {
  */
 export async function monocrate(options: MonocrateOptions): Promise<string> {
   // Resolve and validate cwd first, then use it to resolve all other paths
-  const cwd = path.resolve(options.cwd)
+  const cwd = AbsolutePath(path.resolve(options.cwd))
   const cwdExists = await fs
     .stat(cwd)
     .then(() => true)
@@ -55,15 +56,17 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
     throw new Error(`cwd does not exist: ${cwd}`)
   }
 
-  const sourceDir = path.resolve(cwd, options.pathToSubjectPackage)
-  const monorepoRoot = options.monorepoRoot ? path.resolve(cwd, options.monorepoRoot) : findMonorepoRoot(sourceDir)
+  const sourceDir = AbsolutePath(path.resolve(cwd, options.pathToSubjectPackage))
+  const monorepoRoot = options.monorepoRoot
+    ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
+    : findMonorepoRoot(sourceDir)
 
   // Validate publish argument before any side effects
   const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
 
-  const outputDir = options.outputDir
-    ? path.resolve(cwd, options.outputDir)
-    : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
+  const outputDir = AbsolutePath(
+    options.outputDir ? path.resolve(cwd, options.outputDir) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
+  )
 
   const closure = await computePackageClosure(sourceDir, monorepoRoot)
   await assemble(closure, monorepoRoot, outputDir, versionSpecifier)

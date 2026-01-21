@@ -1,6 +1,7 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import { z } from 'zod'
+import type { AbsolutePath } from './paths.js'
 
 const execAsync = promisify(exec)
 
@@ -28,7 +29,7 @@ const NpmPackError = z.object({
  * @returns Array of relative file paths that npm would include
  * @example getFilesToPack("/home/user/my-package") => ["dist/index.js", "README.md", "package.json"]
  */
-export async function getFilesToPack(packageDir: string): Promise<string[]> {
+export async function getFilesToPack(packageDir: AbsolutePath): Promise<string[]> {
   const { stdout } = await execAsync('npm pack --dry-run --json', {
     cwd: packageDir,
     encoding: 'utf-8',
