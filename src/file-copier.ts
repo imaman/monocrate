@@ -1,7 +1,6 @@
 import * as fsPromises from 'node:fs/promises'
 import * as path from 'node:path'
 import type { PackageMap } from './package-location.js'
-import { AbsolutePath } from './paths.js'
 
 interface CopyOperation {
   source: string
@@ -9,10 +8,7 @@ interface CopyOperation {
 }
 
 export class FileCopier {
-  constructor(
-    private packageMap: PackageMap,
-    private outputDir: AbsolutePath
-  ) {}
+  constructor(private packageMap: PackageMap) {}
 
   async copy(): Promise<string[]> {
     const operations = this.collectCopyOperations()
@@ -39,7 +35,7 @@ export class FileCopier {
       for (const at of location.filesToCopy) {
         operations.push({
           source: path.join(location.packageDir, at),
-          destination: AbsolutePath.join(this.outputDir, location.directoryInOutput, at),
+          destination: path.join(location.directoryInOutput, at),
         })
       }
     }

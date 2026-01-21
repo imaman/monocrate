@@ -2,13 +2,9 @@ import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
 import type { PackageMap } from './package-location.js'
 import { resolveImport } from './collect-package-locations.js'
-import type { AbsolutePath } from './paths.js'
 
 export class ImportRewriter {
-  constructor(
-    private packageMap: PackageMap,
-    private outputDir: AbsolutePath
-  ) {}
+  constructor(private packageMap: PackageMap) {}
 
   async rewriteAll(files: string[]): Promise<void> {
     const jsAndDtsFiles = files.filter((f) => f.endsWith('.js') || f.endsWith('.d.ts'))
@@ -87,8 +83,7 @@ export class ImportRewriter {
     return { packageName: parts.slice(0, cutoff).join('/'), subPath: parts.slice(cutoff).join('/') }
   }
 
-  private computeRelativePath(importerPath: string, importeePath: string): string {
-    const absoluteImporteePath = path.join(this.outputDir, importeePath)
+  private computeRelativePath(importerPath: string, absoluteImporteePath: string): string {
     let relative = path.relative(path.dirname(importerPath), absoluteImporteePath)
     if (!relative.startsWith('.')) {
       relative = './' + relative

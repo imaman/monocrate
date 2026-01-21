@@ -1,5 +1,5 @@
 import type { PackageJson } from './package-json.js'
-import type { AbsolutePath, PathInRepo } from './paths.js'
+import type { AbsolutePath } from './paths.js'
 
 export interface PackageLocation {
   /**
@@ -10,17 +10,15 @@ export interface PackageLocation {
 
   /**
    * Absolute path to the source package directory
-   * @example "/home/user/monorepo/packages/utils"
+   * @example "/home/user/monorepo/packages/my-package"
    */
   packageDir: AbsolutePath
 
   /**
-   * Prefix for the output location. Empty string for the subject package,
-   * relative path under deps/ for in-repo dependencies
-   * @example "" (subject package)
-   * @example "deps/packages/utils" (in-repo dependency)
+   * Absolute path to the the package's output directory
+   * @example "/tmp/monocrate-ab00003/deps/packages/my-package" (in-repo dependency)
    */
-  directoryInOutput: PathInRepo
+  directoryInOutput: AbsolutePath
 
   /**
    * Individual file paths (relative to the package dir) to copy, as determined by `npm pack --dry-run`.

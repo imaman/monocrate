@@ -10,19 +10,18 @@ import type { AbsolutePath } from './paths.js'
 
 export async function assemble(
   closure: PackageClosure,
-  monorepoRoot: AbsolutePath,
   outputDir: AbsolutePath,
   versionSpecifier: VersionSpecifier | undefined
-): Promise<void> {
-  const locations = await collectPackageLocations(closure, monorepoRoot)
+) {
+  const locations = await collectPackageLocations(closure, outputDir)
   const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
   await fsPromises.mkdir(outputDir, { recursive: true })
   const [newVersion] = await Promise.all([
     versionSpecifier ? await resolveVersion(closure.subjectPackageName, versionSpecifier) : Promise.resolve(undefined),
     (async () => {
-      const copiedFiles = await new FileCopier(packageMap, outputDir).copy()
-      await new ImportRewriter(packageMap, outputDir).rewriteAll(copiedFiles)
+      const copiedFiles = await new FileCopier(packageMap).copy()
+      await new ImportRewriter(packageMap).rewriteAll(copiedFiles)
     })(),
   ])
   // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
