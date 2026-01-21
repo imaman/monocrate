@@ -4,6 +4,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { describe, it, expect, afterEach, beforeAll, afterAll } from 'vitest'
+import getPort from 'get-port'
 import { monocrate } from './index.js'
 
 type Jsonable = Record<string, unknown>
@@ -50,12 +51,7 @@ function folderify(recipe: FolderifyRecipe): string {
 interface VerdaccioServer {
   process: ChildProcess
   url: string
-  port: number
   configDir: string
-}
-
-function findAvailablePort(): number {
-  return 4873 + Math.floor(Math.random() * 1000)
 }
 
 async function startVerdaccio(): Promise<VerdaccioServer> {
@@ -63,38 +59,45 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
   const storageDir = path.join(configDir, 'storage')
   fs.mkdirSync(storageDir, { recursive: true })
 
-  const port = findAvailablePort()
+  const port = await getPort()
+  const url = `http://localhost:${String(port)}`
 
-  // Create Verdaccio config file
-  const configPath = path.join(configDir, 'config.yaml')
-  const configContent = `
-storage: ${storageDir}
-auth:
-  htpasswd:
-    file: ${path.join(configDir, 'htpasswd')}
-    max_users: 100
-uplinks:
-  npmjs:
-    url: https://registry.npmjs.org/
-packages:
-  '@test/*':
-    access: $all
-    publish: $all
-  '**':
-    access: $all
-    publish: $all
-    proxy: npmjs
-log:
-  type: stdout
-  format: pretty
-  level: warn
-`
-  fs.writeFileSync(configPath, configContent)
+  // Create Verdaccio config file (JSON format)
+  const configPath = path.join(configDir, 'config.json')
+  const config = {
+    storage: storageDir,
+    auth: {
+      htpasswd: {
+        file: path.join(configDir, 'htpasswd'),
+        max_users: 100,
+      },
+    },
+    uplinks: {
+      npmjs: {
+        url: 'https://registry.npmjs.org/',
+      },
+    },
+    packages: {
+      '@test/*': {
+        access: '$all',
+        publish: '$all',
+      },
+      '**': {
+        access: '$all',
+        publish: '$all',
+        proxy: 'npmjs',
+      },
+    },
+    log: {
+      type: 'stdout',
+      format: 'pretty',
+      level: 'warn',
+    },
+  }
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
 
   // Create empty htpasswd file
   fs.writeFileSync(path.join(configDir, 'htpasswd'), '')
-
-  const url = `http://localhost:${String(port)}`
 
   return new Promise((resolve, reject) => {
     const verdaccioProcess = spawn('npx', ['verdaccio', '--config', configPath, '--listen', String(port)], {
@@ -120,7 +123,6 @@ log:
           resolve({
             process: verdaccioProcess,
             url,
-            port,
             configDir,
           })
         }, 500)
@@ -194,8 +196,8 @@ describe('npm publishing with Verdaccio', () => {
 
     // Create .npmrc in output directory to point to Verdaccio
     // Verdaccio requires some form of auth token even with $all access
-    // Using a fake token that Verdaccio will accept
-    const registryHost = `localhost:${String(verdaccio.port)}`
+    // Extract host from URL for the _authToken line (npm requires host without protocol)
+    const registryHost = new URL(verdaccio.url).host
     fs.writeFileSync(
       path.join(outputDir, '.npmrc'),
       `registry=${verdaccio.url}\n//${registryHost}/:_authToken=fake-token-for-testing\n`
@@ -206,35 +208,30 @@ describe('npm publishing with Verdaccio', () => {
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
       outputDir,
       monorepoRoot,
-      publishToVersion: '1.0.0',
+      publishToVersion: '99.99.99',
     })
 
     // Verify the package was published by checking npm view
     const viewResult = execSync(`npm view @test/mylib --registry=${verdaccio.url} --json`, {
       encoding: 'utf-8',
     })
-    const packageInfo = JSON.parse(viewResult) as Record<string, unknown>
 
-    expect(packageInfo.name).toBe('@test/mylib')
-    expect(packageInfo.version).toBe('1.0.0')
+    expect(JSON.parse(viewResult)).toMatchObject({
+      name: '@test/mylib',
+      version: '99.99.99',
+    })
 
     // Verify the package can be installed and works
-    const installDir = createTempDir('npm-install-test-')
-    fs.writeFileSync(
-      path.join(installDir, 'package.json'),
-      JSON.stringify({ name: 'test-consumer', type: 'module' })
-    )
+    const installDir = folderify({
+      'package.json': { name: 'test-consumer', type: 'module' },
+      'test.mjs': `import { hello } from '@test/mylib'; console.log(hello());`,
+    })
 
-    execSync(`npm install @test/mylib@1.0.0 --registry=${verdaccio.url}`, {
+    // execSync throws if the command fails, which will fail the test
+    execSync(`npm install @test/mylib@99.99.99 --registry=${verdaccio.url}`, {
       cwd: installDir,
       stdio: 'pipe',
     })
-
-    // Run the installed package
-    fs.writeFileSync(
-      path.join(installDir, 'test.mjs'),
-      `import { hello } from '@test/mylib'; console.log(hello());`
-    )
 
     const output = execSync('node test.mjs', {
       cwd: installDir,
