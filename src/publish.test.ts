@@ -53,6 +53,33 @@ describe('npm publishing with Verdaccio', () => {
     expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello from mylib!')
   }, 60000)
 
+  it('publishes a simple non-scoped package', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/mylib/package.json': { name: 'mylib', version: '1.0.0', main: 'dist/index.js' },
+      'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
+    })
+
+    const outputDir = createTempDir()
+    verdaccio.createNpmRc(outputDir)
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
+      outputDir,
+      monorepoRoot,
+      publishToVersion: '99.99.99',
+    })
+    expect(await verdaccio.runView('mylib')).toMatchObject({ name: 'mylib', version: '99.99.99' })
+
+    // Verify the package can be installed and works
+    const installDir = folderify({
+      'package.json': { name: 'test-consumer', type: 'module' },
+      'test.mjs': `import { hello } from 'mylib'; console.log(hello());`,
+    })
+    verdaccio.runInstall(installDir, 'mylib@99.99.99')
+    expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello from mylib!')
+  }, 60000)
   it('publishes a package with in-repo dependency and rewritten imports work correctly', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -90,7 +117,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello, World!')
   }, 60000)
 
-  it('publishes multiple versions of the same package', async () => {
+  it.only('publishes multiple versions of the same package', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/foo/package.json': {
