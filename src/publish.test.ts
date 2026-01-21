@@ -141,12 +141,11 @@ describe('npm publishing with Verdaccio', () => {
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
         outputDir: outputDir1,
         monorepoRoot,
-        publishToVersion: '1.0.0',
+        publishToVersion: '1.4.1',
       })
-    ).toMatchObject({ resolvedVersion: '1.0.0' })
-    expect(verdaccio.runView(`${pkgName}@1.0.0`)).toMatchObject({ version: '1.0.0' })
+    ).toMatchObject({ resolvedVersion: '1.4.1' })
+    expect(verdaccio.runView(pkgName)).toMatchObject({ version: '1.4.1' })
 
-    // Publish version 1.0.1
     const outputDir2 = createTempDir('monocrate-output-')
     verdaccio.createNpmRc(outputDir2)
 
@@ -156,12 +155,11 @@ describe('npm publishing with Verdaccio', () => {
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
         outputDir: outputDir2,
         monorepoRoot,
-        publishToVersion: '1.0.1',
+        publishToVersion: '2.7.1',
       })
-    ).toMatchObject({ resolvedVersion: '1.0.1' })
-    expect(verdaccio.runView(`${pkgName}@1.0.1`)).toMatchObject({ version: '1.0.1' })
+    ).toMatchObject({ resolvedVersion: '2.7.1' })
+    expect(verdaccio.runView(pkgName)).toMatchObject({ version: '2.7.1' })
 
-    // Publish version 2.0.0
     const outputDir3 = createTempDir('monocrate-output-')
     verdaccio.createNpmRc(outputDir3)
 
@@ -171,16 +169,15 @@ describe('npm publishing with Verdaccio', () => {
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
         outputDir: outputDir3,
         monorepoRoot,
-        publishToVersion: '2.0.0',
+        publishToVersion: '3.1.4',
       })
-    ).toMatchObject({ resolvedVersion: '2.0.0' })
-    expect(verdaccio.runView(`${pkgName}@2.0.0`)).toMatchObject({ version: '2.0.0' })
+    ).toMatchObject({ resolvedVersion: '3.1.4' })
 
     // Verify all versions are available
-    const allVersions = verdaccio.runView(pkgName) as Record<string, unknown>
-    expect(allVersions.versions).toContain('1.0.0')
-    expect(allVersions.versions).toContain('1.0.1')
-    expect(allVersions.versions).toContain('2.0.0')
+    expect(verdaccio.runView(pkgName)).toMatchObject({
+      version: '3.1.4',
+      versions: ['1.4.1', '2.7.1', '3.1.4'],
+    })
   }, 120000)
 
   it('merges third-party dependencies from main package and in-repo deps', async () => {
