@@ -1,4 +1,4 @@
-import type { ChildProcess} from 'node:child_process';
+import type { ChildProcess } from 'node:child_process'
 import { execSync, spawn } from 'node:child_process'
 import { createTempDir } from './monocrate-teskit.js'
 import getPort from 'get-port'
@@ -82,16 +82,28 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
       },
     },
     packages: {
-      '@test/*': {
-        access: '$all',
-        publish: '$all',
+      '@*/*': {
+        access: '$anonymous',
+        publish: '$anonymous',
+        unpublish: '$anonymous',
       },
       '**': {
-        access: '$all',
-        publish: '$all',
-        proxy: 'npmjs',
+        access: '$anonymous',
+        publish: '$anonymous',
+        unpublish: '$anonymous',
       },
     },
+    // packages: {
+    //   '@test/*': {
+    //     access: '$all',
+    //     publish: '$all',
+    //   },
+    //   '**': {
+    //     access: '$all',
+    //     publish: '$all',
+    //     proxy: 'npmjs',
+    //   },
+    // },
     log: {
       type: 'stdout',
       format: 'pretty',

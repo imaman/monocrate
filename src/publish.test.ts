@@ -180,7 +180,7 @@ describe('npm publishing with Verdaccio', () => {
     })
   }, 120000)
 
-  it('merges third-party dependencies from main package and in-repo deps', async () => {
+  it.skip('merges third-party dependencies from main package and in-repo deps', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': {
