@@ -5,7 +5,6 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { monocrate } from './index.js'
 import { createTempDir } from './testing/monocrate-teskit.js'
 import { folderify } from './testing/folderify.js'
-import { createTempDir } from './testing/monocrate-teskit.js'
 import { VerdaccioTestkit } from './testing/verdaccio-testkit.js'
 
 describe('npm publishing with Verdaccio', () => {
@@ -61,17 +60,10 @@ describe('npm publishing with Verdaccio', () => {
         name: '@test/app',
         version: '1.0.0',
         main: 'dist/index.js',
-        dependencies: {
-          '@test/lib': 'workspace:*',
-        },
+        dependencies: { '@test/lib': 'workspace:*' },
       },
-      'packages/app/dist/index.js': `import { greet } from '@test/lib';
-export function sayHello(name) { return greet(name); }`,
-      'packages/lib/package.json': {
-        name: '@test/lib',
-        version: '1.0.0',
-        main: 'dist/index.js',
-      },
+      'packages/app/dist/index.js': `import { greet } from '@test/lib'; export function sayHello(name) { return greet(name); }`,
+      'packages/lib/package.json': { name: '@test/lib', version: '1.0.0', main: 'dist/index.js' },
       'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
     })
 
@@ -86,10 +78,7 @@ export function sayHello(name) { return greet(name); }`,
       publishToVersion: '88.88.88',
     })
 
-    expect(verdaccio.runView('@test/app')).toMatchObject({
-      name: '@test/app',
-      version: '88.88.88',
-    })
+    expect(verdaccio.runView('@test/app')).toMatchObject({ name: '@test/app', version: '88.88.88' })
 
     // Install and verify the published package works with rewritten imports
     const installDir = folderify({
@@ -98,9 +87,7 @@ export function sayHello(name) { return greet(name); }`,
     })
 
     verdaccio.runInstall(installDir, '@test/app@88.88.88')
-
-    const output = execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' })
-    expect(output.trim()).toBe('Hello, World!')
+    expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello, World!')
   }, 60000)
 
   it('publishes multiple versions of the same package', async () => {
@@ -118,30 +105,30 @@ export function sayHello(name) { return greet(name); }`,
     const outputDir1 = createTempDir('monocrate-output-')
     verdaccio.createNpmRc(outputDir1)
 
-    const result1 = await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
-      outputDir: outputDir1,
-      monorepoRoot,
-      publishToVersion: '1.0.0',
-    })
-
-    expect(result1.resolvedVersion).toBe('1.0.0')
+    expect(
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
+        outputDir: outputDir1,
+        monorepoRoot,
+        publishToVersion: '1.0.0',
+      })
+    ).toMatchObject({ resolvedVersion: '1.0.0' })
     expect(verdaccio.runView('@test/versioned@1.0.0')).toMatchObject({ version: '1.0.0' })
 
     // Publish version 1.0.1
     const outputDir2 = createTempDir('monocrate-output-')
     verdaccio.createNpmRc(outputDir2)
 
-    const result2 = await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
-      outputDir: outputDir2,
-      monorepoRoot,
-      publishToVersion: '1.0.1',
-    })
-
-    expect(result2.resolvedVersion).toBe('1.0.1')
+    expect(
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
+        outputDir: outputDir2,
+        monorepoRoot,
+        publishToVersion: '1.0.1',
+      })
+    ).toMatchObject({ resolvedVersion: '1.0.1' })
     expect(verdaccio.runView('@test/versioned@1.0.1')).toMatchObject({ version: '1.0.1' })
 
     // Publish version 2.0.0
