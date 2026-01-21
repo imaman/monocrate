@@ -135,15 +135,15 @@ describe('npm publishing with Verdaccio', () => {
     const outputDir3 = createTempDir('monocrate-output-')
     verdaccio.createNpmRc(outputDir3)
 
-    const result3 = await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
-      outputDir: outputDir3,
-      monorepoRoot,
-      publishToVersion: '2.0.0',
-    })
-
-    expect(result3.resolvedVersion).toBe('2.0.0')
+    expect(
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
+        outputDir: outputDir3,
+        monorepoRoot,
+        publishToVersion: '2.0.0',
+      })
+    ).toMatchObject({ resolvedVersion: '2.0.0' })
     expect(verdaccio.runView('@test/versioned@2.0.0')).toMatchObject({ version: '2.0.0' })
 
     // Verify all versions are available
