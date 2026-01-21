@@ -1,0 +1,157 @@
+import type { ChildProcess} from 'node:child_process';
+import { execSync, spawn } from 'node:child_process'
+import { createTempDir } from './monocrate-teskit.js'
+import getPort from 'get-port'
+import path from 'node:path'
+import fs from 'node:fs'
+
+interface VerdaccioServer {
+  process: ChildProcess
+  url: string
+  configDir: string
+}
+
+export class VerdaccioTestkit {
+  private server: VerdaccioServer | undefined = undefined
+
+  async start() {
+    this.server = await startVerdaccio()
+  }
+
+  get() {
+    if (!this.server) {
+      throw new Error(`Verdaccio server is not up. Did you call start()?`)
+    }
+
+    return this.server
+  }
+
+  async shutdown() {
+    await stopVerdaccio(this.get())
+  }
+
+  createNpmRc(dir: string) {
+    // Create .npmrc in output directory to point to Verdaccio
+    // Verdaccio requires some form of auth token even with $all access
+    // Extract host from URL for the _authToken line (npm requires host without protocol)
+    const registryHost = new URL(this.get().url).host
+    fs.writeFileSync(
+      path.join(dir, '.npmrc'),
+      `registry=${this.get().url}\n//${registryHost}/:_authToken=fake-token-for-testing\n`
+    )
+  }
+
+  runView(packageName: string): unknown {
+    // Verify the package was published by checking npm view
+    const viewResult = execSync(`npm view ${packageName} --registry=${this.get().url} --json`, {
+      encoding: 'utf-8',
+    })
+
+    return JSON.parse(viewResult)
+  }
+
+  runInstall(dir: string, packageName: string) {
+    // execSync throws if the command fails, which will fail the test
+    execSync(`npm install ${packageName} --registry=${this.get().url}`, {
+      cwd: dir,
+      stdio: 'pipe',
+    })
+  }
+}
+async function startVerdaccio(): Promise<VerdaccioServer> {
+  const configDir = createTempDir('verdaccio-config-')
+  const storageDir = path.join(configDir, 'storage')
+  fs.mkdirSync(storageDir, { recursive: true })
+
+  const port = await getPort()
+  const url = `http://localhost:${String(port)}`
+
+  // Create Verdaccio config file (JSON format)
+  const configPath = path.join(configDir, 'config.json')
+  const config = {
+    storage: storageDir,
+    auth: {
+      htpasswd: {
+        file: path.join(configDir, 'htpasswd'),
+        max_users: 100,
+      },
+    },
+    uplinks: {
+      npmjs: {
+        url: 'https://registry.npmjs.org/',
+      },
+    },
+    packages: {
+      '@test/*': {
+        access: '$all',
+        publish: '$all',
+      },
+      '**': {
+        access: '$all',
+        publish: '$all',
+        proxy: 'npmjs',
+      },
+    },
+    log: {
+      type: 'stdout',
+      format: 'pretty',
+      level: 'warn',
+    },
+  }
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+
+  // Create empty htpasswd file
+  fs.writeFileSync(path.join(configDir, 'htpasswd'), '')
+
+  return new Promise((resolve, reject) => {
+    const verdaccioProcess = spawn('npx', ['verdaccio', '--config', configPath, '--listen', String(port)], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env },
+    })
+
+    let started = false
+    const timeout = setTimeout(() => {
+      if (!started) {
+        verdaccioProcess.kill()
+        reject(new Error('Verdaccio failed to start within timeout'))
+      }
+    }, 30000)
+
+    const checkReady = (data: Buffer) => {
+      const output = data.toString()
+      if (output.includes('http address') || output.includes('listen on')) {
+        started = true
+        clearTimeout(timeout)
+        // Give it a moment to be fully ready
+        setTimeout(() => {
+          resolve({
+            process: verdaccioProcess,
+            url,
+            configDir,
+          })
+        }, 500)
+      }
+    }
+
+    verdaccioProcess.stdout.on('data', checkReady)
+    verdaccioProcess.stderr.on('data', checkReady)
+
+    verdaccioProcess.on('error', (err) => {
+      clearTimeout(timeout)
+      reject(err)
+    })
+  })
+}
+
+function stopVerdaccio(verdaccio: VerdaccioServer): Promise<void> {
+  return new Promise((resolve) => {
+    verdaccio.process.on('exit', () => {
+      resolve()
+    })
+    verdaccio.process.kill()
+    // Force resolve after 5 seconds if process doesn't exit
+    setTimeout(() => {
+      resolve()
+    }, 5000)
+  })
+}
