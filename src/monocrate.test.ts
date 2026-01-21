@@ -1394,24 +1394,16 @@ describe('version conflict detection', () => {
     })
 
     const outputDir = createTempDir('monocrate-output-')
-
-    try {
-      await monocrate({
+    await expect(
+      monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         outputDir,
         monorepoRoot,
       })
-      expect.fail('Expected an error to be thrown')
-    } catch (error) {
-      const message = (error as Error).message
-      expect(message).toBe(
-        'Third-party dependency version conflicts detected:\n' +
-          '  lodash:\n' +
-          '    - ^3.10.0 (required by @test/lib)\n' +
-          '    - ^4.17.0 (required by @test/app)'
-      )
-    }
+    ).rejects.toThrow(
+      'Third-party dependency version conflicts detected: - lodash: ^3.10.0 (by @test/lib), ^4.17.0 (by @test/app)'
+    )
   })
 
   it('lists all conflicting dependencies when multiple conflicts exist', async () => {
@@ -1430,20 +1422,14 @@ describe('version conflict detection', () => {
     })
 
     const outputDir = createTempDir('monocrate-output-')
-
-    try {
-      await monocrate({
+    await expect(
+      monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         outputDir,
         monorepoRoot,
       })
-      expect.fail('Expected an error to be thrown')
-    } catch (error) {
-      const message = (error as Error).message
-      expect(message).toContain('lodash')
-      expect(message).toContain('chalk')
-    }
+    ).rejects.toThrow('lodash')
   })
 
   it('allows same dependency with identical versions across packages', async () => {

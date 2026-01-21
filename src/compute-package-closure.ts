@@ -16,7 +16,7 @@ function detectVersionConflicts(
   for (const [depName, versionInfos] of versionsByDep.entries()) {
     const uniqueVersions = [...new Set(versionInfos.map((v) => v.version))]
     if (uniqueVersions.length > 1) {
-      conflicts[depName] = versionInfos.map((v) => `${v.version} (required by ${v.requiredBy})`)
+      conflicts[depName] = versionInfos.map((v) => `${v.version} (by ${v.requiredBy})`)
     }
   }
 
@@ -24,18 +24,15 @@ function detectVersionConflicts(
 }
 
 function formatConflictError(conflicts: Partial<Record<string, string[]>>): string {
-  const lines = ['Third-party dependency version conflicts detected:']
+  const parts = ['Third-party dependency version conflicts detected:']
 
   for (const [depName, versions] of Object.entries(conflicts)) {
     if (versions) {
-      lines.push(`  ${depName}:`)
-      for (const version of versions) {
-        lines.push(`    - ${version}`)
-      }
+      parts.push(`${depName}: ${versions.join(', ')}`)
     }
   }
 
-  return lines.join('\n')
+  return parts.join(' - ')
 }
 
 export async function computePackageClosure(sourceDir: AbsolutePath, monorepoRoot: AbsolutePath): Promise<PackageClosure> {
