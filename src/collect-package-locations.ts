@@ -42,7 +42,6 @@ async function createPackageLocation(pkg: MonorepoPackage, directoryInOutput: Pa
 
   return {
     name: pkg.name,
-    // pathInRepo: pkg.pathInRepo,
     packageDir: pkg.path,
     directoryInOutput,
     filesToCopy,
