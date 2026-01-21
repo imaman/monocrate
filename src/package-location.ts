@@ -14,8 +14,6 @@ export interface PackageLocation {
    */
   packageDir: AbsolutePath
 
-  // pathInRepo: PathInRepo
-
   /**
    * Prefix for the output location. Empty string for the subject package,
    * relative path under deps/ for in-repo dependencies
