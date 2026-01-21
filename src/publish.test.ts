@@ -1,186 +1,24 @@
-import { execSync, spawn } from 'node:child_process'
-import type { ChildProcess } from 'node:child_process'
+import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
-import { describe, it, expect, afterEach, beforeAll, afterAll } from 'vitest'
-import getPort from 'get-port'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { monocrate } from './index.js'
-
-type Jsonable = Record<string, unknown>
-type FolderifyRecipe = Record<string, string | Jsonable>
-
-const tempDirs: string[] = []
-
-function createTempDir(prefix: string): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix))
-  tempDirs.push(dir)
-  return dir
-}
-
-function folderify(recipe: FolderifyRecipe): string {
-  const ret = createTempDir('monocrate-publish-test-')
-  const keys = Object.keys(recipe).map((p) => path.normalize(p))
-  const set = new Set<string>(keys)
-
-  for (const key of keys) {
-    if (key === '.') {
-      throw new Error(`bad input - the recipe contains a file name which is either empty ('') or a dot ('.')`)
-    }
-    for (let curr = path.dirname(key); curr !== '.'; curr = path.dirname(curr)) {
-      if (set.has(curr)) {
-        throw new Error(`bad input - a file (${key}) is nested under another file (${curr})`)
-      }
-    }
-  }
-
-  for (const [relativePath, content] of Object.entries(recipe)) {
-    const file = path.join(ret, relativePath)
-    const dir = path.dirname(file)
-    fs.mkdirSync(dir, { recursive: true })
-    if (typeof content === 'string') {
-      fs.writeFileSync(file, content)
-    } else {
-      fs.writeFileSync(file, JSON.stringify(content, null, 2))
-    }
-  }
-
-  return ret
-}
-
-interface VerdaccioServer {
-  process: ChildProcess
-  url: string
-  configDir: string
-}
-
-async function startVerdaccio(): Promise<VerdaccioServer> {
-  const configDir = createTempDir('verdaccio-config-')
-  const storageDir = path.join(configDir, 'storage')
-  fs.mkdirSync(storageDir, { recursive: true })
-
-  const port = await getPort()
-  const url = `http://localhost:${String(port)}`
-
-  // Create Verdaccio config file (JSON format)
-  const configPath = path.join(configDir, 'config.json')
-  const config = {
-    storage: storageDir,
-    auth: {
-      htpasswd: {
-        file: path.join(configDir, 'htpasswd'),
-        max_users: 100,
-      },
-    },
-    uplinks: {
-      npmjs: {
-        url: 'https://registry.npmjs.org/',
-      },
-    },
-    packages: {
-      '@test/*': {
-        access: '$all',
-        publish: '$all',
-      },
-      '**': {
-        access: '$all',
-        publish: '$all',
-        proxy: 'npmjs',
-      },
-    },
-    log: {
-      type: 'stdout',
-      format: 'pretty',
-      level: 'warn',
-    },
-  }
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
-
-  // Create empty htpasswd file
-  fs.writeFileSync(path.join(configDir, 'htpasswd'), '')
-
-  return new Promise((resolve, reject) => {
-    const verdaccioProcess = spawn('npx', ['verdaccio', '--config', configPath, '--listen', String(port)], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env },
-    })
-
-    let started = false
-    const timeout = setTimeout(() => {
-      if (!started) {
-        verdaccioProcess.kill()
-        reject(new Error('Verdaccio failed to start within timeout'))
-      }
-    }, 30000)
-
-    const checkReady = (data: Buffer) => {
-      const output = data.toString()
-      if (output.includes('http address') || output.includes('listen on')) {
-        started = true
-        clearTimeout(timeout)
-        // Give it a moment to be fully ready
-        setTimeout(() => {
-          resolve({
-            process: verdaccioProcess,
-            url,
-            configDir,
-          })
-        }, 500)
-      }
-    }
-
-    verdaccioProcess.stdout.on('data', checkReady)
-    verdaccioProcess.stderr.on('data', checkReady)
-
-    verdaccioProcess.on('error', (err) => {
-      clearTimeout(timeout)
-      reject(err)
-    })
-  })
-}
-
-function stopVerdaccio(verdaccio: VerdaccioServer): Promise<void> {
-  return new Promise((resolve) => {
-    verdaccio.process.on('exit', () => {
-      resolve()
-    })
-    verdaccio.process.kill()
-    // Force resolve after 5 seconds if process doesn't exit
-    setTimeout(() => {
-      resolve()
-    }, 5000)
-  })
-}
+import { folderify } from './testing/folderify.js'
+import { createTempDir } from './testing/monocrate-teskit.js'
+import { VerdaccioTestkit } from './testing/verdaccio-testkit.js'
 
 describe('npm publishing with Verdaccio', () => {
-  let verdaccio: VerdaccioServer | undefined
+  const verdaccio = new VerdaccioTestkit()
 
   beforeAll(async () => {
-    verdaccio = await startVerdaccio()
+    await verdaccio.start()
   }, 60000)
 
   afterAll(async () => {
-    if (verdaccio !== undefined) {
-      await stopVerdaccio(verdaccio)
-    }
+    await verdaccio.shutdown()
   }, 10000)
 
-  afterEach(() => {
-    for (const dir of tempDirs) {
-      try {
-        fs.rmSync(dir, { recursive: true, force: true })
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
-    tempDirs.length = 0
-  })
-
   it('publishes a simple package and it can be installed from the registry', async () => {
-    if (verdaccio === undefined) {
-      throw new Error('Verdaccio server not started')
-    }
-
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/mylib/package.json': {
@@ -188,20 +26,11 @@ describe('npm publishing with Verdaccio', () => {
         version: '1.0.0',
         main: 'dist/index.js',
       },
-      'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }
-`,
+      'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
 
     const outputDir = createTempDir('monocrate-output-')
-
-    // Create .npmrc in output directory to point to Verdaccio
-    // Verdaccio requires some form of auth token even with $all access
-    // Extract host from URL for the _authToken line (npm requires host without protocol)
-    const registryHost = new URL(verdaccio.url).host
-    fs.writeFileSync(
-      path.join(outputDir, '.npmrc'),
-      `registry=${verdaccio.url}\n//${registryHost}/:_authToken=fake-token-for-testing\n`
-    )
+    verdaccio.createNpmRc(outputDir)
 
     await monocrate({
       cwd: monorepoRoot,
@@ -211,33 +40,200 @@ describe('npm publishing with Verdaccio', () => {
       publishToVersion: '99.99.99',
     })
 
-    // Verify the package was published by checking npm view
-    const viewResult = execSync(`npm view @test/mylib --registry=${verdaccio.url} --json`, {
-      encoding: 'utf-8',
-    })
-
-    expect(JSON.parse(viewResult)).toMatchObject({
+    expect(verdaccio.runView('@test/mylib')).toMatchObject({
       name: '@test/mylib',
       version: '99.99.99',
     })
 
-    // Verify the package can be installed and works
     const installDir = folderify({
       'package.json': { name: 'test-consumer', type: 'module' },
       'test.mjs': `import { hello } from '@test/mylib'; console.log(hello());`,
     })
 
-    // execSync throws if the command fails, which will fail the test
-    execSync(`npm install @test/mylib@99.99.99 --registry=${verdaccio.url}`, {
-      cwd: installDir,
-      stdio: 'pipe',
-    })
+    verdaccio.runInstall(installDir, '@test/mylib@99.99.99')
 
-    const output = execSync('node test.mjs', {
-      cwd: installDir,
-      encoding: 'utf-8',
-    })
-
+    const output = execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' })
     expect(output.trim()).toBe('Hello from mylib!')
   }, 60000)
+
+  it('publishes a package with in-repo dependency and rewritten imports work correctly', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: {
+          '@test/lib': 'workspace:*',
+        },
+      },
+      'packages/app/dist/index.js': `import { greet } from '@test/lib';
+export function sayHello(name) { return greet(name); }`,
+      'packages/lib/package.json': {
+        name: '@test/lib',
+        version: '1.0.0',
+        main: 'dist/index.js',
+      },
+      'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    verdaccio.createNpmRc(outputDir)
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+      publishToVersion: '88.88.88',
+    })
+
+    expect(verdaccio.runView('@test/app')).toMatchObject({
+      name: '@test/app',
+      version: '88.88.88',
+    })
+
+    // Install and verify the published package works with rewritten imports
+    const installDir = folderify({
+      'package.json': { name: 'test-consumer', type: 'module' },
+      'test.mjs': `import { sayHello } from '@test/app'; console.log(sayHello('World'));`,
+    })
+
+    verdaccio.runInstall(installDir, '@test/app@88.88.88')
+
+    const output = execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' })
+    expect(output.trim()).toBe('Hello, World!')
+  }, 60000)
+
+  it('publishes multiple versions of the same package', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/versioned/package.json': {
+        name: '@test/versioned',
+        version: '1.0.0',
+        main: 'dist/index.js',
+      },
+      'packages/versioned/dist/index.js': `export const version = '1';`,
+    })
+
+    // Publish version 1.0.0
+    const outputDir1 = createTempDir('monocrate-output-')
+    verdaccio.createNpmRc(outputDir1)
+
+    const result1 = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
+      outputDir: outputDir1,
+      monorepoRoot,
+      publishToVersion: '1.0.0',
+    })
+
+    expect(result1.resolvedVersion).toBe('1.0.0')
+    expect(verdaccio.runView('@test/versioned@1.0.0')).toMatchObject({ version: '1.0.0' })
+
+    // Publish version 1.0.1
+    const outputDir2 = createTempDir('monocrate-output-')
+    verdaccio.createNpmRc(outputDir2)
+
+    const result2 = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
+      outputDir: outputDir2,
+      monorepoRoot,
+      publishToVersion: '1.0.1',
+    })
+
+    expect(result2.resolvedVersion).toBe('1.0.1')
+    expect(verdaccio.runView('@test/versioned@1.0.1')).toMatchObject({ version: '1.0.1' })
+
+    // Publish version 2.0.0
+    const outputDir3 = createTempDir('monocrate-output-')
+    verdaccio.createNpmRc(outputDir3)
+
+    const result3 = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/versioned'),
+      outputDir: outputDir3,
+      monorepoRoot,
+      publishToVersion: '2.0.0',
+    })
+
+    expect(result3.resolvedVersion).toBe('2.0.0')
+    expect(verdaccio.runView('@test/versioned@2.0.0')).toMatchObject({ version: '2.0.0' })
+
+    // Verify all versions are available
+    const allVersions = verdaccio.runView('@test/versioned') as Record<string, unknown>
+    expect(allVersions.versions).toContain('1.0.0')
+    expect(allVersions.versions).toContain('1.0.1')
+    expect(allVersions.versions).toContain('2.0.0')
+  }, 120000)
+
+  it('merges third-party dependencies from main package and in-repo deps', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app-with-deps',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: {
+          '@test/lib-with-deps': 'workspace:*',
+          'is-odd': '^3.0.1',
+        },
+      },
+      'packages/app/dist/index.js': `import { checkEven } from '@test/lib-with-deps';
+import isOdd from 'is-odd';
+export function analyze(n) {
+  return { isOdd: isOdd(n), isEven: checkEven(n) };
+}`,
+      'packages/lib/package.json': {
+        name: '@test/lib-with-deps',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: {
+          'is-even': '^1.0.0',
+        },
+      },
+      'packages/lib/dist/index.js': `import isEven from 'is-even';
+export function checkEven(n) { return isEven(n); }`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    verdaccio.createNpmRc(outputDir)
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+      publishToVersion: '77.77.77',
+    })
+
+    // Verify package.json has merged dependencies
+    const viewResult = verdaccio.runView('@test/app-with-deps') as Record<string, unknown>
+    expect(viewResult).toMatchObject({
+      name: '@test/app-with-deps',
+      version: '77.77.77',
+    })
+    expect(viewResult.dependencies).toMatchObject({
+      'is-odd': '^3.0.1',
+      'is-even': '^1.0.0',
+    })
+
+    // Install and verify all dependencies are available and work
+    const installDir = folderify({
+      'package.json': { name: 'test-consumer', type: 'module' },
+      'test.mjs': `import { analyze } from '@test/app-with-deps';
+const result = analyze(5);
+console.log(JSON.stringify(result));`,
+    })
+
+    verdaccio.runInstall(installDir, '@test/app-with-deps@77.77.77')
+
+    // Verify node_modules contains both third-party deps
+    expect(fs.existsSync(path.join(installDir, 'node_modules', 'is-odd'))).toBe(true)
+    expect(fs.existsSync(path.join(installDir, 'node_modules', 'is-even'))).toBe(true)
+
+    const output = execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' })
+    expect(JSON.parse(output.trim())).toEqual({ isOdd: true, isEven: false })
+  }, 90000)
 })
