@@ -118,10 +118,11 @@ describe('npm publishing with Verdaccio', () => {
   }, 60000)
 
   it.only('publishes multiple versions of the same package', async () => {
+    const pkgName = `foo-${crypto.randomUUID()}`
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/foo/package.json': {
-        name: '@test/foo',
+        name: pkgName,
         version: '1.0.0',
         main: 'dist/index.js',
       },
@@ -141,7 +142,7 @@ describe('npm publishing with Verdaccio', () => {
         publishToVersion: '1.0.0',
       })
     ).toMatchObject({ resolvedVersion: '1.0.0' })
-    expect(verdaccio.runView('@test/foo@1.0.0')).toMatchObject({ version: '1.0.0' })
+    expect(verdaccio.runView(`${pkgName}@1.0.0`)).toMatchObject({ version: '1.0.0' })
 
     // Publish version 1.0.1
     const outputDir2 = createTempDir('monocrate-output-')
@@ -156,7 +157,7 @@ describe('npm publishing with Verdaccio', () => {
         publishToVersion: '1.0.1',
       })
     ).toMatchObject({ resolvedVersion: '1.0.1' })
-    expect(verdaccio.runView('@test/foo@1.0.1')).toMatchObject({ version: '1.0.1' })
+    expect(verdaccio.runView(`${pkgName}@1.0.1`)).toMatchObject({ version: '1.0.1' })
 
     // Publish version 2.0.0
     const outputDir3 = createTempDir('monocrate-output-')
@@ -171,10 +172,10 @@ describe('npm publishing with Verdaccio', () => {
         publishToVersion: '2.0.0',
       })
     ).toMatchObject({ resolvedVersion: '2.0.0' })
-    expect(verdaccio.runView('@test/foo@2.0.0')).toMatchObject({ version: '2.0.0' })
+    expect(verdaccio.runView(`${pkgName}@2.0.0`)).toMatchObject({ version: '2.0.0' })
 
     // Verify all versions are available
-    const allVersions = verdaccio.runView('@test/foo') as Record<string, unknown>
+    const allVersions = verdaccio.runView(pkgName) as Record<string, unknown>
     expect(allVersions.versions).toContain('1.0.0')
     expect(allVersions.versions).toContain('1.0.1')
     expect(allVersions.versions).toContain('2.0.0')
