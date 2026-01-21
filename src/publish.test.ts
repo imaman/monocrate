@@ -117,7 +117,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello, World!')
   }, 60000)
 
-  it.only('publishes multiple versions of the same package', async () => {
+  it('publishes multiple versions of the same package', async () => {
     const pkgName = `foo-${crypto.randomUUID()}`
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
