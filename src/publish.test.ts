@@ -156,6 +156,13 @@ describe('npm publishing with Verdaccio', () => {
   let verdaccio: VerdaccioServer | undefined
 
   beforeAll(async () => {
+    // Remove npm_config_* environment variables that yarn sets,
+    // so npm uses the .npmrc file from the output directory
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('npm_config_')) {
+        delete process.env[key] // eslint-disable-line @typescript-eslint/no-dynamic-delete
+      }
+    }
     verdaccio = await startVerdaccio()
   }, 60000)
 
