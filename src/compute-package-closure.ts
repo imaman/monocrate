@@ -1,8 +1,9 @@
 import type { MonorepoPackage } from './monorepo.js'
 import { discoverMonorepoPackages } from './monorepo.js'
 import type { PackageClosure } from './package-closure.js'
+import type { AbsolutePath } from './paths.js'
 
-export async function computePackageClosure(sourceDir: string, monorepoRoot: string): Promise<PackageClosure> {
+export async function computePackageClosure(sourceDir: AbsolutePath, monorepoRoot: AbsolutePath): Promise<PackageClosure> {
   const allRepoPackages = await discoverMonorepoPackages(monorepoRoot)
   const subjectPackage = [...allRepoPackages.values()].find((at) => at.path === sourceDir)
   if (!subjectPackage) {

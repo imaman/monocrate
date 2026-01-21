@@ -2,17 +2,18 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { glob } from 'glob'
 import { PackageJson } from './package-json.js'
+import { AbsolutePath } from './paths.js'
 
 export interface MonorepoPackage {
   name: string
-  path: string
+  path: AbsolutePath
   packageJson: PackageJson
 }
 
-export function findMonorepoRoot(startDir: string): string {
-  let dir = path.resolve(startDir)
+export function findMonorepoRoot(startDir: AbsolutePath): AbsolutePath {
+  let dir = startDir
 
-  while (dir !== path.dirname(dir)) {
+  while (dir !== AbsolutePath.dirname(dir)) {
     const packageJsonPath = path.join(dir, 'package.json')
     if (fs.existsSync(packageJsonPath)) {
       const parsed = PackageJson.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
@@ -26,13 +27,13 @@ export function findMonorepoRoot(startDir: string): string {
       return dir
     }
 
-    dir = path.dirname(dir)
+    dir = AbsolutePath.dirname(dir)
   }
 
   throw new Error(`Could not find monorepo root from ${startDir}`)
 }
 
-function readPackageJson(packageDir: string): PackageJson {
+function readPackageJson(packageDir: AbsolutePath): PackageJson {
   const packageJsonPath = path.join(packageDir, 'package.json')
   if (!fs.existsSync(packageJsonPath)) {
     throw new Error(`No package.json found at ${packageDir}`)
@@ -45,7 +46,7 @@ function readPackageJson(packageDir: string): PackageJson {
   return parsed.data
 }
 
-function parseWorkspacePatterns(monorepoRoot: string): string[] {
+function parseWorkspacePatterns(monorepoRoot: AbsolutePath): string[] {
   const packageJsonPath = path.join(monorepoRoot, 'package.json')
   if (fs.existsSync(packageJsonPath)) {
     const parsed = PackageJson.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
@@ -75,7 +76,7 @@ function parseWorkspacePatterns(monorepoRoot: string): string[] {
   return ['packages/*']
 }
 
-export async function discoverMonorepoPackages(monorepoRoot: string): Promise<Map<string, MonorepoPackage>> {
+export async function discoverMonorepoPackages(monorepoRoot: AbsolutePath): Promise<Map<string, MonorepoPackage>> {
   const patterns = parseWorkspacePatterns(monorepoRoot)
   const packages = new Map<string, MonorepoPackage>()
 
@@ -84,7 +85,7 @@ export async function discoverMonorepoPackages(monorepoRoot: string): Promise<Ma
     const matches = await glob(fullPattern, { ignore: '**/node_modules/**' })
 
     for (const match of matches) {
-      const packageDir = path.dirname(match)
+      const packageDir = AbsolutePath(path.dirname(match))
       const packageJson = readPackageJson(packageDir)
 
       if (packageJson.name) {

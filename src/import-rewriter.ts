@@ -2,11 +2,12 @@ import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
 import type { PackageMap } from './package-map.js'
 import { resolveImport } from './collect-package-locations.js'
+import type { AbsolutePath } from './paths.js'
 
 export class ImportRewriter {
   constructor(
     private packageMap: PackageMap,
-    private outputDir: string
+    private outputDir: AbsolutePath
   ) {}
 
   async rewriteAll(files: string[]): Promise<void> {
