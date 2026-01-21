@@ -1,3 +1,5 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { defineCommand, runMain } from 'citty'
 import { monocrate } from './monocrate.js'
 
@@ -27,10 +29,15 @@ const command = defineCommand({
       description: 'Publish to npm with version: x.y.z (explicit) or patch|minor|major (increment)',
       alias: 'p',
     },
+    'version-file': {
+      type: 'string',
+      description: 'Write resolved version to file instead of stdout',
+      alias: 'o',
+    },
   },
   async run({ args }) {
     const outputDir = args.output || undefined
-    const actualOutputDir = await monocrate({
+    const result = await monocrate({
       pathToSubjectPackage: args.source,
       ...(outputDir ? { outputDir } : {}),
       monorepoRoot: args.root,
@@ -38,7 +45,15 @@ const command = defineCommand({
       cwd: process.cwd(),
     })
 
-    console.log(actualOutputDir)
+    if (result.resolvedVersion !== undefined) {
+      const versionOutput = result.resolvedVersion
+      const versionFile = args['version-file']
+      if (versionFile) {
+        fs.writeFileSync(path.resolve(process.cwd(), versionFile), versionOutput)
+      } else {
+        console.log(versionOutput)
+      }
+    }
   },
 })
 

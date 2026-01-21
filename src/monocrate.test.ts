@@ -142,18 +142,18 @@ describe('optional output directory', () => {
 `,
     })
 
-    const outputDir = await monocrate({
+    const result = await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       monorepoRoot,
     })
 
     // Verify a temp directory was created
-    expect(outputDir).toContain('monocrate-')
-    expect(fs.existsSync(outputDir)).toBe(true)
+    expect(result.outputDir).toContain('monocrate-')
+    expect(fs.existsSync(result.outputDir)).toBe(true)
 
     // Verify the assembly was created there
-    const output = unfolderify(outputDir)
+    const output = unfolderify(result.outputDir)
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '1.0.0',
@@ -161,7 +161,7 @@ describe('optional output directory', () => {
     })
 
     // Clean up the temp directory
-    tempDirs.push(outputDir)
+    tempDirs.push(result.outputDir)
   })
 
   it('uses provided outputDir when specified', async () => {
@@ -180,7 +180,7 @@ describe('optional output directory', () => {
       monorepoRoot,
     })
 
-    expect(result).toBe(outputDir)
+    expect(result.outputDir).toBe(outputDir)
   })
 })
 

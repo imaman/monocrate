@@ -1,1 +1,1 @@
-export { monocrate, type MonocrateOptions } from './monocrate.js'
+export { monocrate, type MonocrateOptions, type MonocrateResult } from './monocrate.js'

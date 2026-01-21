@@ -39,13 +39,25 @@ export interface MonocrateOptions {
   cwd: string
 }
 
+export interface MonocrateResult {
+  /**
+   * The output directory path where the assembly was created.
+   */
+  outputDir: string
+  /**
+   * The resolved version that was/will be published.
+   * Only present when publishToVersion was specified.
+   */
+  resolvedVersion?: string
+}
+
 /**
  * Assembles a monorepo package and its in-repo dependencies for npm publishing.
  * @param options - Configuration options for the assembly process
- * @returns The output directory path where the assembly was created
+ * @returns The result containing output directory and optional resolved version
  * @throws Error if assembly or publishing fails
  */
-export async function monocrate(options: MonocrateOptions): Promise<string> {
+export async function monocrate(options: MonocrateOptions): Promise<MonocrateResult> {
   // Resolve and validate cwd first, then use it to resolve all other paths
   const cwd = AbsolutePath(path.resolve(options.cwd))
   const cwdExists = await fs
@@ -69,11 +81,11 @@ export async function monocrate(options: MonocrateOptions): Promise<string> {
   )
 
   const closure = await computePackageClosure(sourceDir, monorepoRoot)
-  await assemble(closure, outputDir, versionSpecifier)
+  const resolvedVersion = await assemble(closure, outputDir, versionSpecifier)
 
   if (versionSpecifier) {
     publish(outputDir)
   }
 
-  return outputDir
+  return resolvedVersion !== undefined ? { outputDir, resolvedVersion } : { outputDir }
 }

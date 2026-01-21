@@ -12,7 +12,7 @@ export async function assemble(
   closure: PackageClosure,
   outputDir: AbsolutePath,
   versionSpecifier: VersionSpecifier | undefined
-) {
+): Promise<string | undefined> {
   const locations = await collectPackageLocations(closure, outputDir)
   const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
@@ -26,4 +26,5 @@ export async function assemble(
   ])
   // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
   rewritePackageJson(closure, newVersion, outputDir)
+  return newVersion
 }
