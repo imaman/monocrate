@@ -1,52 +1,12 @@
 import { execSync, spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
-import { describe, it, expect, afterEach, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import getPort from 'get-port'
 import { monocrate } from './index.js'
-
-type Jsonable = Record<string, unknown>
-type FolderifyRecipe = Record<string, string | Jsonable>
-
-const tempDirs: string[] = []
-
-function createTempDir(prefix: string): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix))
-  tempDirs.push(dir)
-  return dir
-}
-
-function folderify(recipe: FolderifyRecipe): string {
-  const ret = createTempDir('monocrate-publish-test-')
-  const keys = Object.keys(recipe).map((p) => path.normalize(p))
-  const set = new Set<string>(keys)
-
-  for (const key of keys) {
-    if (key === '.') {
-      throw new Error(`bad input - the recipe contains a file name which is either empty ('') or a dot ('.')`)
-    }
-    for (let curr = path.dirname(key); curr !== '.'; curr = path.dirname(curr)) {
-      if (set.has(curr)) {
-        throw new Error(`bad input - a file (${key}) is nested under another file (${curr})`)
-      }
-    }
-  }
-
-  for (const [relativePath, content] of Object.entries(recipe)) {
-    const file = path.join(ret, relativePath)
-    const dir = path.dirname(file)
-    fs.mkdirSync(dir, { recursive: true })
-    if (typeof content === 'string') {
-      fs.writeFileSync(file, content)
-    } else {
-      fs.writeFileSync(file, JSON.stringify(content, null, 2))
-    }
-  }
-
-  return ret
-}
+import { createTempDir } from './testing/monocrate-teskit.js'
+import { folderify } from './testing/folderify.js'
 
 interface VerdaccioServer {
   process: ChildProcess
@@ -171,17 +131,6 @@ describe('npm publishing with Verdaccio', () => {
       await stopVerdaccio(verdaccio)
     }
   }, 10000)
-
-  afterEach(() => {
-    for (const dir of tempDirs) {
-      try {
-        fs.rmSync(dir, { recursive: true, force: true })
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
-    tempDirs.length = 0
-  })
 
   it('publishes a simple package and it can be installed from the registry', async () => {
     if (verdaccio === undefined) {
