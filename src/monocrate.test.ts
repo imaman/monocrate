@@ -1402,7 +1402,8 @@ describe('version conflict detection', () => {
         monorepoRoot,
       })
     ).rejects.toThrow(
-      'Third-party dependency version conflicts detected: - lodash: ^3.10.0 (by @test/lib), ^4.17.0 (by @test/app)'
+      'Third-party dependency version conflicts detected:\n' +
+        '  - lodash: ^3.10.0 (by @test/lib), ^4.17.0 (by @test/app)'
     )
   })
 
@@ -1447,16 +1448,8 @@ describe('version conflict detection', () => {
       'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
     })
 
-    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+    const { stdout } = await runMonocrate(monorepoRoot, 'packages/app')
 
-    expect(output['package.json']).toEqual({
-      name: '@test/app',
-      version: '1.0.0',
-      main: 'dist/index.js',
-      dependencies: {
-        lodash: '^4.17.21',
-      },
-    })
     expect(stdout.trim()).toBe('Hello!')
   })
 

@@ -24,15 +24,15 @@ function detectVersionConflicts(
 }
 
 function formatConflictError(conflicts: Partial<Record<string, string[]>>): string {
-  const parts = ['Third-party dependency version conflicts detected:']
+  const lines = ['Third-party dependency version conflicts detected:']
 
   for (const [depName, versions] of Object.entries(conflicts)) {
     if (versions) {
-      parts.push(`${depName}: ${versions.join(', ')}`)
+      lines.push(`  - ${depName}: ${versions.join(', ')}`)
     }
   }
 
-  return parts.join(' - ')
+  return lines.join('\n')
 }
 
 export async function computePackageClosure(sourceDir: AbsolutePath, monorepoRoot: AbsolutePath): Promise<PackageClosure> {
