@@ -74,26 +74,18 @@ describe('output file option', () => {
     const outputDir = createTempDir()
     const dir = createTempDir()
 
-    const result = await monocrate({
+    const opts = {
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       outputDir,
       monorepoRoot,
       outputFile: path.join(dir, 'stdout'),
-    })
-    expect(result.resolvedVersion).toBeUndefined()
+    }
+
+    expect(await monocrate(opts)).toMatchObject({ resolvedVersion: undefined })
     expect(unfolderify(dir)).toEqual({})
 
-    expect(
-      await monocrate({
-        cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
-        monorepoRoot,
-        publishToVersion: '2.3.4',
-        outputFile: path.join(dir, 'stdout'),
-      })
-    ).toMatchObject({ resolvedVersion: '2.3.4' })
+    expect(await monocrate({ ...opts, publishToVersion: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
     expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
   })
 })
