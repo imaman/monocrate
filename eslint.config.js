@@ -19,6 +19,8 @@ export default tseslint.config(
       'unused-imports': unusedImports,
     },
     rules: {
+      'no-tabs': 'error',
+      indent: ['warn', 2],
       'unused-imports/no-unused-imports': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
