@@ -1327,3 +1327,61 @@ describe('version conflict detection', () => {
     ).rejects.toThrow('  - zod: ^2.0.0 (by @test/level2), ^3.0.0 (by @test/app)')
   })
 })
+
+describe('.npmrc file handling', () => {
+  it('includes .npmrc file when present in package directory', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+      'packages/app/dist/index.js': `console.log('Hello');`,
+      'packages/app/.npmrc': 'registry=https://custom.registry.com',
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    const output = unfolderify(outputDir)
+    expect(output['.npmrc']).toBe('registry=https://custom.registry.com')
+  })
+
+  it('does not fail when .npmrc is not present', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+      'packages/app/dist/index.js': `console.log('Hello');`,
+    })
+
+    const outputDir = createTempDir('monocrate-output-')
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      outputDir,
+      monorepoRoot,
+    })
+
+    const output = unfolderify(outputDir)
+    expect(output['.npmrc']).toBeUndefined()
+  })
+
+  it('includes .npmrc from in-repo dependencies', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': makePackageJson({
+        name: '@test/app',
+        dependencies: { '@test/lib': 'workspace:*' },
+      }),
+      'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
+      'packages/lib/package.json': makePackageJson({ name: '@test/lib' }),
+      'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
+      'packages/lib/.npmrc': 'registry=https://lib.registry.com',
+    })
+
+    const { output } = await runMonocrate(monorepoRoot, 'packages/app')
+    expect(output['deps/packages/lib/.npmrc']).toBe('registry=https://lib.registry.com')
+  })
+})
