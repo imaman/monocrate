@@ -1,5 +1,6 @@
-import { execFile } from 'node:child_process'
 import { z } from 'zod'
+import type { AbsolutePath } from './paths.js'
+import { runNpm } from './run-npm.js'
 import type { VersionSpecifier } from './version-specifier.js'
 
 const NpmErrorResponse = z.object({
@@ -9,18 +10,14 @@ const NpmErrorResponse = z.object({
   }),
 })
 
-async function getCurrentPublishedVersion(dir: string, packageName: string): Promise<string> {
-  const { error, stdout } = await new Promise<{ error: Error | undefined; stdout: string }>((resolve) => {
-    execFile('npm', ['view', '-s', '--json', packageName, 'version'], { cwd: dir }, (error, stdout) => {
-      resolve({ error: error ?? undefined, stdout })
-    })
-  })
+async function getCurrentPublishedVersion(dir: AbsolutePath, packageName: string): Promise<string> {
+  const result = await runNpm('view', ['-s', '--json', packageName, 'version'], dir, { errorPolicy: 'return' })
 
-  const parsed: unknown = JSON.parse(stdout)
+  const parsed: unknown = JSON.parse(result.stdout)
 
-  if (!error) {
+  if (result.ok) {
     if (typeof parsed !== 'string') {
-      throw new Error(`Unexpected response from npm view: ${stdout}`)
+      throw new Error(`Unexpected response from npm view: ${result.stdout}`)
     }
     return parsed
   }
@@ -35,10 +32,10 @@ async function getCurrentPublishedVersion(dir: string, packageName: string): Pro
     )
   }
 
-  throw new Error(`Unexpected response from npm view: ${stdout}`)
+  throw new Error(`Unexpected response from npm view: ${result.stdout}`)
 }
 
-export async function resolveVersion(dir: string, packageName: string, versionSpecifier: VersionSpecifier) {
+export async function resolveVersion(dir: AbsolutePath, packageName: string, versionSpecifier: VersionSpecifier) {
   if (versionSpecifier.tag === 'explicit') {
     return versionSpecifier.value
   }
