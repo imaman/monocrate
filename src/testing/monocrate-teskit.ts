@@ -22,7 +22,7 @@ interface PackageJsonOptions {
   transform?: (pkg: PackageJson) => void
 }
 
-export function pj(name: string, version: string, more: Partial<PackageJson> = {}) {
+export function pj(name: string, version = '1.0.0', more: Partial<PackageJson> = {}) {
   return {
     main: 'index.js',
     ...more,

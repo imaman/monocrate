@@ -7,7 +7,7 @@ import { AbsolutePath } from './paths.js'
 import * as publishModule from './publish.js'
 import { folderify } from './testing/folderify.js'
 import { unfolderify } from './testing/unfolderify.js'
-import { createTempDir, makePackageJson, runMonocrate } from './testing/monocrate-teskit.js'
+import { createTempDir, makePackageJson, pj, runMonocrate } from './testing/monocrate-teskit.js'
 
 describe('optional output directory', () => {
   it('creates a temp directory when outputDir is not provided', async () => {
@@ -1337,51 +1337,34 @@ describe('.npmrc file handling', () => {
       'packages/app/.npmrc': 'registry=https://custom.registry.com',
     })
 
-    const outputDir = createTempDir('monocrate-output-')
-    await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
+    expect(await runMonocrate(monorepoRoot, 'packages/app')).toMatchObject({
+      output: { '.npmrc': 'registry=https://custom.registry.com' },
     })
-
-    const output = unfolderify(outputDir)
-    expect(output['.npmrc']).toBe('registry=https://custom.registry.com')
   })
 
   it('does not fail when .npmrc is not present', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
-      'packages/app/package.json': makePackageJson({ name: '@test/app' }),
-      'packages/app/dist/index.js': `console.log('Hello');`,
+      'packages/app/package.json': pj('app'),
+      'packages/app/dist/index.js': `export function whatever() {}`,
     })
-
-    const outputDir = createTempDir('monocrate-output-')
-    await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-      outputDir,
-      monorepoRoot,
-    })
-
-    const output = unfolderify(outputDir)
-    expect(output['.npmrc']).toBeUndefined()
+    expect(await runMonocrate(monorepoRoot, 'packages/app')).toMatchObject({ output: { '.npmrc': undefined } })
   })
 
   it('includes .npmrc from in-repo dependencies', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
-      'packages/app/package.json': makePackageJson({
-        name: '@test/app',
-        dependencies: { '@test/lib': 'workspace:*' },
-      }),
+      'packages/app/package.json': pj('app', undefined, { dependencies: { lib: 'workspace:*' } }),
       'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
-      'packages/lib/package.json': makePackageJson({ name: '@test/lib' }),
+      'packages/lib/package.json': pj('lib'),
       'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
       'packages/lib/.npmrc': 'registry=https://lib.registry.com',
     })
 
-    const { output } = await runMonocrate(monorepoRoot, 'packages/app')
-    expect(output['deps/packages/lib/.npmrc']).toBe('registry=https://lib.registry.com')
+    expect(await runMonocrate(monorepoRoot, 'packages/app')).toMatchObject({
+      output: {
+        'deps/packages/lib/.npmrc': 'registry=https://lib.registry.com',
+      },
+    })
   })
 })
