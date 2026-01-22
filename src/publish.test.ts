@@ -27,11 +27,11 @@ describe('npm publishing with Verdaccio', () => {
 
   it('publishes a simple package and it can be installed from the registry', async () => {
     const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
       'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', main: 'dist/index.js' },
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
-    verdaccio.createNpmRc(monorepoRoot)
 
     const outputDir = createTempDir()
     await monocrate({
@@ -54,11 +54,11 @@ describe('npm publishing with Verdaccio', () => {
 
   it('publishes a simple non-scoped package', async () => {
     const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
       'packages/mylib/package.json': { name: 'mylib', version: '1.0.0', main: 'dist/index.js' },
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
-    verdaccio.createNpmRc(monorepoRoot)
 
     const outputDir = createTempDir()
     await monocrate({
@@ -80,6 +80,8 @@ describe('npm publishing with Verdaccio', () => {
   }, 60000)
   it('publishes a package with in-repo dependency and rewritten imports work correctly', async () => {
     const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
+
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': {
         name: '@test/app',
@@ -91,7 +93,6 @@ describe('npm publishing with Verdaccio', () => {
       'packages/lib/package.json': { name: '@test/lib', version: '1.0.0', main: 'dist/index.js' },
       'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
     })
-    verdaccio.createNpmRc(monorepoRoot)
 
     await monocrate({
       cwd: monorepoRoot,
@@ -115,6 +116,8 @@ describe('npm publishing with Verdaccio', () => {
   it('publishes multiple versions of the same package', async () => {
     const pkgName = `foo`
     const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
+
       'package.json': { workspaces: ['packages/*'] },
       'packages/foo/package.json': {
         name: pkgName,
@@ -123,7 +126,6 @@ describe('npm publishing with Verdaccio', () => {
       },
       'packages/foo/dist/index.js': `export const version = '1';`,
     })
-    verdaccio.createNpmRc(monorepoRoot)
 
     expect(
       await monocrate({
@@ -163,6 +165,7 @@ describe('npm publishing with Verdaccio', () => {
 
   it.skip('merges third-party dependencies from main package and in-repo deps', async () => {
     const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': {
         name: '@test/app-with-deps',
@@ -189,7 +192,6 @@ export function analyze(n) {
       'packages/lib/dist/index.js': `import isEven from 'is-even';
 export function checkEven(n) { return isEven(n); }`,
     })
-    verdaccio.createNpmRc(monorepoRoot)
 
     await monocrate({
       cwd: monorepoRoot,

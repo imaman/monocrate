@@ -30,14 +30,9 @@ export class VerdaccioTestkit {
     await stopVerdaccio(this.get())
   }
 
-  createNpmRc(dir: string) {
-    // Create .npmrc in output directory to point to Verdaccio
+  npmRc() {
     // Verdaccio requires some form of auth token even with $all access
     // Extract host from URL for the _authToken line (npm requires host without protocol)
-    fs.writeFileSync(path.join(dir, '.npmrc'), this.npmRc())
-  }
-
-  npmRc() {
     const u = this.get().url
     return `registry=${u}\n//${new URL(u).host}/:_authToken=fake-token-for-testing\n`
   }
