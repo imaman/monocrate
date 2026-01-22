@@ -9,7 +9,7 @@ const NpmErrorResponse = z.object({
   }),
 })
 
-async function getCurrentPublishedVersion(dir: string, packageName: string): Promise<string> {
+export async function getCurrentPublishedVersion(dir: string, packageName: string): Promise<string> {
   const { error, stdout } = await new Promise<{ error: Error | undefined; stdout: string }>((resolve) => {
     execFile('npm', ['view', '-s', '--json', packageName, 'version'], { cwd: dir }, (error, stdout) => {
       resolve({ error: error ?? undefined, stdout })
@@ -38,17 +38,52 @@ async function getCurrentPublishedVersion(dir: string, packageName: string): Pro
   throw new Error(`Unexpected response from npm view: ${stdout}`)
 }
 
-export async function resolveVersion(dir: string, packageName: string, versionSpecifier: VersionSpecifier) {
+function parseVersion(version: string): [number, number, number] {
+  const nums = version.split('.').slice(0, 3).map(Number)
+  if (nums.length !== 3) {
+    throw new Error(`Version is ill-formatted: "${version}"`)
+  }
+  return nums as [number, number, number]
+}
+
+function compareVersions(a: string, b: string): number {
+  const [aMajor, aMinor, aPatch] = parseVersion(a)
+  const [bMajor, bMinor, bPatch] = parseVersion(b)
+  if (aMajor !== bMajor) return aMajor - bMajor
+  if (aMinor !== bMinor) return aMinor - bMinor
+  return aPatch - bPatch
+}
+
+function applyIncrement(version: string, increment: 'major' | 'minor' | 'patch'): string {
+  const nums = parseVersion(version)
+  const indexToIncrement = { major: 0, minor: 1, patch: 2 }[increment]
+  return nums.map((n, i) => (i < indexToIncrement ? n : i === indexToIncrement ? n + 1 : 0)).join('.')
+}
+
+/**
+ * Resolves the version for multiple packages by finding the maximum current version
+ * and applying the version specifier to it.
+ */
+export async function resolveVersionForPackages(
+  packages: Array<{ dir: string; packageName: string }>,
+  versionSpecifier: VersionSpecifier
+): Promise<string> {
   if (versionSpecifier.tag === 'explicit') {
     return versionSpecifier.value
   }
 
-  const currentVersion = await getCurrentPublishedVersion(dir, packageName)
-  const nums = currentVersion.split('.').slice(0, 3).map(Number)
-  if (nums.length !== 3) {
-    throw new Error(`Current version is ill-formatted: "${currentVersion}"`)
-  }
+  const versions = await Promise.all(
+    packages.map(async ({ dir, packageName }) => getCurrentPublishedVersion(dir, packageName))
+  )
 
-  const indexToIncrement = { major: 0, minor: 1, patch: 2 }[versionSpecifier.tag]
-  return nums.map((n, i) => (i < indexToIncrement ? n : i === indexToIncrement ? n + 1 : 0)).join('.')
+  const maxVersion = versions.reduce((max, v) => (compareVersions(v, max) > 0 ? v : max), '0.0.0')
+  return applyIncrement(maxVersion, versionSpecifier.tag)
+}
+
+export async function resolveVersion(
+  dir: string,
+  packageName: string,
+  versionSpecifier: VersionSpecifier
+): Promise<string> {
+  return resolveVersionForPackages([{ dir, packageName }], versionSpecifier)
 }

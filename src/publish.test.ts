@@ -34,7 +34,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mylib'),
       monorepoRoot,
       publishToVersion: '99.99.99',
     })
@@ -54,7 +54,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mylib'),
       monorepoRoot,
       publishToVersion: '99.99.99',
     })
@@ -81,7 +81,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
       monorepoRoot,
       publishToVersion: '88.88.88',
     })
@@ -106,7 +106,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/foo',
+        pathToSubjectPackages: 'packages/foo',
         monorepoRoot,
         publishToVersion: '1.4.1',
       })
@@ -116,7 +116,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/foo',
+        pathToSubjectPackages: 'packages/foo',
         monorepoRoot,
         publishToVersion: '2.7.1',
       })
@@ -126,7 +126,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/foo',
+        pathToSubjectPackages: 'packages/foo',
         monorepoRoot,
         publishToVersion: '3.1.4',
       })
@@ -160,7 +160,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: 'packages/foo',
+      pathToSubjectPackages: 'packages/foo',
       monorepoRoot,
       publishToVersion: '77.77.77',
     })
@@ -186,32 +186,32 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       publishToVersion: '2.4.0',
     })
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       publishToVersion: 'minor',
     })
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       publishToVersion: 'major',
     })
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       publishToVersion: '4.1.8',
     })
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       publishToVersion: 'patch',
     })
@@ -232,7 +232,7 @@ describe('npm publishing with Verdaccio', () => {
 
     const opts = {
       cwd: monorepoRoot,
-      pathToSubjectPackage: 'packages/calculator',
+      pathToSubjectPackages: 'packages/calculator',
       monorepoRoot,
       publishToVersion: 'major',
     }
@@ -258,5 +258,87 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       verdaccio.runConumser('calculator@3.0.0', `import { compute } from 'calculator'; console.log(compute(3, 4))`)
     ).toBe('81')
+  }, 120000)
+
+  it('publishes multiple packages with shared version derived from max current version', async () => {
+    // Publish initial versions: core at 1.2.0, utils at 1.3.0, cli at 1.1.0
+    const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/core/package.json': pj('@test/core', '1.2.0'),
+      'packages/core/dist/index.js': `export const core = 'core';`,
+      'packages/utils/package.json': pj('@test/utils', '1.3.0'),
+      'packages/utils/dist/index.js': `export const utils = 'utils';`,
+      'packages/cli/package.json': pj('@test/cli', '1.1.0'),
+      'packages/cli/dist/index.js': `export const cli = 'cli';`,
+    })
+
+    // Publish each at different versions first
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/core'),
+      monorepoRoot,
+      publishToVersion: '1.2.0',
+    })
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/utils'),
+      monorepoRoot,
+      publishToVersion: '1.3.0',
+    })
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/cli'),
+      monorepoRoot,
+      publishToVersion: '1.1.0',
+    })
+
+    // Now publish all three with patch increment
+    // Max is 1.3.0, so patch should give 1.3.1
+    const result = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: [
+        path.join(monorepoRoot, 'packages/core'),
+        path.join(monorepoRoot, 'packages/utils'),
+        path.join(monorepoRoot, 'packages/cli'),
+      ],
+      monorepoRoot,
+      publishToVersion: 'patch',
+    })
+
+    expect(result.resolvedVersion).toBe('1.3.1')
+    expect(result.packages).toHaveLength(3)
+
+    // All three should be published at 1.3.1
+    expect(verdaccio.runView('@test/core')).toMatchObject({ version: '1.3.1' })
+    expect(verdaccio.runView('@test/utils')).toMatchObject({ version: '1.3.1' })
+    expect(verdaccio.runView('@test/cli')).toMatchObject({ version: '1.3.1' })
+  }, 180000)
+
+  it('publishes multiple packages with explicit version', async () => {
+    const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/alpha/package.json': pj('alpha', '1.0.0'),
+      'packages/alpha/dist/index.js': `export const alpha = 'alpha';`,
+      'packages/beta/package.json': pj('beta', '1.0.0'),
+      'packages/beta/dist/index.js': `export const beta = 'beta';`,
+    })
+
+    const result = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: [
+        path.join(monorepoRoot, 'packages/alpha'),
+        path.join(monorepoRoot, 'packages/beta'),
+      ],
+      monorepoRoot,
+      publishToVersion: '5.0.0',
+    })
+
+    expect(result.resolvedVersion).toBe('5.0.0')
+
+    // Both should be published at 5.0.0
+    expect(verdaccio.runView('alpha')).toMatchObject({ version: '5.0.0' })
+    expect(verdaccio.runView('beta')).toMatchObject({ version: '5.0.0' })
   }, 120000)
 })

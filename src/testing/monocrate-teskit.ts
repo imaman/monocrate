@@ -61,7 +61,7 @@ export async function runMonocrate(monorepoRoot: string, sourcePackage: string, 
 
   await monocrate({
     cwd: monorepoRoot,
-    pathToSubjectPackage: path.join(monorepoRoot, sourcePackage),
+    pathToSubjectPackages: path.join(monorepoRoot, sourcePackage),
     outputDir,
     monorepoRoot,
   })

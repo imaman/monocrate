@@ -4,18 +4,18 @@ import { monocrate } from './monocrate.js'
 const command = defineCommand({
   meta: {
     name: 'monocrate',
-    description: 'Assemble and optionally publish a monorepo package to npm',
+    description: 'Assemble and optionally publish monorepo packages to npm',
   },
   args: {
-    source: {
+    sources: {
       type: 'positional',
-      description: 'Source package directory',
+      description: 'Source package directories (one or more)',
       required: true,
     },
     output: {
-      type: 'positional',
-      description: 'Output directory (creates a dedicated temp directory if not specified)',
-      required: false,
+      type: 'string',
+      description: 'Output directory. When multiple packages are specified, each gets a subdirectory. Creates temp directories if not specified.',
+      alias: 'd',
     },
     root: {
       type: 'string',
@@ -24,20 +24,23 @@ const command = defineCommand({
     },
     publish: {
       type: 'string',
-      description: 'Publish to npm with version: x.y.z (explicit) or patch|minor|major (increment)',
+      description: 'Publish to npm with version: x.y.z (explicit) or patch|minor|major (increment). All packages share the same version.',
       alias: 'p',
     },
     'output-file': {
       type: 'string',
-      description: 'Write output to file instead of stdout',
+      description: 'Write resolved version to file instead of stdout',
       alias: 'o',
     },
   },
   async run({ args }) {
+    // Collect all positional arguments (source directories)
+    // citty puts the first positional in args.sources, and remaining in args._
+    const sources: string[] = [args.sources, ...((args._ as string[] | undefined) ?? [])]
     const outputDir = args.output || undefined
     const outputFile = args['output-file'] || undefined
     await monocrate({
-      pathToSubjectPackage: args.source,
+      pathToSubjectPackages: sources,
       ...(outputDir ? { outputDir } : {}),
       ...(outputFile ? { outputFile } : {}),
       monorepoRoot: args.root,
