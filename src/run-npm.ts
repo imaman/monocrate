@@ -1,10 +1,11 @@
-import { execFile } from 'node:child_process'
+import { x } from 'tinyexec'
 import type { AbsolutePath } from './paths.js'
 
 type NpmSubcommand = 'view' | 'publish' | 'pack'
 
 interface NpmOptionsBase {
   env?: Partial<Record<string, string>>
+  inheritStdio?: boolean
 }
 
 interface NpmOptionsThrow extends NpmOptionsBase {
@@ -50,18 +51,30 @@ export async function runNpm(
 ): Promise<NpmResult> {
   const errorPolicy = options?.errorPolicy ?? 'throw'
   const env = options?.env !== undefined ? { ...process.env, ...options.env } : undefined
+  const inheritStdio = options?.inheritStdio ?? false
 
-  return new Promise((resolve, reject) => {
-    execFile('npm', [subcommand, ...args], { cwd, env }, (error, stdout, stderr) => {
-      if (error) {
-        if (errorPolicy === 'throw') {
-          reject(error instanceof Error ? error : new Error('npm command failed'))
-          return
-        }
-        resolve({ ok: false, stdout, stderr, error })
-        return
-      }
-      resolve({ ok: true, stdout, stderr })
-    })
+  const proc = x('npm', [subcommand, ...args], {
+    nodeOptions: { cwd, env, stdio: inheritStdio ? 'inherit' : 'pipe' },
+    throwOnError: false,
   })
+
+  const result = await proc
+
+  if (result.exitCode === undefined) {
+    const error = new Error(`npm ${subcommand} terminated abnormally` + (proc.killed ? ' (killed)' : ''))
+    if (errorPolicy === 'throw') {
+      throw error
+    }
+    return { ok: false, stdout: result.stdout, stderr: result.stderr, error }
+  }
+
+  if (result.exitCode !== 0) {
+    const error = new Error(`npm ${subcommand} exited with code ${String(result.exitCode)}`)
+    if (errorPolicy === 'throw') {
+      throw error
+    }
+    return { ok: false, stdout: result.stdout, stderr: result.stderr, error }
+  }
+
+  return { ok: true, stdout: result.stdout, stderr: result.stderr }
 }
