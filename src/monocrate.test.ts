@@ -1396,12 +1396,16 @@ console.log('Hello from bin');
       expect(result.packages[1]?.packageName).toBe('@test/utils')
 
       // Each package should have its own output directory under the base
-      expect(result.packages[0]?.outputDir).toContain('test-core')
-      expect(result.packages[1]?.outputDir).toContain('test-utils')
+      const corePackage = result.packages[0]
+      const utilsPackage = result.packages[1]
+      expect(corePackage).toBeDefined()
+      expect(utilsPackage).toBeDefined()
+      expect(corePackage?.outputDir).toContain('test-core')
+      expect(utilsPackage?.outputDir).toContain('test-utils')
 
       // Verify both packages were assembled
-      const coreOutput = unfolderify(result.packages[0]!.outputDir)
-      const utilsOutput = unfolderify(result.packages[1]!.outputDir)
+      const coreOutput = unfolderify(corePackage?.outputDir ?? '')
+      const utilsOutput = unfolderify(utilsPackage?.outputDir ?? '')
 
       expect(coreOutput['package.json']).toMatchObject({ name: '@test/core' })
       expect(utilsOutput['package.json']).toMatchObject({ name: '@test/utils' })
@@ -1499,14 +1503,18 @@ console.log('Hello from bin');
       })
 
       expect(result.packages).toHaveLength(2)
+      const appPackage = result.packages[0]
+      const cliPackage = result.packages[1]
+      expect(appPackage).toBeDefined()
+      expect(cliPackage).toBeDefined()
 
       // app should have lib as dependency, not utils
-      const appOutput = unfolderify(result.packages[0]!.outputDir)
+      const appOutput = unfolderify(appPackage?.outputDir ?? '')
       expect(appOutput).toHaveProperty('deps/packages/lib/dist/index.js')
       expect(appOutput).not.toHaveProperty('deps/packages/utils/dist/index.js')
 
       // cli should have utils as dependency, not lib
-      const cliOutput = unfolderify(result.packages[1]!.outputDir)
+      const cliOutput = unfolderify(cliPackage?.outputDir ?? '')
       expect(cliOutput).toHaveProperty('deps/packages/utils/dist/index.js')
       expect(cliOutput).not.toHaveProperty('deps/packages/lib/dist/index.js')
     }, 30000)

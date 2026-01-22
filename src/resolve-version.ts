@@ -65,7 +65,7 @@ function applyIncrement(version: string, increment: 'major' | 'minor' | 'patch')
  * and applying the version specifier to it.
  */
 export async function resolveVersionForPackages(
-  packages: Array<{ dir: string; packageName: string }>,
+  packages: { dir: string; packageName: string }[],
   versionSpecifier: VersionSpecifier
 ): Promise<string> {
   if (versionSpecifier.tag === 'explicit') {

@@ -131,11 +131,15 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }
 
   const sourceDirs = pathsToPackages.map((p) => AbsolutePath(path.resolve(cwd, p)))
+  const firstSourceDir = sourceDirs[0]
+  if (firstSourceDir === undefined) {
+    throw new Error('At least one package path must be specified')
+  }
 
   // Use the first package's location to determine monorepo root if not specified
   const monorepoRoot = options.monorepoRoot
     ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
-    : findMonorepoRoot(sourceDirs[0]!)
+    : findMonorepoRoot(firstSourceDir)
 
   // Validate publish argument before any side effects
   const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
@@ -149,7 +153,10 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
 
   const packageInfos: PackageInfo[] = await Promise.all(
     sourceDirs.map(async (sourceDir, index) => {
-      const closure = closures[index]!
+      const closure = closures[index]
+      if (closure === undefined) {
+        throw new Error(`Internal error: missing closure for index ${index}`)
+      }
       let outputDir: AbsolutePath
 
       if (baseOutputDir) {
@@ -212,7 +219,11 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }))
 
   // For outputDir in result: use base output dir if provided, otherwise first package's output dir
-  const resultOutputDir = baseOutputDir ?? packageInfos[0]!.outputDir
+  const firstPackageInfo = packageInfos[0]
+  if (firstPackageInfo === undefined) {
+    throw new Error('Internal error: no packages were processed')
+  }
+  const resultOutputDir = baseOutputDir ?? firstPackageInfo.outputDir
 
   return { packages, outputDir: resultOutputDir, resolvedVersion }
 }
