@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { monocrate } from './index.js'
-import { createTempDir, pj } from './testing/monocrate-teskit.js'
+import { pj } from './testing/monocrate-teskit.js'
 import { folderify } from './testing/folderify.js'
 import { VerdaccioTestkit } from './testing/verdaccio-testkit.js'
 
@@ -33,23 +33,16 @@ describe('npm publishing with Verdaccio', () => {
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
 
-    const outputDir = createTempDir()
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
-      outputDir,
       monorepoRoot,
       publishToVersion: '99.99.99',
     })
     expect(await verdaccio.runView('@test/mylib')).toMatchObject({ name: '@test/mylib', version: '99.99.99' })
-
-    // Verify the package can be installed and works
-    const installDir = folderify({
-      'package.json': { name: 'test-consumer', type: 'module' },
-      'test.mjs': `import { hello } from '@test/mylib'; console.log(hello());`,
-    })
-    verdaccio.runInstall(installDir, '@test/mylib@99.99.99')
-    expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello from mylib!')
+    expect(
+      verdaccio.runConumser(`@test/mylib@99.99.99`, `import { hello } from '@test/mylib'; console.log(hello())`)
+    ).toBe('Hello from mylib!')
   }, 60000)
 
   it('publishes a simple non-scoped package', async () => {
@@ -60,23 +53,16 @@ describe('npm publishing with Verdaccio', () => {
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
 
-    const outputDir = createTempDir()
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
-      outputDir,
       monorepoRoot,
       publishToVersion: '99.99.99',
     })
     expect(await verdaccio.runView('mylib')).toMatchObject({ name: 'mylib', version: '99.99.99' })
-
-    // Verify the package can be installed and works
-    const installDir = folderify({
-      'package.json': { name: 'test-consumer', type: 'module' },
-      'test.mjs': `import { hello } from 'mylib'; console.log(hello());`,
-    })
-    verdaccio.runInstall(installDir, 'mylib@99.99.99')
-    expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello from mylib!')
+    expect(verdaccio.runConumser(`mylib@99.99.99`, `import { hello } from 'mylib'; console.log(hello())`)).toBe(
+      'Hello from mylib!'
+    )
   }, 60000)
   it('publishes a package with in-repo dependency and rewritten imports work correctly', async () => {
     const monorepoRoot = folderify({
@@ -117,14 +103,9 @@ describe('npm publishing with Verdaccio', () => {
     const pkgName = `foo`
     const monorepoRoot = folderify({
       '.npmrc': verdaccio.npmRc(),
-
       'package.json': { workspaces: ['packages/*'] },
-      'packages/foo/package.json': {
-        name: pkgName,
-        version: '1.0.0',
-        main: 'dist/index.js',
-      },
-      'packages/foo/dist/index.js': `export const version = '1';`,
+      'packages/foo/package.json': pj(pkgName, '1.0.0'),
+      'packages/foo/dist/index.js': `export const foo = 'FOO'`,
     })
 
     expect(
@@ -157,10 +138,7 @@ describe('npm publishing with Verdaccio', () => {
     ).toMatchObject({ resolvedVersion: '3.1.4' })
 
     // Verify all versions are available
-    expect(verdaccio.runView(pkgName)).toMatchObject({
-      version: '3.1.4',
-      versions: ['1.4.1', '2.7.1', '3.1.4'],
-    })
+    expect(verdaccio.runView(pkgName)).toMatchObject({ version: '3.1.4', versions: ['1.4.1', '2.7.1', '3.1.4'] })
   }, 120000)
 
   it('merges third-party dependencies from main package and in-repo deps', async () => {
