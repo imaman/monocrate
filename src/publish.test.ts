@@ -143,43 +143,32 @@ describe('npm publishing with Verdaccio', () => {
     const monorepoRoot = folderify({
       '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
-      'packages/app/package.json': {
-        name: '@test/app-with-deps',
-        version: '1.0.0',
-        main: 'dist/index.js',
-        dependencies: {
-          '@test/lib-with-deps': 'workspace:*',
-          'is-odd': '^3.0.0',
-        },
-      },
-      'packages/app/dist/index.js': [
-        `import { checkEven } from '@test/lib-with-deps'`,
-        `import isOdd from 'is-odd'`,
-        `export function analyze(n) {  return "odd? " + isOdd(n) + ", even? " + checkEven(n) }`,
+      'packages/foo/package.json': pj('foo', '1.0.0', { dependencies: { boo: 'workspace:*', 'is-odd': '^3.0.0' } }),
+      'packages/foo/index.js': [
+        `import { classify } from 'boo'`,
+        `import { divisorsOf } from 'divisors'`,
+        `export function analyze(n) { return n + ' is ' + classify(n) + " divisors: " + divisorsOf(n).join(', ') }`,
       ].join('\n'),
-      'packages/lib/package.json': pj('@test/lib-with-deps', '1.0.0', { dependencies: { 'is-even': '^2.0.0' } }),
-      'packages/lib/index.js': `import isEven from 'is-even'; export function checkEven(n) { return isEven(n); }`,
+      'packages/boo/package.json': pj('boo', '1.0.0', { dependencies: { 'is-even': '^2.0.0' } }),
+      'packages/boo/index.js': `import isEven from 'is-even'; export function classify(n) { return isEven(n) ? 'even' ? 'odd'; }`,
     })
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
       monorepoRoot,
       publishToVersion: '77.77.77',
     })
 
     // Verify package.json has merged dependencies
-    expect(verdaccio.runView('@test/app-with-deps')).toMatchObject({
-      name: '@test/app-with-deps',
+    expect(verdaccio.runView('foo')).toMatchObject({
+      name: 'foo',
       version: '77.77.77',
       dependencies: { 'is-odd': '^3.0.0', 'is-even': '^2.0.0' },
     })
 
-    expect(
-      verdaccio.runConumser(
-        '@test/app-with-deps',
-        `import { analyze } from '@test/app-with-deps'; console.log(analyze(5))`
-      )
-    ).toBe('odd? true, even? false')
+    expect(verdaccio.runConumser('foo', `import { analyze } from 'foo'; console.log(analyze(5))`)).toBe(
+      'odd? true, even? false'
+    )
   }, 90000)
 })
