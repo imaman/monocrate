@@ -16,9 +16,16 @@ export async function assemble(
   const locations = await collectPackageLocations(closure, outputDir)
   const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
+  const subject = packageMap.get(closure.subjectPackageName)
+  if (!subject) {
+    throw new Error(`Internal mismatch: could not find location data of "${closure.subjectPackageName}"`)
+  }
+
   await fsPromises.mkdir(outputDir, { recursive: true })
   const [newVersion] = await Promise.all([
-    versionSpecifier ? await resolveVersion(closure.subjectPackageName, versionSpecifier) : Promise.resolve(undefined),
+    versionSpecifier
+      ? await resolveVersion(subject.fromDir, closure.subjectPackageName, versionSpecifier)
+      : Promise.resolve(undefined),
     (async () => {
       const copiedFiles = await new FileCopier(packageMap).copy()
       await new ImportRewriter(packageMap).rewriteAll(copiedFiles)

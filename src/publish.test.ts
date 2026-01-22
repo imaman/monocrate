@@ -174,4 +174,49 @@ describe('npm publishing with Verdaccio', () => {
       '24 is even. Divisors: 1, 2, 3, 4, 6, 8, 12, 24'
     )
   }, 90000)
+
+  it('publishes with explicit version, minor bump, and major bump', async () => {
+    const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/mypkg/package.json': pj('mypkg', '0.0.0'),
+      'packages/mypkg/dist/index.js': `export const whatever = () => {}`,
+    })
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      monorepoRoot,
+      publishToVersion: '2.4.0',
+    })
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      monorepoRoot,
+      publishToVersion: 'minor',
+    })
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      monorepoRoot,
+      publishToVersion: 'major',
+    })
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      monorepoRoot,
+      publishToVersion: '4.1.8',
+    })
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      monorepoRoot,
+      publishToVersion: 'patch',
+    })
+    expect(verdaccio.runView('mypkg')).toMatchObject({
+      version: '4.1.9',
+      versions: ['2.4.0', '2.5.0', '3.0.0', '4.1.8', '4.1.9'],
+    })
+  }, 120000)
 })
