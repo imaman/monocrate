@@ -86,17 +86,13 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       publishToVersion: '88.88.88',
     })
-
     expect(verdaccio.runView('@test/app')).toMatchObject({ name: '@test/app', version: '88.88.88' })
-
-    // Install and verify the published package works with rewritten imports
-    const installDir = folderify({
-      'package.json': { name: 'test-consumer', type: 'module' },
-      'test.mjs': `import { sayHello } from '@test/app'; console.log(sayHello('World'));`,
-    })
-
-    verdaccio.runInstall(installDir, '@test/app@88.88.88')
-    expect(execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' }).trim()).toBe('Hello, World!')
+    expect(
+      verdaccio.runConumser(
+        '@test/app@88.88.88',
+        `import { sayHello } from '@test/app'; console.log(sayHello('World'))`
+      )
+    ).toBe('Hello, World!')
   }, 60000)
 
   it('publishes multiple versions of the same package', async () => {
