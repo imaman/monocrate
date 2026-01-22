@@ -12,3 +12,7 @@ export function publish(outputDir: AbsolutePath, monorepoRoot: AbsolutePath) {
   //   throw new Error(`npm publish failed with exit code ${String(npmPublishResult.status ?? 1)}`)
   // }
 }
+
+// get-files-to-pack
+// resolve-version
+// publish
