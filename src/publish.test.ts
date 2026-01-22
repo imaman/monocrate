@@ -164,15 +164,14 @@ describe('npm publishing with Verdaccio', () => {
       publishToVersion: '77.77.77',
     })
 
-    // Verify package.json has merged dependencies
     expect(verdaccio.runView('foo')).toMatchObject({
       name: 'foo',
       version: '77.77.77',
       dependencies: { 'is-even': '~2.4.0', naturals: '^3.0.0' },
     })
 
-    expect(verdaccio.runConumser('foo', `import { analyze } from 'foo'; console.log(analyze(5))`)).toBe(
-      '5 is odd. Divisors: 1, 5'
+    expect(verdaccio.runConumser('foo', `import { analyze } from 'foo'`, `console.log(analyze(24))`)).toBe(
+      '24 is even. Divisors: 1, 2, 3, 4, 6, 8, 12, 24'
     )
   }, 90000)
 })
