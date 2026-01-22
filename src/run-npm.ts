@@ -61,11 +61,7 @@ export async function runNpm(
   const result = await proc
 
   if (result.exitCode === undefined) {
-    const error = new Error(`npm ${subcommand} terminated abnormally` + (proc.killed ? ' (killed)' : ''))
-    if (errorPolicy === 'throw') {
-      throw error
-    }
-    return { ok: false, stdout: result.stdout, stderr: result.stderr, error }
+    throw new Error(`npm ${subcommand} terminated abnormally` + (proc.killed ? ' (killed)' : ''))
   }
 
   if (result.exitCode !== 0) {
