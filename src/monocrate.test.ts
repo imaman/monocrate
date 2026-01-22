@@ -1348,7 +1348,7 @@ describe('.npmrc file handling', () => {
       'packages/app/package.json': pj('app'),
       'packages/app/dist/index.js': `export function whatever() {}`,
     })
-    expect(await runMonocrate(monorepoRoot, 'packages/app')).toMatchObject({ output: { '.npmrc': undefined } })
+    expect((await runMonocrate(monorepoRoot, 'packages/app')).output).not.toHaveProperty('.npmrc')
   })
 
   it('includes .npmrc from in-repo dependencies', async () => {
