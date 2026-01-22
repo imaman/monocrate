@@ -137,20 +137,24 @@ describe('npm publishing with Verdaccio', () => {
 
   it('merges third-party dependencies from main package and in-repo deps', async () => {
     // Publish two libs directly to Verdaccio to serve as "third-party" deps.
-    verdaccio.publishPackage('is-odd', '3.9.27', 'export default function isOdd(n) { return n % 2 !== 0; }')
+    verdaccio.publishPackage(
+      'naturals',
+      '3.9.27',
+      'export const divisorsOf = n => Array.from({ length: n }, (_, i) => i+1).filter(x => n % x === 0)'
+    )
     verdaccio.publishPackage('is-even', '2.4.8', 'export default function isEven(n) { return n % 2 === 0; }')
 
     const monorepoRoot = folderify({
       '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
-      'packages/foo/package.json': pj('foo', '1.0.0', { dependencies: { boo: 'workspace:*', 'is-odd': '^3.0.0' } }),
+      'packages/foo/package.json': pj('foo', '1.0.0', { dependencies: { boo: 'workspace:*', naturals: '^3.0.0' } }),
       'packages/foo/index.js': [
         `import { classify } from 'boo'`,
-        `import { divisorsOf } from 'divisors'`,
-        `export function analyze(n) { return n + ' is ' + classify(n) + " divisors: " + divisorsOf(n).join(', ') }`,
+        `import { divisorsOf } from 'naturals'`,
+        `export function analyze(n) { return n + ' is ' + classify(n) + ". Divisors: " + divisorsOf(n).join(', ') }`,
       ].join('\n'),
-      'packages/boo/package.json': pj('boo', '1.0.0', { dependencies: { 'is-even': '^2.0.0' } }),
-      'packages/boo/index.js': `import isEven from 'is-even'; export function classify(n) { return isEven(n) ? 'even' ? 'odd'; }`,
+      'packages/boo/package.json': pj('boo', '1.0.0', { dependencies: { 'is-even': '~2.4.0' } }),
+      'packages/boo/index.js': `import isEven from 'is-even'; export function classify(n) { return isEven(n) ? 'even' : 'odd'; }`,
     })
 
     await monocrate({
@@ -164,11 +168,11 @@ describe('npm publishing with Verdaccio', () => {
     expect(verdaccio.runView('foo')).toMatchObject({
       name: 'foo',
       version: '77.77.77',
-      dependencies: { 'is-odd': '^3.0.0', 'is-even': '^2.0.0' },
+      dependencies: { 'is-even': '~2.4.0', naturals: '^3.0.0' },
     })
 
     expect(verdaccio.runConumser('foo', `import { analyze } from 'foo'; console.log(analyze(5))`)).toBe(
-      'odd? true, even? false'
+      '5 is odd. Divisors: 1, 5'
     )
   }, 90000)
 })
