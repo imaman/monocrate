@@ -4,6 +4,7 @@ import { createTempDir } from './monocrate-teskit.js'
 import getPort from 'get-port'
 import path from 'node:path'
 import fs from 'node:fs'
+import { folderify } from './folderify.js'
 
 interface VerdaccioServer {
   process: ChildProcess
@@ -52,6 +53,17 @@ export class VerdaccioTestkit {
       cwd: dir,
       stdio: 'pipe',
     })
+  }
+
+  publishPackage(name: string, version: string, jsSourceCode: string) {
+    const dir = folderify({
+      '.npmrc': this.npmRc(),
+      'package.json': { name, version, main: 'index.js' },
+      'index.js': jsSourceCode,
+    })
+    // Publish a package directly to Verdaccio
+    // execSync throws if the command fails, which will fail the test
+    execSync(`npm publish --registry=${this.get().url}`, { cwd: dir, stdio: 'pipe' })
   }
 }
 async function startVerdaccio(): Promise<VerdaccioServer> {

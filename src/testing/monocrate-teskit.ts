@@ -22,6 +22,15 @@ interface PackageJsonOptions {
   transform?: (pkg: PackageJson) => void
 }
 
+export function pj(name: string, version: string, more: Partial<PackageJson>) {
+  return {
+    main: 'index.js',
+    ...more,
+    name,
+    version,
+  }
+}
+
 /**
  * Creates a package.json object with sensible defaults for npm pack compatibility.
  * Required fields (name, version) are always included.

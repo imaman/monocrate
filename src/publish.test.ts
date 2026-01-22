@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { monocrate } from './index.js'
-import { createTempDir } from './testing/monocrate-teskit.js'
+import { createTempDir, pj } from './testing/monocrate-teskit.js'
 import { folderify } from './testing/folderify.js'
 import { VerdaccioTestkit } from './testing/verdaccio-testkit.js'
 
@@ -163,7 +163,11 @@ describe('npm publishing with Verdaccio', () => {
     })
   }, 120000)
 
-  it.skip('merges third-party dependencies from main package and in-repo deps', async () => {
+  it('merges third-party dependencies from main package and in-repo deps', async () => {
+    // Publish two libs directly to Verdaccio to serve as "third-party" deps.
+    verdaccio.publishPackage('is-odd', '3.0.1', 'export default function isOdd(n) { return n % 2 !== 0; }')
+    verdaccio.publishPackage('is-even', '1.0.0', 'export default function isEven(n) { return n % 2 === 0; }')
+
     const monorepoRoot = folderify({
       '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
@@ -176,21 +180,13 @@ describe('npm publishing with Verdaccio', () => {
           'is-odd': '^3.0.1',
         },
       },
-      'packages/app/dist/index.js': `import { checkEven } from '@test/lib-with-deps';
-import isOdd from 'is-odd';
-export function analyze(n) {
-  return { isOdd: isOdd(n), isEven: checkEven(n) };
-}`,
-      'packages/lib/package.json': {
-        name: '@test/lib-with-deps',
-        version: '1.0.0',
-        main: 'dist/index.js',
-        dependencies: {
-          'is-even': '^1.0.0',
-        },
-      },
-      'packages/lib/dist/index.js': `import isEven from 'is-even';
-export function checkEven(n) { return isEven(n); }`,
+      'packages/app/dist/index.js': [
+        `import { checkEven } from '@test/lib-with-deps';`,
+        `import isOdd from 'is-odd';`,
+        `export function analyze(n) {  return { isOdd: isOdd(n), isEven: checkEven(n) };}`,
+      ].join('\n'),
+      'packages/lib/package.json': pj('@test/lib-with-deps', '1.0.0', { dependencies: { 'is-even': '^1.0.0' } }),
+      'packages/lib/index.js': `import isEven from 'is-even'; export function checkEven(n) { return isEven(n); }`,
     })
 
     await monocrate({
@@ -205,10 +201,10 @@ export function checkEven(n) { return isEven(n); }`,
     expect(viewResult).toMatchObject({
       name: '@test/app-with-deps',
       version: '77.77.77',
-    })
-    expect(viewResult.dependencies).toMatchObject({
-      'is-odd': '^3.0.1',
-      'is-even': '^1.0.0',
+      dependencies: {
+        'is-odd': '^3.0.1',
+        'is-even': '^1.0.0',
+      },
     })
 
     // Install and verify all dependencies are available and work
