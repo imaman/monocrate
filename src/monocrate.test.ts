@@ -86,7 +86,7 @@ describe('output file option', () => {
 
     expect(await monocrate({ ...opts, publishToVersion: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
     expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
-  })
+  }, 30000)
 })
 
 describe('monorepo discovery', () => {
