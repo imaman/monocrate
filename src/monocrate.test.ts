@@ -9,7 +9,8 @@ import { folderify } from './testing/folderify.js'
 import { unfolderify } from './testing/unfolderify.js'
 import { createTempDir, makePackageJson, pj, runMonocrate } from './testing/monocrate-teskit.js'
 
-describe('optional output directory', () => {
+describe('monocrate', () => {
+  describe('optional output directory', () => {
   it('creates a temp directory when outputDir is not provided', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -54,9 +55,9 @@ describe('optional output directory', () => {
 
     expect(result.outputDir).toBe(outputDir)
   })
-})
+  })
 
-describe('output file option', () => {
+  describe('output file option', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
@@ -87,9 +88,9 @@ describe('output file option', () => {
     expect(await monocrate({ ...opts, publishToVersion: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
     expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
   }, 30000)
-})
+  })
 
-describe('monorepo discovery', () => {
+  describe('monorepo discovery', () => {
   it('finds monorepo root with npm workspaces', () => {
     const monorepoRoot = folderify({
       'package.json': { name: 'my-monorepo', workspaces: ['packages/*'] },
@@ -121,9 +122,9 @@ describe('monorepo discovery', () => {
       'Could not find monorepo root'
     )
   })
-})
+  })
 
-describe('error handling', () => {
+  describe('error handling', () => {
   it('handles package with no dist directory (npm pack includes only package.json)', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -220,9 +221,9 @@ describe('error handling', () => {
 
     expect(stdout.trim()).toBe('Hello!')
   })
-})
+  })
 
-describe('package.json transformation', () => {
+  describe('package.json transformation', () => {
   it('preserves exports field in package.json', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -293,9 +294,9 @@ describe('package.json transformation', () => {
     expect(pkgJson.author).toBe('Test Author')
     expect(pkgJson.license).toBe('MIT')
   })
-})
+  })
 
-describe('monocrate e2e', () => {
+  describe('monocrate e2e', () => {
   it('assembles a simple package with an in-repo dependency', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -1014,9 +1015,9 @@ export const a = 'a-' + b;
     // Verify execution works
     expect(stdout.trim()).toBe('a-b')
   }, 15000)
-})
+  })
 
-describe('files property support', () => {
+  describe('files property support', () => {
   it('uses files property to determine what to copy', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -1217,11 +1218,11 @@ console.log('Hello from bin');
     expect(pkgJson.files).toEqual(['dist', 'bin'])
   })
 
-  // TODO(imaman): publish to a test registry
-})
+    // TODO(imaman): publish to a test registry
+  })
 
-// TODO(imaman): move this to a separate test file
-describe('version conflict detection', () => {
+  // TODO(imaman): move this to a separate test file
+  describe('version conflict detection', () => {
   it('throws with detailed error message when packages require different versions', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -1326,9 +1327,9 @@ describe('version conflict detection', () => {
       })
     ).rejects.toThrow('  - zod: ^2.0.0 (by @test/level2), ^3.0.0 (by @test/app)')
   })
-})
+  })
 
-describe('.npmrc file handling', () => {
+  describe('.npmrc file handling', () => {
   it('includes .npmrc file when present in package directory', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
@@ -1366,5 +1367,6 @@ describe('.npmrc file handling', () => {
         'deps/packages/lib/.npmrc': 'registry=https://lib.registry.com',
       },
     })
+  })
   })
 })
