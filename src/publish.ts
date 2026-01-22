@@ -3,6 +3,10 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { AbsolutePath } from './paths.js'
 
+/**
+ * @param outputDir
+ * @param monorepoRoot
+ */
 export function publish(outputDir: AbsolutePath, monorepoRoot: AbsolutePath) {
   const npmrcPath = path.join(monorepoRoot, '.npmrc')
   const userconfigArg = fs.existsSync(npmrcPath) ? ` --userconfig ${npmrcPath}` : ''
