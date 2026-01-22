@@ -197,24 +197,21 @@ describe('npm publishing with Verdaccio', () => {
     })
 
     // Verify package.json has merged dependencies
-    const viewResult = verdaccio.runView('@test/app-with-deps') as Record<string, unknown>
-    expect(viewResult).toMatchObject({
+    expect(verdaccio.runView('@test/app-with-deps')).toMatchObject({
       name: '@test/app-with-deps',
       version: '77.77.77',
-      dependencies: {
-        'is-odd': '^3.0.1',
-        'is-even': '^1.0.0',
-      },
+      dependencies: { 'is-odd': '^3.0.1', 'is-even': '^1.0.0' },
     })
 
     // Install and verify all dependencies are available and work
     const installDir = folderify({
       'package.json': { name: 'test-consumer', type: 'module' },
-      'test.mjs': `import { analyze } from '@test/app-with-deps';
-const result = analyze(5);
-console.log(JSON.stringify(result));`,
+      'test.mjs': [
+        `import { analyze } from '@test/app-with-deps';`,
+        `const result = analyze(5);`,
+        `console.log(JSON.stringify(result));`,
+      ].join('\n'),
     })
-
     verdaccio.runInstall(installDir, '@test/app-with-deps@77.77.77')
 
     // Verify node_modules contains both third-party deps
