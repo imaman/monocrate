@@ -1,4 +1,5 @@
 import * as path from 'node:path'
+import * as fs from 'node:fs'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { monocrate } from './index.js'
 import { pj } from './testing/monocrate-teskit.js'
@@ -105,7 +106,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
+        pathToSubjectPackage: 'packages/foo',
         monorepoRoot,
         publishToVersion: '1.4.1',
       })
@@ -115,7 +116,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
+        pathToSubjectPackage: 'packages/foo',
         monorepoRoot,
         publishToVersion: '2.7.1',
       })
@@ -125,7 +126,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
+        pathToSubjectPackage: 'packages/foo',
         monorepoRoot,
         publishToVersion: '3.1.4',
       })
@@ -159,7 +160,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/foo'),
+      pathToSubjectPackage: 'packages/foo',
       monorepoRoot,
       publishToVersion: '77.77.77',
     })
@@ -175,7 +176,7 @@ describe('npm publishing with Verdaccio', () => {
     )
   }, 90000)
 
-  it('publishes with explicit version, minor bump, and major bump', async () => {
+  it('published version increments as dictated by the "bump" value', async () => {
     const monorepoRoot = folderify({
       '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
@@ -218,5 +219,44 @@ describe('npm publishing with Verdaccio', () => {
       version: '4.1.9',
       versions: ['2.4.0', '2.5.0', '3.0.0', '4.1.8', '4.1.9'],
     })
+  }, 120000)
+
+  it('verify the packaged code changes indeed changes with each published version', async () => {
+    const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/calculator/package.json': pj('calculator', '1.0.0', { main: 'index.mjs' }),
+      'packages/calculator/index.mjs': `//`,
+    })
+    const indexPath = path.join(monorepoRoot, 'packages/calculator/index.mjs')
+
+    const opts = {
+      cwd: monorepoRoot,
+      pathToSubjectPackage: 'packages/calculator',
+      monorepoRoot,
+      publishToVersion: 'major',
+    }
+
+    // Version 1.0.0: addition
+    fs.writeFileSync(indexPath, `export function compute(a, b) { return a + b; }`)
+    await monocrate(opts)
+
+    // Version 2.0.0: multiplication
+    fs.writeFileSync(indexPath, `export function compute(a, b) { return a * b; }`)
+    await monocrate(opts)
+
+    // Version 3.0.0: power
+    fs.writeFileSync(indexPath, `export function compute(a, b) { return Math.pow(a, b); }`)
+    await monocrate(opts)
+
+    expect(
+      verdaccio.runConumser('calculator@1.0.0', `import { compute } from 'calculator'; console.log(compute(3, 4))`)
+    ).toBe('7')
+    expect(
+      verdaccio.runConumser('calculator@2.0.0', `import { compute } from 'calculator'; console.log(compute(3, 4))`)
+    ).toBe('12')
+    expect(
+      verdaccio.runConumser('calculator@3.0.0', `import { compute } from 'calculator'; console.log(compute(3, 4))`)
+    ).toBe('81')
   }, 120000)
 })

@@ -1,9 +1,6 @@
 import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
 import { z } from 'zod'
 import type { VersionSpecifier } from './version-specifier.js'
-
-const execFileAsync = promisify(execFile)
 
 const NpmErrorResponse = z.object({
   error: z.object({
@@ -13,8 +10,20 @@ const NpmErrorResponse = z.object({
 })
 
 async function getCurrentPublishedVersion(dir: string, packageName: string): Promise<string> {
-  const { stdout } = await execFileAsync('npm', ['view', '-s', '--json', packageName, 'version'], { cwd: dir })
+  const { error, stdout } = await new Promise<{ error: Error | undefined; stdout: string }>((resolve) => {
+    execFile('npm', ['view', '-s', '--json', packageName, 'version'], { cwd: dir }, (error, stdout) => {
+      resolve({ error: error ?? undefined, stdout })
+    })
+  })
+
   const parsed: unknown = JSON.parse(stdout)
+
+  if (!error) {
+    if (typeof parsed !== 'string') {
+      throw new Error(`Unexpected response from npm view: ${stdout}`)
+    }
+    return parsed
+  }
 
   const errorResult = NpmErrorResponse.safeParse(parsed)
   if (errorResult.success) {
@@ -26,11 +35,7 @@ async function getCurrentPublishedVersion(dir: string, packageName: string): Pro
     )
   }
 
-  if (typeof parsed !== 'string') {
-    throw new Error(`Unexpected response from npm view: ${stdout}`)
-  }
-
-  return parsed
+  throw new Error(`Unexpected response from npm view: ${stdout}`)
 }
 
 export async function resolveVersion(dir: string, packageName: string, versionSpecifier: VersionSpecifier) {
