@@ -66,9 +66,9 @@ export class VerdaccioTestkit {
     execSync(`npm publish --registry=${this.get().url}`, { cwd: dir, stdio: 'pipe' })
   }
 
-  runConumser(depToInstall: string, jsSourceCode: string, fileType: 'mjs' | 'js' = 'mjs') {
-    const fileName = `index.${fileType}`
-    const dir = folderify({ 'package.json': { name: 'na', version: '1.0.0' }, [fileName]: jsSourceCode })
+  runConumser(depToInstall: string, ...jsSourceCode: string[]) {
+    const fileName = `index.mjs`
+    const dir = folderify({ 'package.json': { name: 'na', version: '1.0.0' }, [fileName]: jsSourceCode.join('\n') })
     this.runInstall(dir, depToInstall)
     return execSync(`node ${fileName}`, { cwd: dir, encoding: 'utf-8' }).trim()
   }

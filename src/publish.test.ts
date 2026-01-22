@@ -1,5 +1,3 @@
-import { execSync } from 'node:child_process'
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { monocrate } from './index.js'
@@ -155,9 +153,9 @@ describe('npm publishing with Verdaccio', () => {
         },
       },
       'packages/app/dist/index.js': [
-        `import { checkEven } from '@test/lib-with-deps';`,
-        `import isOdd from 'is-odd';`,
-        `export function analyze(n) {  return { isOdd: isOdd(n), isEven: checkEven(n) };}`,
+        `import { checkEven } from '@test/lib-with-deps'`,
+        `import isOdd from 'is-odd'`,
+        `export function analyze(n) {  return "odd? " + isOdd(n) + ", even? " + checkEven(n) }`,
       ].join('\n'),
       'packages/lib/package.json': pj('@test/lib-with-deps', '1.0.0', { dependencies: { 'is-even': '^1.0.0' } }),
       'packages/lib/index.js': `import isEven from 'is-even'; export function checkEven(n) { return isEven(n); }`,
@@ -177,22 +175,11 @@ describe('npm publishing with Verdaccio', () => {
       dependencies: { 'is-odd': '^3.0.1', 'is-even': '^1.0.0' },
     })
 
-    // Install and verify all dependencies are available and work
-    const installDir = folderify({
-      'package.json': { name: 'test-consumer', type: 'module' },
-      'test.mjs': [
-        `import { analyze } from '@test/app-with-deps';`,
-        `const result = analyze(5);`,
-        `console.log(JSON.stringify(result));`,
-      ].join('\n'),
-    })
-    verdaccio.runInstall(installDir, '@test/app-with-deps@77.77.77')
-
-    // Verify node_modules contains both third-party deps
-    expect(fs.existsSync(path.join(installDir, 'node_modules', 'is-odd'))).toBe(true)
-    expect(fs.existsSync(path.join(installDir, 'node_modules', 'is-even'))).toBe(true)
-
-    const output = execSync('node test.mjs', { cwd: installDir, encoding: 'utf-8' })
-    expect(JSON.parse(output.trim())).toEqual({ isOdd: true, isEven: false })
+    expect(
+      verdaccio.runConumser(
+        '@test/app-with-deps',
+        `import { analyze } from '@test/app-with-deps'; console.log(analyze(5))`
+      )
+    ).toBe('odd? true, even? false')
   }, 90000)
 })
