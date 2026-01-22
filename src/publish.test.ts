@@ -137,8 +137,8 @@ describe('npm publishing with Verdaccio', () => {
 
   it('merges third-party dependencies from main package and in-repo deps', async () => {
     // Publish two libs directly to Verdaccio to serve as "third-party" deps.
-    verdaccio.publishPackage('is-odd', '3.0.1', 'export default function isOdd(n) { return n % 2 !== 0; }')
-    verdaccio.publishPackage('is-even', '1.0.0', 'export default function isEven(n) { return n % 2 === 0; }')
+    verdaccio.publishPackage('is-odd', '3.9.27', 'export default function isOdd(n) { return n % 2 !== 0; }')
+    verdaccio.publishPackage('is-even', '2.4.8', 'export default function isEven(n) { return n % 2 === 0; }')
 
     const monorepoRoot = folderify({
       '.npmrc': verdaccio.npmRc(),
@@ -149,7 +149,7 @@ describe('npm publishing with Verdaccio', () => {
         main: 'dist/index.js',
         dependencies: {
           '@test/lib-with-deps': 'workspace:*',
-          'is-odd': '^3.0.1',
+          'is-odd': '^3.0.0',
         },
       },
       'packages/app/dist/index.js': [
@@ -157,7 +157,7 @@ describe('npm publishing with Verdaccio', () => {
         `import isOdd from 'is-odd'`,
         `export function analyze(n) {  return "odd? " + isOdd(n) + ", even? " + checkEven(n) }`,
       ].join('\n'),
-      'packages/lib/package.json': pj('@test/lib-with-deps', '1.0.0', { dependencies: { 'is-even': '^1.0.0' } }),
+      'packages/lib/package.json': pj('@test/lib-with-deps', '1.0.0', { dependencies: { 'is-even': '^2.0.0' } }),
       'packages/lib/index.js': `import isEven from 'is-even'; export function checkEven(n) { return isEven(n); }`,
     })
 
@@ -172,7 +172,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(verdaccio.runView('@test/app-with-deps')).toMatchObject({
       name: '@test/app-with-deps',
       version: '77.77.77',
-      dependencies: { 'is-odd': '^3.0.1', 'is-even': '^1.0.0' },
+      dependencies: { 'is-odd': '^3.0.0', 'is-even': '^2.0.0' },
     })
 
     expect(
