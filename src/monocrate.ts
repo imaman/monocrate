@@ -155,7 +155,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     sourceDirs.map(async (sourceDir, index) => {
       const closure = closures[index]
       if (closure === undefined) {
-        throw new Error(`Internal error: missing closure for index ${index}`)
+        throw new Error(`Internal error: missing closure for index ${String(index)}`)
       }
       let outputDir: AbsolutePath
 
