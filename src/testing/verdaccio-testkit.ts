@@ -1,9 +1,10 @@
-import type { ChildProcess} from 'node:child_process';
+import type { ChildProcess } from 'node:child_process'
 import { execSync, spawn } from 'node:child_process'
 import { createTempDir } from './monocrate-teskit.js'
 import getPort from 'get-port'
 import path from 'node:path'
 import fs from 'node:fs'
+import { folderify } from './folderify.js'
 
 interface VerdaccioServer {
   process: ChildProcess
@@ -30,15 +31,11 @@ export class VerdaccioTestkit {
     await stopVerdaccio(this.get())
   }
 
-  createNpmRc(dir: string) {
-    // Create .npmrc in output directory to point to Verdaccio
+  npmRc() {
     // Verdaccio requires some form of auth token even with $all access
     // Extract host from URL for the _authToken line (npm requires host without protocol)
-    const registryHost = new URL(this.get().url).host
-    fs.writeFileSync(
-      path.join(dir, '.npmrc'),
-      `registry=${this.get().url}\n//${registryHost}/:_authToken=fake-token-for-testing\n`
-    )
+    const u = this.get().url
+    return `registry=${u}\n//${new URL(u).host}/:_authToken=fake-token-for-testing\n`
   }
 
   runView(packageName: string): unknown {
@@ -57,6 +54,24 @@ export class VerdaccioTestkit {
       stdio: 'pipe',
     })
   }
+
+  publishPackage(name: string, version: string, jsSourceCode: string) {
+    const dir = folderify({
+      '.npmrc': this.npmRc(),
+      'package.json': { name, version, main: 'index.js' },
+      'index.js': jsSourceCode,
+    })
+    // Publish a package directly to Verdaccio
+    // execSync throws if the command fails, which will fail the test
+    execSync(`npm publish --registry=${this.get().url}`, { cwd: dir, stdio: 'pipe' })
+  }
+
+  runConumser(depToInstall: string, ...jsSourceCode: string[]) {
+    const fileName = `index.mjs`
+    const dir = folderify({ 'package.json': { name: 'na', version: '1.0.0' }, [fileName]: jsSourceCode.join('\n') })
+    this.runInstall(dir, depToInstall)
+    return execSync(`node ${fileName}`, { cwd: dir, encoding: 'utf-8' }).trim()
+  }
 }
 async function startVerdaccio(): Promise<VerdaccioServer> {
   const configDir = createTempDir('verdaccio-config-')
@@ -70,26 +85,16 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
   const configPath = path.join(configDir, 'config.json')
   const config = {
     storage: storageDir,
-    auth: {
-      htpasswd: {
-        file: path.join(configDir, 'htpasswd'),
-        max_users: 100,
-      },
-    },
-    uplinks: {
-      npmjs: {
-        url: 'https://registry.npmjs.org/',
-      },
-    },
     packages: {
-      '@test/*': {
+      '@*/*': {
         access: '$all',
         publish: '$all',
+        unpublish: '$all',
       },
       '**': {
         access: '$all',
         publish: '$all',
-        proxy: 'npmjs',
+        unpublish: '$all',
       },
     },
     log: {
@@ -99,9 +104,6 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
     },
   }
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
-
-  // Create empty htpasswd file
-  fs.writeFileSync(path.join(configDir, 'htpasswd'), '')
 
   return new Promise((resolve, reject) => {
     const verdaccioProcess = spawn('npx', ['verdaccio', '--config', configPath, '--listen', String(port)], {

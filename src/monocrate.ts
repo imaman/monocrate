@@ -91,7 +91,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   const resolvedVersion = await assemble(closure, outputDir, versionSpecifier)
 
   if (versionSpecifier) {
-    publish(outputDir)
+    publish(outputDir, monorepoRoot)
   }
 
   if (resolvedVersion !== undefined) {

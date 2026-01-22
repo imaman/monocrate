@@ -22,6 +22,17 @@ interface PackageJsonOptions {
   transform?: (pkg: PackageJson) => void
 }
 
+export function pj(name: string, version = '1.0.0', more: Partial<PackageJson> = {}) {
+  // TODO(imaman): type "module" by default?
+  return {
+    // TODO(imaman): align with index.mjs
+    main: 'index.js',
+    ...more,
+    name,
+    version,
+  }
+}
+
 /**
  * Creates a package.json object with sensible defaults for npm pack compatibility.
  * Required fields (name, version) are always included.
@@ -30,6 +41,7 @@ export function makePackageJson(options: PackageJsonOptions): PackageJson {
   const pkg: PackageJson = {
     name: options.name,
     version: '1.0.0',
+    // TODO(imaman): algin with index.js
     main: 'dist/index.js',
   }
 

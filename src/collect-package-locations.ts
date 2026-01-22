@@ -1,3 +1,4 @@
+import * as fs from 'node:fs'
 import * as ResolveExports from 'resolve.exports'
 import type { PackageLocation } from './package-location.js'
 import type { PackageClosure } from './package-closure.js'
@@ -38,6 +39,12 @@ export function resolveImport(packageJson: PackageJson, subpath: string): string
 
 async function createPackageLocation(pkg: MonorepoPackage, directoryInOutput: AbsolutePath): Promise<PackageLocation> {
   const filesToCopy = await getFilesToPack(pkg.path)
+
+  // Add .npmrc if it exists (npm pack doesn't include it since it's a config file)
+  const npmrcPath = AbsolutePath.join(pkg.path, RelativePath('.npmrc'))
+  if (fs.existsSync(npmrcPath)) {
+    filesToCopy.push('.npmrc')
+  }
 
   return {
     name: pkg.name,

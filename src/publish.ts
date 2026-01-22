@@ -1,9 +1,14 @@
-import { spawnSync } from 'node:child_process'
+import { execSync } from 'node:child_process'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import type { AbsolutePath } from './paths.js'
 
-export function publish(outputDir: AbsolutePath) {
-  const npmPublishResult = spawnSync('npm', ['publish'], { cwd: outputDir, stdio: 'inherit' })
-  if (npmPublishResult.status !== 0) {
-    throw new Error(`npm publish failed with exit code ${String(npmPublishResult.status ?? 1)}`)
-  }
+export function publish(outputDir: AbsolutePath, monorepoRoot: AbsolutePath) {
+  const npmrcPath = path.join(monorepoRoot, '.npmrc')
+  const userconfigArg = fs.existsSync(npmrcPath) ? ` --userconfig ${npmrcPath}` : ''
+  // transition to a common npm invocation utility + a common child process invocation utility.
+  execSync(`npm publish${userconfigArg}`, { cwd: outputDir, stdio: 'inherit', encoding: 'utf-8' })
+  // if (npmPublishResult.status !== 0) {
+  //   throw new Error(`npm publish failed with exit code ${String(npmPublishResult.status ?? 1)}`)
+  // }
 }
