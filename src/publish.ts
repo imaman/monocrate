@@ -1,12 +1,10 @@
 import * as fs from 'node:fs'
-import * as path from 'node:path'
-import type { AbsolutePath } from './paths.js'
-import { runNpm } from './run-npm.js'
+import { AbsolutePath, RelativePath } from './paths.js'
+import { NpmClient } from './npm-client.js'
 
 export async function publish(outputDir: AbsolutePath, monorepoRoot: AbsolutePath) {
-  const npmrcPath = path.join(monorepoRoot, '.npmrc')
-  const args = fs.existsSync(npmrcPath) ? ['--userconfig', npmrcPath] : []
-  await runNpm('publish', args, outputDir)
+  const npmrcPath = AbsolutePath.join(monorepoRoot, RelativePath('.npmrc'))
+  await new NpmClient().publish(outputDir, { userconfig: fs.existsSync(npmrcPath) ? npmrcPath : undefined })
 }
 
 // get-files-to-pack
