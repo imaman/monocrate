@@ -2,10 +2,6 @@ import { z } from 'zod'
 import type { AbsolutePath } from './paths.js'
 import { runNpm } from './run-npm.js'
 
-// ============================================================
-// Zod Schemas
-// ============================================================
-
 const NpmErrorResponse = z.object({
   error: z.object({
     code: z.string().optional(),
