@@ -1,22 +1,5 @@
-import { z } from 'zod'
 import type { AbsolutePath } from './paths.js'
-import { runNpm } from './run-npm.js'
-
-const NpmPackFile = z.object({
-  path: z.string(),
-})
-
-const NpmPackResult = z.object({
-  files: z.array(NpmPackFile),
-})
-
-const NpmPackOutput = z.array(NpmPackResult)
-
-const NpmPackError = z.object({
-  error: z.object({
-    summary: z.string(),
-  }),
-})
+import { NpmClient } from './npm-client.js'
 
 /**
  * Gets the list of files that npm would include in a package tarball.
@@ -27,25 +10,15 @@ const NpmPackError = z.object({
  * @example getFilesToPack("/home/user/my-package") => ["dist/index.js", "README.md", "package.json"]
  */
 export async function getFilesToPack(packageDir: AbsolutePath): Promise<string[]> {
-  const { stdout } = await runNpm('pack', ['--dry-run', '--json'], packageDir, { stdio: 'pipe' })
-
-  const json: unknown = JSON.parse(stdout)
-
-  // Check if npm returned an error
-  const errorResult = NpmPackError.safeParse(json)
-  if (errorResult.success) {
-    throw new Error(`npm pack failed: ${errorResult.data.error.summary}`)
+  const o = await new NpmClient().pack(packageDir, { dryRun: true })
+  if (o.length !== 1) {
+    throw new Error(`Expected npm pack to return a single element array`)
   }
 
-  const parsed = NpmPackOutput.safeParse(json)
-  if (!parsed.success) {
-    throw new Error(`Failed to parse npm pack output: ${parsed.error.message}`)
-  }
-
-  const packOutput = parsed.data[0]
-  if (packOutput === undefined) {
+  const at0 = o.at(0)
+  if (at0 === undefined) {
     throw new Error('npm pack returned empty output')
   }
 
-  return packOutput.files.map((f) => f.path)
+  return at0.files.map((f) => f.path)
 }
