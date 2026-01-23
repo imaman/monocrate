@@ -5,50 +5,71 @@ type NpmSubcommand = 'view' | 'publish' | 'pack'
 
 interface NpmOptionsBase {
   env?: Partial<Record<string, string>>
-  inheritStdio?: boolean
 }
 
-interface NpmOptionsThrow extends NpmOptionsBase {
+interface StdioPipe {
+  inheritStdio?: false
+}
+
+interface StdioInherit {
+  inheritStdio: true
+}
+
+interface PolicyThrow {
   nonZeroExitCodePolicy?: 'throw'
 }
 
-interface NpmOptionsReturn extends NpmOptionsBase {
+interface PolicyReturn {
   nonZeroExitCodePolicy: 'return'
 }
 
-interface NpmSuccessResult {
+interface ResultSuccess {
   ok: true
-  stdout: string
-  stderr: string
 }
 
-interface NpmErrorResult {
+interface ResultError {
   ok: false
-  stdout: string
-  stderr: string
   error: Error
 }
 
-type NpmResult = NpmSuccessResult | NpmErrorResult
+interface WithOutput {
+  stdout: string
+  stderr: string
+}
+
+type NpmResultWithOutput = (ResultSuccess | ResultError) & WithOutput
+type NpmResultNoOutput = ResultSuccess | ResultError
 
 export async function runNpm(
   subcommand: NpmSubcommand,
   args: string[],
   cwd: AbsolutePath,
-  options: NpmOptionsReturn
-): Promise<NpmResult>
+  options: NpmOptionsBase & StdioInherit & PolicyReturn
+): Promise<NpmResultNoOutput>
 export async function runNpm(
   subcommand: NpmSubcommand,
   args: string[],
   cwd: AbsolutePath,
-  options?: NpmOptionsThrow
-): Promise<NpmSuccessResult>
+  options: NpmOptionsBase & StdioPipe & PolicyReturn
+): Promise<NpmResultWithOutput>
 export async function runNpm(
   subcommand: NpmSubcommand,
   args: string[],
   cwd: AbsolutePath,
-  options?: NpmOptionsThrow | NpmOptionsReturn
-): Promise<NpmResult> {
+  options: NpmOptionsBase & StdioInherit & PolicyThrow
+): Promise<ResultSuccess>
+export async function runNpm(
+  subcommand: NpmSubcommand,
+  args: string[],
+  cwd: AbsolutePath,
+  options?: NpmOptionsBase & StdioPipe & PolicyThrow
+): Promise<ResultSuccess & WithOutput>
+export async function runNpm(
+  subcommand: NpmSubcommand,
+  args: string[],
+  cwd: AbsolutePath,
+  options?: NpmOptionsBase & (StdioPipe | StdioInherit) & (PolicyThrow | PolicyReturn)
+): Promise<NpmResultWithOutput | NpmResultNoOutput> {
   const errorPolicy = options?.nonZeroExitCodePolicy ?? 'throw'
   const env = options?.env !== undefined ? { ...process.env, ...options.env } : undefined
   const inheritStdio = options?.inheritStdio ?? false
@@ -69,8 +90,14 @@ export async function runNpm(
     if (errorPolicy === 'throw') {
       throw error
     }
+    if (inheritStdio) {
+      return { ok: false, error }
+    }
     return { ok: false, stdout: result.stdout, stderr: result.stderr, error }
   }
 
+  if (inheritStdio) {
+    return { ok: true }
+  }
   return { ok: true, stdout: result.stdout, stderr: result.stderr }
 }
