@@ -9,11 +9,11 @@ interface NpmOptionsBase {
 }
 
 interface NpmOptionsThrow extends NpmOptionsBase {
-  errorPolicy?: 'throw'
+  nonZeroExitCodePolicy?: 'throw'
 }
 
 interface NpmOptionsReturn extends NpmOptionsBase {
-  errorPolicy: 'return'
+  nonZeroExitCodePolicy: 'return'
 }
 
 interface NpmSuccessResult {
@@ -49,7 +49,7 @@ export async function runNpm(
   cwd: AbsolutePath,
   options?: NpmOptionsThrow | NpmOptionsReturn
 ): Promise<NpmResult> {
-  const errorPolicy = options?.errorPolicy ?? 'throw'
+  const errorPolicy = options?.nonZeroExitCodePolicy ?? 'throw'
   const env = options?.env !== undefined ? { ...process.env, ...options.env } : undefined
   const inheritStdio = options?.inheritStdio ?? false
 
