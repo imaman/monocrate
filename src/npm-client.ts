@@ -10,37 +10,6 @@ const NpmErrorResponse = z.object({
   }),
 })
 
-const NpmViewVersionResult = z.string()
-
-const NpmPackOutput = z.array(
-  z.object({
-    id: z.string(),
-    name: z.string(),
-    version: z.string(),
-    size: z.number(),
-    unpackedSize: z.number(),
-    shasum: z.string(),
-    integrity: z.string(),
-    filename: z.string(),
-    files: z.array(
-      z.object({
-        path: z.string(),
-      })
-    ),
-  })
-)
-
-type ViewVersionResult = { found: true; version: string } | { found: false; errorCode: string }
-
-interface PackResult {
-  files: string[]
-  filename: string
-  size: number
-  unpackedSize: number
-  shasum: string
-  integrity: string
-}
-
 export class NpmClient {
   private readonly env: Partial<Record<string, string>> | undefined
 
@@ -48,65 +17,48 @@ export class NpmClient {
     this.env = options?.env
   }
 
-  async publish(
-    dir: AbsolutePath,
-    options?: {
-      userconfig?: AbsolutePath
-    }
-  ): Promise<void> {
-    const args: string[] = []
-    if (options?.userconfig !== undefined) {
-      args.push('--userconfig', options.userconfig)
-    }
-    await runNpm('publish', args, dir, { env: this.env })
+  async publish(dir: AbsolutePath, options?: { userconfig?: AbsolutePath }): Promise<void> {
+    await runNpm('publish', options?.userconfig ? ['--userconfig', options.userconfig] : [], dir, { env: this.env })
   }
 
-  async viewVersion(packageName: string, cwd: AbsolutePath): Promise<ViewVersionResult> {
+  /**
+   * @param packageName
+   * @param cwd
+   * @returns the version of `packageName` or undefined (if not found)
+   */
+  async viewVersion(packageName: string, cwd: AbsolutePath): Promise<string | undefined> {
     const result = await runNpm('view', ['-s', '--json', packageName, 'version'], cwd, {
       stdio: 'pipe',
       nonZeroExitCodePolicy: 'return',
       ...(this.env !== undefined ? { env: this.env } : {}),
     })
 
-    const parsed: unknown = JSON.parse(result.stdout)
-
     if (result.ok) {
-      const versionResult = NpmViewVersionResult.safeParse(parsed)
-      if (!versionResult.success) {
-        throw new Error(`Unexpected response from npm view: ${result.stdout}`)
+      const parsed = z.string().safeParse(JSON.parse(result.stdout))
+      if (!parsed.success) {
+        throw new Error(`Response of 'npm view' could not be parsed: ${result.stdout}`)
       }
-      return { found: true, version: versionResult.data }
+      return parsed.data
     }
 
-    const errorResult = NpmErrorResponse.safeParse(parsed)
-    if (errorResult.success) {
-      const code = errorResult.data.error.code ?? 'UNKNOWN'
-      if (code === 'E404') {
-        return { found: false, errorCode: code }
-      }
-      const detail = errorResult.data.error.detail ?? errorResult.data.error.summary ?? '<No Further Details>'
+    const parsed = NpmErrorResponse.safeParse(JSON.parse(result.stdout))
+    if (!parsed.success) {
+      throw new Error(`Error response of 'npm view' could not be parsed: ${result.stdout}`)
+    }
+
+    const code = parsed.data.error.code ?? 'UNKNOWN'
+    if (code !== 'E404') {
+      const detail = parsed.data.error.detail ?? parsed.data.error.summary ?? '<No Further Details>'
       throw new Error(`npm view failed (${code}): ${detail}`)
     }
-
-    throw new Error(`Unexpected response from npm view: ${result.stdout}`)
+    return undefined
   }
 
-  async pack(
-    dir: AbsolutePath,
-    options?: {
-      dryRun?: boolean
-    }
-  ): Promise<PackResult> {
-    const args = ['--json']
-    if (options?.dryRun === true) {
-      args.push('--dry-run')
-    }
-
-    const { stdout } = await runNpm('pack', args, dir, {
+  async pack(dir: AbsolutePath, options?: { dryRun?: boolean }) {
+    const { stdout } = await runNpm('pack', ['--json', ...(options?.dryRun ? ['--dry-run'] : [])], dir, {
       stdio: 'pipe',
-      ...(this.env !== undefined ? { env: this.env } : {}),
+      env: this.env,
     })
-
     const json: unknown = JSON.parse(stdout)
 
     const errorResult = NpmErrorResponse.safeParse(json)
@@ -115,23 +67,29 @@ export class NpmClient {
       throw new Error(`npm pack failed: ${summary}`)
     }
 
-    const parsed = NpmPackOutput.safeParse(json)
+    const parsed = z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          version: z.string(),
+          size: z.number(),
+          unpackedSize: z.number(),
+          shasum: z.string(),
+          integrity: z.string(),
+          filename: z.string(),
+          files: z.array(
+            z.object({
+              path: z.string(),
+            })
+          ),
+        })
+      )
+      .safeParse(json)
     if (!parsed.success) {
       throw new Error(`Failed to parse npm pack output: ${parsed.error.message}`)
     }
 
-    const packEntry = parsed.data[0]
-    if (packEntry === undefined) {
-      throw new Error('npm pack returned empty output')
-    }
-
-    return {
-      files: packEntry.files.map((f) => f.path),
-      filename: packEntry.filename,
-      size: packEntry.size,
-      unpackedSize: packEntry.unpackedSize,
-      shasum: packEntry.shasum,
-      integrity: packEntry.integrity,
-    }
+    return parsed.data
   }
 }
