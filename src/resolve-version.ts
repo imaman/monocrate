@@ -12,6 +12,7 @@ const NpmErrorResponse = z.object({
 
 async function getCurrentPublishedVersion(dir: AbsolutePath, packageName: string): Promise<string> {
   const result = await runNpm('view', ['-s', '--json', packageName, 'version'], dir, {
+    stdio: 'pipe',
     nonZeroExitCodePolicy: 'return',
   })
 

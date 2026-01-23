@@ -27,7 +27,7 @@ const NpmPackError = z.object({
  * @example getFilesToPack("/home/user/my-package") => ["dist/index.js", "README.md", "package.json"]
  */
 export async function getFilesToPack(packageDir: AbsolutePath): Promise<string[]> {
-  const { stdout } = await runNpm('pack', ['--dry-run', '--json'], packageDir)
+  const { stdout } = await runNpm('pack', ['--dry-run', '--json'], packageDir, { stdio: 'pipe' })
 
   const json: unknown = JSON.parse(stdout)
 
