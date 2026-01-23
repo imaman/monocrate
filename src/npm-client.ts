@@ -12,24 +12,23 @@ const NpmErrorResponse = z.object({
 
 const NpmViewVersionResult = z.string()
 
-const NpmPackFile = z.object({
-  path: z.string(),
-})
-
-const NpmPackEntry = z.object({
-  id: z.string(),
-  name: z.string(),
-  version: z.string(),
-  size: z.number(),
-  unpackedSize: z.number(),
-  shasum: z.string(),
-  integrity: z.string(),
-  filename: z.string(),
-  files: z.array(NpmPackFile),
-})
-type NpmPackEntry = z.infer<typeof NpmPackEntry>
-
-const NpmPackOutput = z.array(NpmPackEntry)
+const NpmPackOutput = z.array(
+  z.object({
+    id: z.string(),
+    name: z.string(),
+    version: z.string(),
+    size: z.number(),
+    unpackedSize: z.number(),
+    shasum: z.string(),
+    integrity: z.string(),
+    filename: z.string(),
+    files: z.array(
+      z.object({
+        path: z.string(),
+      })
+    ),
+  })
+)
 
 type ViewVersionResult = { found: true; version: string } | { found: false; errorCode: string }
 
@@ -42,31 +41,24 @@ interface PackResult {
   integrity: string
 }
 
-interface NpmClientOptions {
-  env?: Partial<Record<string, string>>
-}
-
-interface PublishOptions {
-  userconfig?: AbsolutePath
-}
-
-interface PackOptions {
-  dryRun?: boolean
-}
-
 export class NpmClient {
   private readonly env: Partial<Record<string, string>> | undefined
 
-  constructor(options?: NpmClientOptions) {
+  constructor(options?: { env?: Partial<Record<string, string>> }) {
     this.env = options?.env
   }
 
-  async publish(dir: AbsolutePath, options?: PublishOptions): Promise<void> {
+  async publish(
+    dir: AbsolutePath,
+    options?: {
+      userconfig?: AbsolutePath
+    }
+  ): Promise<void> {
     const args: string[] = []
     if (options?.userconfig !== undefined) {
       args.push('--userconfig', options.userconfig)
     }
-    await runNpm('publish', args, dir, this.env !== undefined ? { env: this.env } : undefined)
+    await runNpm('publish', args, dir, { env: this.env })
   }
 
   async viewVersion(packageName: string, cwd: AbsolutePath): Promise<ViewVersionResult> {
@@ -99,7 +91,12 @@ export class NpmClient {
     throw new Error(`Unexpected response from npm view: ${result.stdout}`)
   }
 
-  async pack(dir: AbsolutePath, options?: PackOptions): Promise<PackResult> {
+  async pack(
+    dir: AbsolutePath,
+    options?: {
+      dryRun?: boolean
+    }
+  ): Promise<PackResult> {
     const args = ['--json']
     if (options?.dryRun === true) {
       args.push('--dry-run')
