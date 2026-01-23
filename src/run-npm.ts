@@ -21,53 +21,48 @@ interface PolicyReturn {
   nonZeroExitCodePolicy: 'return'
 }
 
-interface ResultSuccess {
-  ok: true
-}
-
-interface ResultError {
-  ok: false
-  error: Error
-}
-
 interface WithOutput {
   stdout: string
   stderr: string
 }
 
-type NpmResultWithOutput = (ResultSuccess | ResultError) & WithOutput
-type NpmResultNoOutput = ResultSuccess | ResultError
+type ResultOnError =
+  | {
+      ok: false
+      error: Error
+    }
+  | { ok: true }
 
 export async function runNpm(
   subcommand: string,
   args: string[],
   cwd: AbsolutePath,
-  options: NpmOptionsBase & StdioPipe & PolicyReturn
-): Promise<NpmResultWithOutput>
-export async function runNpm(
-  subcommand: string,
-  args: string[],
-  cwd: AbsolutePath,
-  options: NpmOptionsBase & StdioPipe & PolicyThrow
-): Promise<ResultSuccess & WithOutput>
-export async function runNpm(
-  subcommand: string,
-  args: string[],
-  cwd: AbsolutePath,
   options: NpmOptionsBase & StdioInherit & PolicyReturn
-): Promise<NpmResultNoOutput>
+): Promise<ResultOnError>
+export async function runNpm(
+  subcommand: string,
+  args: string[],
+  cwd: AbsolutePath,
+  options: NpmOptionsBase & StdioPipe & PolicyReturn
+): Promise<ResultOnError & WithOutput>
 export async function runNpm(
   subcommand: string,
   args: string[],
   cwd: AbsolutePath,
   options?: NpmOptionsBase & StdioInherit & PolicyThrow
-): Promise<ResultSuccess>
+): Promise<{ ok: true }>
+export async function runNpm(
+  subcommand: string,
+  args: string[],
+  cwd: AbsolutePath,
+  options: NpmOptionsBase & StdioPipe & PolicyThrow
+): Promise<{ ok: true } & WithOutput>
 export async function runNpm(
   subcommand: string,
   args: string[],
   cwd: AbsolutePath,
   options?: NpmOptionsBase & (StdioPipe | StdioInherit) & (PolicyThrow | PolicyReturn)
-): Promise<NpmResultWithOutput | NpmResultNoOutput> {
+): Promise<ResultOnError | (ResultOnError & WithOutput) | { ok: true } | ({ ok: true } & WithOutput)> {
   const errorPolicy = options?.nonZeroExitCodePolicy ?? 'throw'
   const stdio = options?.stdio ?? 'inherit'
 
