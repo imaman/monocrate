@@ -31,10 +31,6 @@ type NpmPackEntry = z.infer<typeof NpmPackEntry>
 
 const NpmPackOutput = z.array(NpmPackEntry)
 
-// ============================================================
-// Result Types
-// ============================================================
-
 type ViewVersionResult = { found: true; version: string } | { found: false; errorCode: string }
 
 interface PackResult {
@@ -45,10 +41,6 @@ interface PackResult {
   shasum: string
   integrity: string
 }
-
-// ============================================================
-// Options Types
-// ============================================================
 
 interface NpmClientOptions {
   env?: Partial<Record<string, string>>
@@ -61,10 +53,6 @@ interface PublishOptions {
 interface PackOptions {
   dryRun?: boolean
 }
-
-// ============================================================
-// NpmClient Class
-// ============================================================
 
 export class NpmClient {
   private readonly env: Partial<Record<string, string>> | undefined
