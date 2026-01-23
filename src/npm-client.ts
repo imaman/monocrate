@@ -27,44 +27,49 @@ export class NpmClient {
    * @returns the version of `packageName` or undefined (if not found)
    */
   async viewVersion(packageName: string, cwd: AbsolutePath): Promise<string | undefined> {
-    const result = await runNpm('view', ['-s', '--json', packageName, 'version'], cwd, {
+    const { ok, stdout } = await runNpm('view', ['-s', '--json', packageName, 'version'], cwd, {
       stdio: 'pipe',
       nonZeroExitCodePolicy: 'return',
       ...(this.env !== undefined ? { env: this.env } : {}),
     })
 
-    if (result.ok) {
-      const parsed = z.string().safeParse(JSON.parse(result.stdout))
+    if (!ok) {
+      const parsed = NpmErrorResponse.safeParse(JSON.parse(stdout))
       if (!parsed.success) {
-        throw new Error(`Response of 'npm view' could not be parsed: ${result.stdout}`)
+        throw new Error(`Error response of 'npm view' could not be parsed: ${stdout}`)
       }
-      return parsed.data
+
+      const code = parsed.data.error.code ?? 'UNKNOWN'
+      if (code !== 'E404') {
+        const detail = parsed.data.error.detail ?? parsed.data.error.summary ?? '<No Further Details>'
+        throw new Error(`npm view failed (${code}): ${detail}`)
+      }
+      return undefined
     }
 
-    const parsed = NpmErrorResponse.safeParse(JSON.parse(result.stdout))
+    const parsed = z.string().safeParse(JSON.parse(stdout))
     if (!parsed.success) {
-      throw new Error(`Error response of 'npm view' could not be parsed: ${result.stdout}`)
+      throw new Error(`Response of 'npm view' could not be parsed: ${stdout}`)
     }
-
-    const code = parsed.data.error.code ?? 'UNKNOWN'
-    if (code !== 'E404') {
-      const detail = parsed.data.error.detail ?? parsed.data.error.summary ?? '<No Further Details>'
-      throw new Error(`npm view failed (${code}): ${detail}`)
-    }
-    return undefined
+    return parsed.data
   }
 
   async pack(dir: AbsolutePath, options?: { dryRun?: boolean }) {
-    const { stdout } = await runNpm('pack', ['--json', ...(options?.dryRun ? ['--dry-run'] : [])], dir, {
+    const { stdout, ok } = await runNpm('pack', ['--json', ...(options?.dryRun ? ['--dry-run'] : [])], dir, {
       stdio: 'pipe',
       env: this.env,
+      nonZeroExitCodePolicy: 'return',
     })
-    const json: unknown = JSON.parse(stdout)
 
-    const errorResult = NpmErrorResponse.safeParse(json)
-    if (errorResult.success) {
-      const summary = errorResult.data.error.summary ?? errorResult.data.error.detail ?? '<No Details>'
-      throw new Error(`npm pack failed: ${summary}`)
+    if (!ok) {
+      const parsed = NpmErrorResponse.safeParse(JSON.parse(stdout))
+      if (!parsed.success) {
+        throw new Error(`Error response of 'npm pack' could not be parsed: ${stdout}`)
+      }
+
+      const code = parsed.data.error.code ?? 'UNKNOWN'
+      const detail = parsed.data.error.detail ?? parsed.data.error.summary ?? '<No Further Details>'
+      throw new Error(`npm view failed (${code}): ${detail}`)
     }
 
     const parsed = z
@@ -85,9 +90,9 @@ export class NpmClient {
           ),
         })
       )
-      .safeParse(json)
+      .safeParse(JSON.parse(stdout))
     if (!parsed.success) {
-      throw new Error(`Failed to parse npm pack output: ${parsed.error.message}`)
+      throw new Error(`Response of 'npm pack' could not be parsed: ${parsed.error.message}`)
     }
 
     return parsed.data
