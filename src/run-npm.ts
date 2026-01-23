@@ -21,12 +21,13 @@ interface PolicyReturn {
   nonZeroExitCodePolicy: 'return'
 }
 
-interface WithOutput {
+interface OutputResult {
   stdout: string
   stderr: string
 }
 
-type ResultOnError =
+interface PolicyThrowResult { ok: true }
+type PolicyReturnResult =
   | {
       ok: false
       error: Error
@@ -37,32 +38,34 @@ export async function runNpm(
   subcommand: string,
   args: string[],
   cwd: AbsolutePath,
-  options: NpmOptionsBase & StdioInherit & PolicyReturn
-): Promise<ResultOnError>
+  options: PolicyReturn & StdioInherit & NpmOptionsBase
+): Promise<PolicyReturnResult>
 export async function runNpm(
   subcommand: string,
   args: string[],
   cwd: AbsolutePath,
-  options: NpmOptionsBase & StdioPipe & PolicyReturn
-): Promise<ResultOnError & WithOutput>
+  options: PolicyReturn & StdioPipe & NpmOptionsBase
+): Promise<PolicyReturnResult & OutputResult>
 export async function runNpm(
   subcommand: string,
   args: string[],
   cwd: AbsolutePath,
-  options?: NpmOptionsBase & StdioInherit & PolicyThrow
-): Promise<{ ok: true }>
+  options?: PolicyThrow & StdioInherit & NpmOptionsBase
+): Promise<PolicyThrowResult>
 export async function runNpm(
   subcommand: string,
   args: string[],
   cwd: AbsolutePath,
-  options: NpmOptionsBase & StdioPipe & PolicyThrow
-): Promise<{ ok: true } & WithOutput>
+  options: PolicyThrow & StdioPipe & NpmOptionsBase
+): Promise<PolicyThrowResult & OutputResult>
 export async function runNpm(
   subcommand: string,
   args: string[],
   cwd: AbsolutePath,
-  options?: NpmOptionsBase & (StdioPipe | StdioInherit) & (PolicyThrow | PolicyReturn)
-): Promise<ResultOnError | (ResultOnError & WithOutput) | { ok: true } | ({ ok: true } & WithOutput)> {
+  options?: (PolicyReturn | PolicyThrow) & (StdioInherit | StdioPipe) & NpmOptionsBase
+): Promise<
+  PolicyReturnResult | (PolicyReturnResult & OutputResult) | PolicyThrowResult | (PolicyThrowResult & OutputResult)
+> {
   const errorPolicy = options?.nonZeroExitCodePolicy ?? 'throw'
   const stdio = options?.stdio ?? 'inherit'
 
