@@ -26,7 +26,9 @@ interface OutputResult {
   stderr: string
 }
 
-interface PolicyThrowResult { ok: true }
+interface PolicyThrowResult {
+  ok: true
+}
 type PolicyReturnResult =
   | {
       ok: false
@@ -35,31 +37,31 @@ type PolicyReturnResult =
   | { ok: true }
 
 export async function runNpm(
-  subcommand: string,
+  command: string,
   args: string[],
   cwd: AbsolutePath,
   options: PolicyReturn & StdioInherit & NpmOptionsBase
 ): Promise<PolicyReturnResult>
 export async function runNpm(
-  subcommand: string,
+  command: string,
   args: string[],
   cwd: AbsolutePath,
   options: PolicyReturn & StdioPipe & NpmOptionsBase
 ): Promise<PolicyReturnResult & OutputResult>
 export async function runNpm(
-  subcommand: string,
+  command: string,
   args: string[],
   cwd: AbsolutePath,
   options?: PolicyThrow & StdioInherit & NpmOptionsBase
 ): Promise<PolicyThrowResult>
 export async function runNpm(
-  subcommand: string,
+  command: string,
   args: string[],
   cwd: AbsolutePath,
   options: PolicyThrow & StdioPipe & NpmOptionsBase
 ): Promise<PolicyThrowResult & OutputResult>
 export async function runNpm(
-  subcommand: string,
+  command: string,
   args: string[],
   cwd: AbsolutePath,
   options?: (PolicyReturn | PolicyThrow) & (StdioInherit | StdioPipe) & NpmOptionsBase
@@ -69,7 +71,7 @@ export async function runNpm(
   const errorPolicy = options?.nonZeroExitCodePolicy ?? 'throw'
   const stdio = options?.stdio ?? 'inherit'
 
-  const proc = x('npm', [subcommand, ...args], {
+  const proc = x(command, args, {
     nodeOptions: { cwd, env: options?.env, stdio },
     throwOnError: false,
   })
@@ -77,11 +79,11 @@ export async function runNpm(
   const result = await proc
 
   if (result.exitCode === undefined) {
-    throw new Error(`npm ${subcommand} terminated abnormally` + (proc.killed ? ' (killed)' : ''))
+    throw new Error(`npm ${command} terminated abnormally` + (proc.killed ? ' (killed)' : ''))
   }
 
   if (result.exitCode !== 0) {
-    const error = new Error(`npm ${subcommand} exited with code ${String(result.exitCode)}`)
+    const error = new Error(`npm ${command} exited with code ${String(result.exitCode)}`)
     if (errorPolicy === 'throw') {
       throw error
     }
