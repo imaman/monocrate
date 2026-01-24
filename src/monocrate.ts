@@ -115,14 +115,14 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     if (versionSpecifier) {
       await publish(assembler.getOutputDir(), monorepoRoot)
     }
+  }
 
-    if (resolvedVersion !== undefined) {
-      if (options.outputFile) {
-        const outputFilePath = path.resolve(cwd, options.outputFile)
-        fsSync.writeFileSync(outputFilePath, resolvedVersion)
-      } else {
-        console.log(resolvedVersion)
-      }
+  if (resolvedVersion !== undefined) {
+    if (options.outputFile) {
+      const outputFilePath = path.resolve(cwd, options.outputFile)
+      fsSync.writeFileSync(outputFilePath, resolvedVersion)
+    } else {
+      console.log(resolvedVersion)
     }
   }
 
