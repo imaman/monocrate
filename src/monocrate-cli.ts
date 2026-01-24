@@ -1,5 +1,6 @@
 import { defineCommand, runMain } from 'citty'
-import { monocrate, MonocrateOptions } from './monocrate.js'
+import type { MonocrateOptions } from './monocrate.js';
+import { monocrate } from './monocrate.js'
 
 const sharedArgs = {
   packages: {
@@ -29,7 +30,7 @@ const sharedArgs = {
   },
 }
 
-type SharedArgs = {
+interface SharedArgs {
   _: string[]
   output?: string
   root?: string
@@ -64,7 +65,7 @@ const prepareCommand = defineCommand({
   },
   args: sharedArgs,
   async run({ args }) {
-    await monocrate(buildOptions(args as SharedArgs, false))
+    await monocrate(buildOptions(args, false))
   },
 })
 
@@ -75,7 +76,7 @@ const publishCommand = defineCommand({
   },
   args: sharedArgs,
   async run({ args }) {
-    await monocrate(buildOptions(args as SharedArgs, true))
+    await monocrate(buildOptions(args, true))
   },
 })
 
