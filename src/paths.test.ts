@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { AbsolutePath, RelativePath } from './paths.js'
 
+const { contains } = AbsolutePath
+
 describe('paths', () => {
   describe('AbsolutePath', () => {
     describe('creation', () => {
@@ -60,6 +62,40 @@ describe('paths', () => {
           p = AbsolutePath.dirname(p)
         }
         expect(p).toBe('/')
+      })
+    })
+
+    describe('contains', () => {
+      it('checks if parent contains child', () => {
+        const parent = AbsolutePath('/home/user/project')
+
+        expect(contains(parent, AbsolutePath('/home/user/project/packages'))).toBe(true)
+        expect(contains(parent, AbsolutePath('/home/user/project/packages/app/src'))).toBe(true)
+        expect(contains(parent, AbsolutePath('/home/user/project'))).toBe(true)
+        expect(contains(parent, AbsolutePath('/home/user/project/a/..'))).toBe(true)
+
+        expect(contains(parent, AbsolutePath('/home/user/other'))).toBe(false)
+        expect(contains(parent, AbsolutePath('/home/user/sibling'))).toBe(false)
+        expect(contains(parent, AbsolutePath('/home/user'))).toBe(false)
+        expect(contains(parent, AbsolutePath('/home/user/project-other'))).toBe(false)
+
+        // Path traversal that stays inside parent
+        expect(contains(parent, AbsolutePath('/home/user/project/a/b/../c'))).toBe(true)
+
+        // Path that traverses up, escapes, but comes back into parent
+        expect(contains(parent, AbsolutePath('/home/user/project/a/../../project/b'))).toBe(true)
+
+        // Path that traverses up and escapes the parent
+        expect(contains(parent, AbsolutePath('/home/user/project/a/b/../../../../other'))).toBe(false)
+
+        // Trailing slashes and double slashes are normalized
+        expect(contains(AbsolutePath('/home/user/project/'), AbsolutePath('/home/user/project/packages'))).toBe(true)
+        expect(contains(AbsolutePath('/home//user//project'), AbsolutePath('/home/user/project/packages'))).toBe(true)
+
+        // Parent with path traversal is normalized
+        expect(contains(AbsolutePath('/home/user/other/../project'), AbsolutePath('/home/user/project/packages'))).toBe(
+          true
+        )
       })
     })
   })

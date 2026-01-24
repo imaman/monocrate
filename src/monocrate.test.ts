@@ -188,18 +188,13 @@ describe('monocrate', () => {
       ).rejects.toThrow('Invalid package.json')
     })
 
-    // +1
-    // Y
     it('throws when source package directory has no package.json', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
         // No packages/app/package.json
       })
 
-      // 199
       await expect(
-        // 201
-        // 202
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: 'packages/app',
@@ -207,33 +202,54 @@ describe('monocrate', () => {
           bump: '2.8.512',
         })
       ).rejects.toThrow(`Unrecognized package source dir: "${monorepoRoot}/packages/app"`)
-      // 210
     })
+    it('throws when a package is located outside the monorepo root', async () => {
+      // Create an external package outside the monorepo
+      const externalPackage = folderify({
+        'package.json': { name: '@test/external', version: '1.0.0', main: 'dist/index.js' },
+        'dist/index.js': `export const external = 'external';`,
+      })
 
-    it('works with workspace object format (packages field)', () => {
-      expect(1).toEqual(1)
-      // // 210
-      // const monorepoRoot = folderify({
-      //   'package.json': { workspaces: { packages: ['packages/*'] } },
-      //   'packages/app/package.json': makePackageJson({
-      //     name: '@test/app',
-      //     dependencies: { '@test/lib': 'workspace:*' },
-      //   }),
-      //   'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
-      //   'packages/lib/package.json': makePackageJson({ name: '@test/lib' }),
-      //   'packages/lib/dist/index.js': `export function greet() { return 'Hello!' }`,
-      // })
+      // Create monorepo with a symlink to the external package
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
 
-      // const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+      // Create symlink to external package inside the monorepo
+      fs.symlinkSync(externalPackage, path.join(monorepoRoot, 'packages/external'))
 
-      // // 1
-      // expect(output['package.json']).toEqual({
-      //   name: '@test/app',
-      //   version: '2.8.512',
-      //   main: 'dist/index.js_',
-      // })
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+          monorepoRoot,
+          publish: false,
+          bump: '2.4.6',
+        })
+      ).rejects.toThrow(/Package "@test\/external" is located at .* which is outside the monorepo root/)
+    })
+    it('works with workspace object format (packages field)', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: { packages: ['packages/*'] } },
+        'packages/app/package.json': makePackageJson({
+          name: '@test/app',
+          dependencies: { '@test/lib': 'workspace:*' },
+        }),
+        'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
+        'packages/lib/package.json': makePackageJson({ name: '@test/lib' }),
+        'packages/lib/dist/index.js': `export function greet() { return 'Hello!' }`,
+      })
+      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
 
-      // expect(stdout.trim()).toBe('Hello!')
+      expect(output['package.json']).toEqual({
+        name: '@test/app',
+        version: '2.8.512',
+        main: 'dist/index.js',
+      })
+
+      expect(stdout.trim()).toBe('Hello!')
     })
   })
 
