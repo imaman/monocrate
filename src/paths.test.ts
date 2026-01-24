@@ -72,6 +72,7 @@ describe('paths', () => {
         expect(contains(parent, AbsolutePath('/home/user/project/packages'))).toBe(true)
         expect(contains(parent, AbsolutePath('/home/user/project/packages/app/src'))).toBe(true)
         expect(contains(parent, AbsolutePath('/home/user/project'))).toBe(true)
+        expect(contains(parent, AbsolutePath('/home/user/project/a/..'))).toBe(true)
 
         expect(contains(parent, AbsolutePath('/home/user/other'))).toBe(false)
         expect(contains(parent, AbsolutePath('/home/user/sibling'))).toBe(false)
