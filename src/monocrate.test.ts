@@ -186,7 +186,7 @@ describe('monocrate', () => {
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
           monorepoRoot,
         })
-      ).rejects.toThrow(`Could not find a monorepo package at ${monorepoRoot}/packages/app`)
+      ).rejects.toThrow(`Unrecognized package source dir: "${monorepoRoot}/packages/app"`)
     })
 
     it('works with workspace object format (packages field)', async () => {
