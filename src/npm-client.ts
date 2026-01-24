@@ -18,7 +18,10 @@ export class NpmClient {
   }
 
   async publish(dir: AbsolutePath, options?: { userconfig?: AbsolutePath }): Promise<void> {
-    await runNpm('publish', options?.userconfig ? ['--userconfig', options.userconfig] : [], dir, { env: this.env })
+    await runNpm('publish', options?.userconfig ? ['--userconfig', options.userconfig] : [], dir, {
+      stdio: 'inherit',
+      env: this.env,
+    })
   }
 
   /**
@@ -30,7 +33,7 @@ export class NpmClient {
     const { ok, stdout } = await runNpm('view', ['-s', '--json', packageName, 'version'], cwd, {
       stdio: 'pipe',
       nonZeroExitCodePolicy: 'return',
-      ...(this.env !== undefined ? { env: this.env } : {}),
+      env: this.env,
     })
 
     if (!ok) {
@@ -69,7 +72,7 @@ export class NpmClient {
 
       const code = parsed.data.error.code ?? 'UNKNOWN'
       const detail = parsed.data.error.detail ?? parsed.data.error.summary ?? '<No Further Details>'
-      throw new Error(`npm view failed (${code}): ${detail}`)
+      throw new Error(`The 'npm view' command failed (code: ${code}): ${detail}`)
     }
 
     const parsed = z
