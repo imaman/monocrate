@@ -11,7 +11,7 @@ import { maxVersion } from './resolve-version.js'
 
 export interface MonocrateOptions {
   /**
-   * Path to the package directory to assemble.
+   * Paths to the directories of the various package to assemble. If a string, it is transformed to a single element array.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    */
   pathToSubjectPackage: string[] | string
@@ -29,9 +29,12 @@ export interface MonocrateOptions {
    */
   monorepoRoot?: string
   /**
-   * Publish the assembly to npm after building.
+   * Publish the assemblies to npm after building.
    * Accepts either an explicit semver version (e.g., "1.2.3") or an increment keyword ("patch", "minor", "major").
-   * When specified, the assembly is published to npm with the resolved version.
+   * When specified, the assembly is published to npm with the resolved version. The resolved version is either this
+   * value (if it is an explicit semver value) or is obtained by finding current version of all the packages to publish,
+   * finding the highest version of these, and then applying the increment depicted by this value.
+   *
    * If not specified, no publishing occurs.
    */
   publishToVersion?: string
@@ -58,7 +61,7 @@ export interface MonocrateResult {
    */
   resolvedVersion: string | undefined
   /**
-   *
+   * Details about each individual package that was assembled/published.
    */
   summaries: { packageName: string; outputDir: string }[]
 }
