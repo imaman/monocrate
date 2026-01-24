@@ -1,8 +1,8 @@
 import { defineCommand, runMain } from 'citty'
-import type { MonocrateOptions } from './monocrate.js';
+import type { MonocrateOptions } from './monocrate.js'
 import { monocrate } from './monocrate.js'
 
-const sharedArgs = {
+const cliArgsDefs = {
   packages: {
     type: 'positional' as const,
     description: 'Package directories to assemble',
@@ -30,7 +30,7 @@ const sharedArgs = {
   },
 }
 
-interface SharedArgs {
+interface CliArgs {
   _: string[]
   output?: string
   root?: string
@@ -38,7 +38,7 @@ interface SharedArgs {
   'output-file'?: string
 }
 
-function buildOptions(args: SharedArgs, publish: boolean): MonocrateOptions {
+function buildOptions(args: CliArgs, publish: boolean): MonocrateOptions {
   const packages = extractPackages(args._)
   return {
     pathToSubjectPackage: packages,
@@ -63,7 +63,7 @@ const prepareCommand = defineCommand({
     name: 'prepare',
     description: 'Assemble packages for publishing without actually publishing',
   },
-  args: sharedArgs,
+  args: cliArgsDefs,
   async run({ args }) {
     await monocrate(buildOptions(args, false))
   },
@@ -74,7 +74,7 @@ const publishCommand = defineCommand({
     name: 'publish',
     description: 'Assemble and publish packages to npm',
   },
-  args: sharedArgs,
+  args: cliArgsDefs,
   async run({ args }) {
     await monocrate(buildOptions(args, true))
   },
