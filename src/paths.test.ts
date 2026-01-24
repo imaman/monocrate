@@ -80,6 +80,10 @@ describe('paths', () => {
 
         // Path that traverses up and escapes the parent
         expect(contains(parent, AbsolutePath('/home/user/project/a/b/../../../../other'))).toBe(false)
+
+        // Trailing slashes and double slashes are normalized
+        expect(contains(AbsolutePath('/home/user/project/'), AbsolutePath('/home/user/project/packages'))).toBe(true)
+        expect(contains(AbsolutePath('/home//user//project'), AbsolutePath('/home/user/project/packages'))).toBe(true)
       })
     })
   })
