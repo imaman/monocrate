@@ -2,13 +2,11 @@ import * as fs from 'node:fs/promises'
 import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { findMonorepoRoot } from './monorepo.js'
-import { computePackageClosure } from './compute-package-closure.js'
-import { assemble } from './assemble.js'
+import { RepoExplorer } from './repo-explorer.js'
+import { PackageAssembler } from './package-assembler.js'
 import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
-import { AbsolutePath, RelativePath } from './paths.js'
-import { manglePackageName } from './name-mangler.js'
+import { AbsolutePath } from './paths.js'
 
 export interface MonocrateOptions {
   /**
@@ -78,9 +76,11 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }
 
   const sourceDir = AbsolutePath(path.resolve(cwd, options.pathToSubjectPackage))
+
   const monorepoRoot = options.monorepoRoot
     ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
-    : findMonorepoRoot(sourceDir)
+    : RepoExplorer.findMonorepoRoot(sourceDir)
+  const explorer = await RepoExplorer.create(monorepoRoot)
 
   // Validate publish argument before any side effects
   const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
@@ -89,12 +89,13 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
-  const closure = await computePackageClosure(sourceDir, monorepoRoot)
-  const outputDir = AbsolutePath.join(outputRoot, RelativePath(manglePackageName(closure.subjectPackageName)))
-  const resolvedVersion = await assemble(closure, outputDir, versionSpecifier)
+  const assembler = new PackageAssembler(explorer, sourceDir, outputRoot)
+  const closure = assembler.computeClosure()
+  const newVersion = await assembler.computeNewVersion(versionSpecifier)
+  const resolvedVersion = await assembler.assemble(closure, newVersion)
 
   if (versionSpecifier) {
-    await publish(outputDir, monorepoRoot)
+    await publish(assembler.getOutputDir(), monorepoRoot)
   }
 
   if (resolvedVersion !== undefined) {
@@ -106,5 +107,5 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     }
   }
 
-  return { outputDir, resolvedVersion }
+  return { outputDir: assembler.getOutputDir(), resolvedVersion }
 }
