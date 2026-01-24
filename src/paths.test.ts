@@ -62,6 +62,45 @@ describe('paths', () => {
         expect(p).toBe('/')
       })
     })
+
+    describe('isUnder', () => {
+      it('returns true when path is directly under base', () => {
+        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/project/packages'), AbsolutePath('/home/user/project'))).toBe(
+          true
+        )
+      })
+
+      it('returns true when path is deeply nested under base', () => {
+        expect(
+          AbsolutePath.isUnder(
+            AbsolutePath('/home/user/project/packages/app/src'),
+            AbsolutePath('/home/user/project')
+          )
+        ).toBe(true)
+      })
+
+      it('returns true when path equals base', () => {
+        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/project'), AbsolutePath('/home/user/project'))).toBe(true)
+      })
+
+      it('returns false when path is outside base', () => {
+        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/other'), AbsolutePath('/home/user/project'))).toBe(false)
+      })
+
+      it('returns false when path is a sibling of base', () => {
+        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/sibling'), AbsolutePath('/home/user/project'))).toBe(false)
+      })
+
+      it('returns false when path is a parent of base', () => {
+        expect(AbsolutePath.isUnder(AbsolutePath('/home/user'), AbsolutePath('/home/user/project'))).toBe(false)
+      })
+
+      it('returns false when paths share a common prefix but are not related', () => {
+        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/project-other'), AbsolutePath('/home/user/project'))).toBe(
+          false
+        )
+      })
+    })
   })
 
   describe('RelativePath', () => {

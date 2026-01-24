@@ -189,6 +189,32 @@ describe('monocrate', () => {
       ).rejects.toThrow(`Unrecognized package source dir: "${monorepoRoot}/packages/app"`)
     })
 
+    it('throws when a package is located outside the monorepo root', async () => {
+      // Create an external package outside the monorepo
+      const externalPackage = folderify({
+        'package.json': { name: '@test/external', version: '1.0.0', main: 'dist/index.js' },
+        'dist/index.js': `export const external = 'external';`,
+      })
+
+      // Create monorepo with a symlink to the external package
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      // Create symlink to external package inside the monorepo
+      fs.symlinkSync(externalPackage, path.join(monorepoRoot, 'packages/external'))
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+          monorepoRoot,
+        })
+      ).rejects.toThrow('is located at')
+    })
+
     it('works with workspace object format (packages field)', async () => {
       const monorepoRoot = folderify({
         'package.json': { workspaces: { packages: ['packages/*'] } },

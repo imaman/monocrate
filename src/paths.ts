@@ -27,6 +27,15 @@ export namespace AbsolutePath {
   export function dirname(p: AbsolutePath): AbsolutePath {
     return AbsolutePath(path.dirname(p))
   }
+
+  /**
+   * Checks if a path is under (or equal to) a base directory.
+   * Both paths must be normalized absolute paths.
+   */
+  export function isUnder(p: AbsolutePath, base: AbsolutePath): boolean {
+    const relative = path.relative(base, p)
+    return !relative.startsWith('..') && !path.isAbsolute(relative)
+  }
 }
 
 /**

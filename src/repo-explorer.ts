@@ -19,6 +19,19 @@ export class RepoExplorer {
 
   static async create(monorepoRoot: AbsolutePath) {
     const map = await this.discover(monorepoRoot)
+
+    // Validate all package directories are under the monorepo root
+    // Use realpath to resolve symlinks and catch cases where a symlink points outside
+    const realMonorepoRoot = AbsolutePath(fs.realpathSync(monorepoRoot))
+    for (const pkg of map.values()) {
+      const realPkgPath = AbsolutePath(fs.realpathSync(pkg.path))
+      if (!AbsolutePath.isUnder(realPkgPath, realMonorepoRoot)) {
+        throw new Error(
+          `Package "${pkg.name}" is located at "${realPkgPath}" which is outside the monorepo root "${realMonorepoRoot}"`
+        )
+      }
+    }
+
     return new RepoExplorer(monorepoRoot, map)
   }
 
