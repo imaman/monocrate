@@ -221,7 +221,7 @@ describe('monocrate', () => {
       expect(output['package.json']).toEqual({
         name: '@test/app',
         version: '2.8.512',
-        main: 'dist/index.js',
+        main: 'dist/index.js_',
       })
 
       expect(stdout.trim()).toBe('Hello!')
