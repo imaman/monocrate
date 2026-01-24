@@ -66,17 +66,17 @@ describe('paths', () => {
     })
 
     describe('isUnder', () => {
-      it('checks if a path is under a base directory', () => {
-        const base = AbsolutePath('/home/user/project')
+      it('checks if child is under parent', () => {
+        const parent = AbsolutePath('/home/user/project')
 
-        expect(isUnder(AbsolutePath('/home/user/project/packages'), base)).toBe(true)
-        expect(isUnder(AbsolutePath('/home/user/project/packages/app/src'), base)).toBe(true)
-        expect(isUnder(AbsolutePath('/home/user/project'), base)).toBe(true)
+        expect(isUnder(AbsolutePath('/home/user/project/packages'), parent)).toBe(true)
+        expect(isUnder(AbsolutePath('/home/user/project/packages/app/src'), parent)).toBe(true)
+        expect(isUnder(AbsolutePath('/home/user/project'), parent)).toBe(true)
 
-        expect(isUnder(AbsolutePath('/home/user/other'), base)).toBe(false)
-        expect(isUnder(AbsolutePath('/home/user/sibling'), base)).toBe(false)
-        expect(isUnder(AbsolutePath('/home/user'), base)).toBe(false)
-        expect(isUnder(AbsolutePath('/home/user/project-other'), base)).toBe(false)
+        expect(isUnder(AbsolutePath('/home/user/other'), parent)).toBe(false)
+        expect(isUnder(AbsolutePath('/home/user/sibling'), parent)).toBe(false)
+        expect(isUnder(AbsolutePath('/home/user'), parent)).toBe(false)
+        expect(isUnder(AbsolutePath('/home/user/project-other'), parent)).toBe(false)
       })
     })
   })

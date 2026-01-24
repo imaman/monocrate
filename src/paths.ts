@@ -29,11 +29,10 @@ export namespace AbsolutePath {
   }
 
   /**
-   * Checks if a path is under (or equal to) a base directory.
-   * Both paths must be normalized absolute paths.
+   * Checks if `child` is under (or equal to) `parent`.
    */
-  export function isUnder(p: AbsolutePath, base: AbsolutePath): boolean {
-    const relative = path.relative(base, p)
+  export function isUnder(child: AbsolutePath, parent: AbsolutePath): boolean {
+    const relative = path.relative(parent, child)
     return !relative.startsWith('..') && !path.isAbsolute(relative)
   }
 }
