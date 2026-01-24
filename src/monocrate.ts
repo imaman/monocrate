@@ -29,15 +29,23 @@ export interface MonocrateOptions {
    */
   monorepoRoot?: string
   /**
-   * Publish the assemblies to npm after building.
+   * Version specifier for the assembly.
    * Accepts either an explicit semver version (e.g., "1.2.3") or an increment keyword ("patch", "minor", "major").
-   * When specified, the assembly is published to npm with the resolved version. The resolved version is either this
-   * value (if it is an explicit semver value) or is obtained by finding current version of all the packages to publish,
-   * finding the highest version of these, and then applying the increment depicted by this value.
+   * When specified, the resolved version is either this value (if it is an explicit semver value) or is obtained by
+   * finding current version of all the packages to publish, finding the highest version of these, and then applying
+   * the increment depicted by this value.
    *
-   * If not specified, no publishing occurs.
+   * If not specified, no version resolution occurs and the package is assembled with its original version.
    */
-  publishToVersion?: string
+  bump?: string
+  /**
+   * Whether to publish the assemblies to npm after building.
+   * Requires bump to be specified. If bump is specified but publish is false, the assembly is prepared
+   * with the resolved version but not published (useful for inspection or manual publishing).
+   *
+   * Defaults to false.
+   */
+  publish?: boolean
   /**
    * Path to write the output (resolved version) to a file instead of stdout.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
@@ -57,7 +65,7 @@ export interface MonocrateResult {
   outputDir: string
   /**
    * The new version (AKA: 'resolved version') for the package (or packages).
-   * Undefined when publishToVersion was not specified.
+   * Undefined when bump was not specified.
    */
   resolvedVersion: string | undefined
   /**
@@ -86,8 +94,8 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
-  // Validate publish argument before any side effects
-  const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
+  // Validate bump argument before any side effects
+  const versionSpecifier = parseVersionSpecifier(options.bump)
 
   const sources = Array.isArray(options.pathToSubjectPackage)
     ? options.pathToSubjectPackage
@@ -120,7 +128,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   for (const assembler of assemblers) {
     await assembler.assemble(resolvedVersion)
 
-    if (versionSpecifier) {
+    if (options.publish) {
       await publish(assembler.getOutputDir(), monorepoRoot)
     }
   }

@@ -83,7 +83,7 @@ describe('monocrate', () => {
       expect(await monocrate(opts)).toMatchObject({ resolvedVersion: undefined })
       expect(unfolderify(dir)).toEqual({})
 
-      expect(await monocrate({ ...opts, publishToVersion: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
+      expect(await monocrate({ ...opts, bump: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
       expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
     }, 30000)
   })

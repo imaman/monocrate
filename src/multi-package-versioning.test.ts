@@ -45,7 +45,8 @@ describe('multi-package versioning', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: ['packages/alpha', 'packages/beta', 'packages/gamma', 'packages/delta'],
       monorepoRoot,
-      publishToVersion: 'patch',
+      bump: 'patch',
+      publish: true,
     })
 
     expect(result.resolvedVersion).toBe('3.0.1')
@@ -76,7 +77,8 @@ describe('multi-package versioning', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: ['packages/app', 'packages/lib'],
       monorepoRoot,
-      publishToVersion: '1.0.0',
+      bump: '1.0.0',
+      publish: true,
     })
 
     expect(verdaccio.runView('mpv-app')).toMatchObject({ version: '1.0.0' })
@@ -93,7 +95,8 @@ describe('multi-package versioning', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: 'packages/app',
       monorepoRoot,
-      publishToVersion: '2.0.0',
+      bump: '2.0.0',
+      publish: true,
     })
 
     // Step 4: Consuming app@2.0.0 should run the updated lib code
@@ -123,7 +126,8 @@ describe('multi-package versioning', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: ['packages/a', 'packages/b', 'packages/c'],
       monorepoRoot,
-      publishToVersion: '1.0.0',
+      bump: '1.0.0',
+      publish: true,
     })
 
     // Update C, publish A and C (major → 2.0.0)
@@ -132,7 +136,8 @@ describe('multi-package versioning', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: ['packages/a', 'packages/c'],
       monorepoRoot,
-      publishToVersion: 'major',
+      bump: 'major',
+      publish: true,
     })
 
     // Update C, publish A and B (major → 3.0.0)
@@ -141,7 +146,8 @@ describe('multi-package versioning', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: ['packages/a', 'packages/b'],
       monorepoRoot,
-      publishToVersion: 'major',
+      bump: 'major',
+      publish: true,
     })
 
     // Update C, publish B and C (major → 4.0.0)
@@ -150,7 +156,8 @@ describe('multi-package versioning', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: ['packages/b', 'packages/c'],
       monorepoRoot,
-      publishToVersion: 'major',
+      bump: 'major',
+      publish: true,
     })
 
     expect(verdaccio.runView('mpv-a')).toMatchObject({ versions: ['1.0.0', '2.0.0', '3.0.0'] })
