@@ -51,7 +51,11 @@ describe('multi-package versioning', () => {
     expect(verdaccio.runView('mpv-beta')).toMatchObject({ version: '3.0.1' })
     expect(verdaccio.runView('mpv-gamma')).toMatchObject({ version: '3.0.1' })
     expect(verdaccio.runView('mpv-delta')).toMatchObject({ version: '3.0.1' })
-    expect(result.summaries).toHaveLength(4)
-    expect(result.summaries.map((s) => s.packageName).sort()).toEqual(['mpv-alpha', 'mpv-beta', 'mpv-delta', 'mpv-gamma'])
+    expect(result.summaries.map((s) => s.packageName)).toEqual(['mpv-alpha', 'mpv-beta', 'mpv-gamma', 'mpv-delta'])
+
+    expect(verdaccio.runConumser('mpv-alpha@3.0.1', `import { value } from 'mpv-alpha'; console.log(value)`)).toBe('alpha-new')
+    expect(verdaccio.runConumser('mpv-beta@3.0.1', `import { value } from 'mpv-beta'; console.log(value)`)).toBe('beta-new')
+    expect(verdaccio.runConumser('mpv-gamma@3.0.1', `import { value } from 'mpv-gamma'; console.log(value)`)).toBe('gamma-new')
+    expect(verdaccio.runConumser('mpv-delta@3.0.1', `import { value } from 'mpv-delta'; console.log(value)`)).toBe('delta-new')
   }, 120000)
 })
