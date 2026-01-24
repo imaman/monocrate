@@ -81,6 +81,9 @@ describe('paths', () => {
         // Path traversal that stays inside parent
         expect(contains(parent, AbsolutePath('/home/user/project/a/b/../c'))).toBe(true)
 
+        // Path that traverses up, escapes, but comes back into parent
+        expect(contains(parent, AbsolutePath('/home/user/project/a/../../project/b'))).toBe(true)
+
         // Path that traverses up and escapes the parent
         expect(contains(parent, AbsolutePath('/home/user/project/a/b/../../../../other'))).toBe(false)
 
