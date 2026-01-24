@@ -104,4 +104,57 @@ describe('multi-package versioning', () => {
     // Step 5: lib's version in registry should still be 1.0.0 (not republished)
     expect(verdaccio.runView('mpv-lib')).toMatchObject({ version: '1.0.0', versions: ['1.0.0'] })
   }, 120000)
+
+  it('selective publishing of dependency chain produces expected version history', async () => {
+    const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/a/package.json': pj('mpv-a', '0.0.0', { dependencies: { 'mpv-b': 'workspace:*' } }),
+      'packages/a/index.js': `import { b } from 'mpv-b'; export const a = () => 'a:' + b();`,
+      'packages/b/package.json': pj('mpv-b', '0.0.0', { dependencies: { 'mpv-c': 'workspace:*' } }),
+      'packages/b/index.js': `import { c } from 'mpv-c'; export const b = () => 'b:' + c();`,
+      'packages/c/package.json': pj('mpv-c', '0.0.0'),
+      'packages/c/index.js': `export const c = () => 'c1';`,
+    })
+    const cPath = path.join(monorepoRoot, 'packages/c/index.js')
+
+    // Publish A, B, C at 1.0.0
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: ['packages/a', 'packages/b', 'packages/c'],
+      monorepoRoot,
+      publishToVersion: '1.0.0',
+    })
+
+    // Update C, publish A and C (major → 2.0.0)
+    fs.writeFileSync(cPath, `export const c = () => 'c2';`)
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: ['packages/a', 'packages/c'],
+      monorepoRoot,
+      publishToVersion: 'major',
+    })
+
+    // Update C, publish A and B (major → 3.0.0)
+    fs.writeFileSync(cPath, `export const c = () => 'c3';`)
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: ['packages/a', 'packages/b'],
+      monorepoRoot,
+      publishToVersion: 'major',
+    })
+
+    // Update C, publish B and C (major → 4.0.0)
+    fs.writeFileSync(cPath, `export const c = () => 'c4';`)
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: ['packages/b', 'packages/c'],
+      monorepoRoot,
+      publishToVersion: 'major',
+    })
+
+    expect(verdaccio.runView('mpv-a')).toMatchObject({ versions: ['1.0.0', '2.0.0', '3.0.0'] })
+    expect(verdaccio.runView('mpv-b')).toMatchObject({ versions: ['1.0.0', '3.0.0', '4.0.0'] })
+    expect(verdaccio.runView('mpv-c')).toMatchObject({ versions: ['1.0.0', '2.0.0', '4.0.0'] })
+  }, 180000)
 })
