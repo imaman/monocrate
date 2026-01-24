@@ -39,7 +39,7 @@ export class PackageAssembler {
       : Promise.resolve(undefined)
   }
 
-  async assemble(closure: PackageClosure, newVersion: string | undefined): Promise<string | undefined> {
+  async assemble(closure: PackageClosure, newVersion: string | undefined) {
     const outputDir = this.getOutputDir()
     const locations = await collectPackageLocations(closure, outputDir)
     const packageMap = new Map(locations.map((at) => [at.name, at] as const))
@@ -57,6 +57,5 @@ export class PackageAssembler {
 
     // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
     rewritePackageJson(closure, newVersion, outputDir)
-    return newVersion
   }
 }
