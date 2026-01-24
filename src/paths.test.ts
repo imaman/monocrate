@@ -91,6 +91,11 @@ describe('paths', () => {
         // Trailing slashes and double slashes are normalized
         expect(contains(AbsolutePath('/home/user/project/'), AbsolutePath('/home/user/project/packages'))).toBe(true)
         expect(contains(AbsolutePath('/home//user//project'), AbsolutePath('/home/user/project/packages'))).toBe(true)
+
+        // Parent with path traversal is normalized
+        expect(contains(AbsolutePath('/home/user/other/../project'), AbsolutePath('/home/user/project/packages'))).toBe(
+          true
+        )
       })
     })
   })
