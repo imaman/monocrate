@@ -105,7 +105,9 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   const versions = (await Promise.all(assemblers.map((a) => a.computeNewVersion(versionSpecifier)))).flatMap((v) =>
     v ? [v] : []
   )
-  const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), '0.0.0')
+
+  const v0 = versions.at(0)
+  const resolvedVersion = v0 ? versions.reduce((soFar, curr) => maxVersion(soFar, curr), v0) : undefined
 
   for (const assembler of assemblers) {
     await assembler.assemble(resolvedVersion)
@@ -114,7 +116,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
       await publish(assembler.getOutputDir(), monorepoRoot)
     }
 
-    if (resolvedVersion !== '0.0.0') {
+    if (resolvedVersion !== undefined) {
       if (options.outputFile) {
         const outputFilePath = path.resolve(cwd, options.outputFile)
         fsSync.writeFileSync(outputFilePath, resolvedVersion)
