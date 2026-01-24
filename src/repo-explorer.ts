@@ -12,7 +12,36 @@ export interface MonorepoPackage {
 }
 
 export class RepoExplorer {
-  findMonorepoRoot(startDir: AbsolutePath): AbsolutePath {
+  constructor(
+    readonly repoRootDir: AbsolutePath,
+    private readonly map: Map<string, MonorepoPackage>
+  ) {}
+
+  static async create(monorepoRoot: AbsolutePath) {
+    const map = await this.discover(monorepoRoot)
+    return new RepoExplorer(monorepoRoot, map)
+  }
+
+  listNames() {
+    return [...this.map.keys()]
+  }
+  listPackages() {
+    return [...this.map.values()]
+  }
+
+  getPackage(pkgName: string) {
+    const ret = this.lookupPackage(pkgName)
+    if (!ret) {
+      throw new Error(`Unrecognized package name: "${pkgName}"`)
+    }
+    return ret
+  }
+
+  lookupPackage(pkgName: string) {
+    return this.map.get(pkgName)
+  }
+
+  static findMonorepoRoot(startDir: AbsolutePath): AbsolutePath {
     let dir = startDir
 
     while (dir !== AbsolutePath.dirname(dir)) {
@@ -35,7 +64,7 @@ export class RepoExplorer {
     throw new Error(`Could not find monorepo root from ${startDir}`)
   }
 
-  private readPackageJson(packageDir: AbsolutePath): PackageJson {
+  private static readPackageJson(packageDir: AbsolutePath): PackageJson {
     const packageJsonPath = path.join(packageDir, 'package.json')
     if (!fs.existsSync(packageJsonPath)) {
       throw new Error(`No package.json found at ${packageDir}`)
@@ -48,7 +77,7 @@ export class RepoExplorer {
     return parsed.data
   }
 
-  private parseWorkspacePatterns(monorepoRoot: AbsolutePath): string[] {
+  private static parseWorkspacePatterns(monorepoRoot: AbsolutePath): string[] {
     const packageJsonPath = path.join(monorepoRoot, 'package.json')
     if (fs.existsSync(packageJsonPath)) {
       const parsed = PackageJson.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
@@ -78,7 +107,7 @@ export class RepoExplorer {
     return ['packages/*']
   }
 
-  async discoverMonorepoPackages(monorepoRoot: AbsolutePath): Promise<Map<string, MonorepoPackage>> {
+  static async discover(monorepoRoot: AbsolutePath): Promise<Map<string, MonorepoPackage>> {
     const patterns = this.parseWorkspacePatterns(monorepoRoot)
     const packages = new Map<string, MonorepoPackage>()
 

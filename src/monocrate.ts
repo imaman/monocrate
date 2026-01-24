@@ -6,8 +6,7 @@ import { RepoExplorer } from './repo-explorer.js'
 import { PackageAssembler } from './pacakge-assembler.js'
 import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
-import { AbsolutePath, RelativePath } from './paths.js'
-import { manglePackageName } from './name-mangler.js'
+import { AbsolutePath } from './paths.js'
 
 export interface MonocrateOptions {
   /**
@@ -76,12 +75,12 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     throw new Error(`cwd does not exist: ${cwd}`)
   }
 
-  const explorer = new RepoExplorer()
-
   const sourceDir = AbsolutePath(path.resolve(cwd, options.pathToSubjectPackage))
+
   const monorepoRoot = options.monorepoRoot
     ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
-    : explorer.findMonorepoRoot(sourceDir)
+    : RepoExplorer.findMonorepoRoot(sourceDir)
+  const explorer = await RepoExplorer.create(monorepoRoot)
 
   // Validate publish argument before any side effects
   const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
@@ -90,13 +89,12 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
-  const assembler = new PackageAssembler(explorer, monorepoRoot, sourceDir)
-  const closure = await assembler.computeClosure()
-  const outputDir = AbsolutePath.join(outputRoot, RelativePath(manglePackageName(closure.subjectPackageName)))
-  const resolvedVersion = await assembler.assemble(closure, outputDir, versionSpecifier)
+  const assembler = new PackageAssembler(explorer, sourceDir, outputRoot)
+  const closure = assembler.computeClosure()
+  const resolvedVersion = await assembler.assemble(closure, versionSpecifier)
 
   if (versionSpecifier) {
-    await publish(outputDir, monorepoRoot)
+    await publish(assembler.getOutputDir(), monorepoRoot)
   }
 
   if (resolvedVersion !== undefined) {
@@ -108,5 +106,5 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     }
   }
 
-  return { outputDir, resolvedVersion }
+  return { outputDir: assembler.getOutputDir(), resolvedVersion }
 }

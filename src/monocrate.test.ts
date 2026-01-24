@@ -95,7 +95,7 @@ describe('monocrate', () => {
         'packages/app/package.json': { name: '@test/app' },
       })
 
-      const found = new RepoExplorer().findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
+      const found = RepoExplorer.findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
       expect(found).toBe(monorepoRoot)
     })
 
@@ -108,7 +108,7 @@ describe('monocrate', () => {
         'packages/app/package.json': { name: '@test/app' },
       })
 
-      const found = new RepoExplorer().findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
+      const found = RepoExplorer.findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
       expect(found).toBe(monorepoRoot)
     })
 
@@ -116,7 +116,7 @@ describe('monocrate', () => {
       const tempDir = createTempDir('no-monorepo-')
       fs.mkdirSync(path.join(tempDir, 'some-package'))
 
-      expect(() => new RepoExplorer().findMonorepoRoot(AbsolutePath(path.join(tempDir, 'some-package')))).toThrow(
+      expect(() => RepoExplorer.findMonorepoRoot(AbsolutePath(path.join(tempDir, 'some-package')))).toThrow(
         'Could not find monorepo root'
       )
     })

@@ -1,7 +1,6 @@
 import type { MonorepoPackage } from './repo-explorer.js'
 import type { RepoExplorer } from './repo-explorer.js'
 import type { PackageClosure } from './package-closure.js'
-import type { AbsolutePath } from './paths.js'
 
 interface VersionInfo {
   version: string
@@ -33,16 +32,8 @@ function formatConflictError(conflicts: Partial<Record<string, string[]>>): stri
   return lines.join('\n')
 }
 
-export async function computePackageClosure(
-  sourceDir: AbsolutePath,
-  monorepoRoot: AbsolutePath,
-  repoExplorer: RepoExplorer
-): Promise<PackageClosure> {
-  const allRepoPackages = await repoExplorer.discoverMonorepoPackages(monorepoRoot)
-  const subjectPackage = [...allRepoPackages.values()].find((at) => at.path === sourceDir)
-  if (!subjectPackage) {
-    throw new Error(`Could not find a monorepo package at ${sourceDir}`)
-  }
+export function computePackageClosure(pkgName: string, repoExplorer: RepoExplorer): PackageClosure {
+  const subjectPackage = repoExplorer.getPackage(pkgName)
 
   const versionsByDep = new Map<string, VersionInfo[]>()
   const visited = new Map<string, MonorepoPackage>()
@@ -57,7 +48,7 @@ export async function computePackageClosure(
       if (!depVersion) {
         throw new Error(`no version for dep ${depName} in ${pkg.name}`)
       }
-      const depPackage = allRepoPackages.get(depName)
+      const depPackage = repoExplorer.lookupPackage(depName)
       if (depPackage) {
         // Is an in-repo dep
         collectDeps(depPackage)

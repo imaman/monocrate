@@ -6,26 +6,35 @@ import type { PackageClosure } from './package-closure.js'
 import { resolveVersion } from './resolve-version.js'
 import { rewritePackageJson } from './rewrite-package-json.js'
 import type { VersionSpecifier } from './version-specifier.js'
-import type { AbsolutePath } from './paths.js'
+import { AbsolutePath, RelativePath } from './paths.js'
 import type { RepoExplorer } from './repo-explorer.js'
 import { computePackageClosure } from './compute-package-closure.js'
+import { manglePackageName } from './name-mangler.js'
 
 export class PackageAssembler {
+  private pkgName
   constructor(
     private readonly explorer: RepoExplorer,
-    private readonly monorepoRoot: AbsolutePath,
-    private readonly sourcerDir: AbsolutePath
-  ) {}
-
-  async computeClosure() {
-    return computePackageClosure(this.sourcerDir, this.monorepoRoot, this.explorer)
+    private readonly sourcerDir: AbsolutePath,
+    private readonly outputRoot: AbsolutePath
+  ) {
+    const found = this.explorer.listPackages().find((at) => at.path === sourcerDir)
+    if (!found) {
+      throw new Error(`Unrecognized package source dir: "${this.sourcerDir}"`)
+    }
+    this.pkgName = found.name
   }
 
-  async assemble(
-    closure: PackageClosure,
-    outputDir: AbsolutePath,
-    versionSpecifier: VersionSpecifier | undefined
-  ): Promise<string | undefined> {
+  computeClosure() {
+    return computePackageClosure(this.pkgName, this.explorer)
+  }
+
+  getOutputDir() {
+    return AbsolutePath.join(this.outputRoot, RelativePath(manglePackageName(this.pkgName)))
+  }
+
+  async assemble(closure: PackageClosure, versionSpecifier: VersionSpecifier | undefined): Promise<string | undefined> {
+    const outputDir = this.getOutputDir()
     const locations = await collectPackageLocations(closure, outputDir)
     const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
