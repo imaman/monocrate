@@ -149,12 +149,10 @@ describe('monocrate', () => {
         'packages/app/package.json': 'invalid json {{{',
       })
 
-      const outputDir = createTempDir('monocrate-output-')
       await expect(
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          outputDir,
           monorepoRoot,
         })
       ).rejects.toThrow('Unexpected token')
@@ -167,12 +165,10 @@ describe('monocrate', () => {
         'packages/app/package.json': { version: '1.0.0', main: 'dist/index.js' },
       })
 
-      const outputDir = createTempDir('monocrate-output-')
       await expect(
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          outputDir,
           monorepoRoot,
         })
       ).rejects.toThrow('Invalid package.json')
@@ -184,12 +180,10 @@ describe('monocrate', () => {
         // No packages/app/package.json
       })
 
-      const outputDir = createTempDir('monocrate-output-')
       await expect(
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          outputDir,
           monorepoRoot,
         })
       ).rejects.toThrow(`Could not find a monorepo package at ${monorepoRoot}/packages/app`)
