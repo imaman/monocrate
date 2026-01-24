@@ -2,7 +2,6 @@ import * as fsPromises from 'node:fs/promises'
 import { collectPackageLocations } from './collect-package-locations.js'
 import { FileCopier } from './file-copier.js'
 import { ImportRewriter } from './import-rewriter.js'
-import type { PackageClosure } from './package-closure.js'
 import { resolveVersion } from './resolve-version.js'
 import { rewritePackageJson } from './rewrite-package-json.js'
 import type { VersionSpecifier } from './version-specifier.js'
@@ -25,10 +24,6 @@ export class PackageAssembler {
     this.pkgName = found.name
   }
 
-  computeClosure() {
-    return computePackageClosure(this.pkgName, this.explorer)
-  }
-
   getOutputDir() {
     return AbsolutePath.join(this.outputRoot, RelativePath(manglePackageName(this.pkgName)))
   }
@@ -39,7 +34,8 @@ export class PackageAssembler {
       : Promise.resolve(undefined)
   }
 
-  async assemble(closure: PackageClosure, newVersion: string | undefined): Promise<string | undefined> {
+  async assemble(newVersion: string | undefined) {
+    const closure = computePackageClosure(this.pkgName, this.explorer)
     const outputDir = this.getOutputDir()
     const locations = await collectPackageLocations(closure, outputDir)
     const packageMap = new Map(locations.map((at) => [at.name, at] as const))
@@ -57,6 +53,5 @@ export class PackageAssembler {
 
     // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
     rewritePackageJson(closure, newVersion, outputDir)
-    return newVersion
   }
 }

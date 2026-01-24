@@ -90,9 +90,8 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   )
 
   const assembler = new PackageAssembler(explorer, sourceDir, outputRoot)
-  const closure = assembler.computeClosure()
-  const newVersion = await assembler.computeNewVersion(versionSpecifier)
-  const resolvedVersion = await assembler.assemble(closure, newVersion)
+  const resolvedVersion = await assembler.computeNewVersion(versionSpecifier)
+  await assembler.assemble(resolvedVersion)
 
   if (versionSpecifier) {
     await publish(assembler.getOutputDir(), monorepoRoot)
