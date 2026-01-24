@@ -212,7 +212,7 @@ describe('monocrate', () => {
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
           monorepoRoot,
         })
-      ).rejects.toThrow('is located at')
+      ).rejects.toThrow(/Package "@test\/external" is located at .* which is outside the monorepo root/)
     })
 
     it('works with workspace object format (packages field)', async () => {
