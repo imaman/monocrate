@@ -36,7 +36,8 @@ describe('npm publishing with Verdaccio', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
       monorepoRoot,
-      publishToVersion: '99.99.99',
+      bump: '99.99.99',
+      publish: true,
     })
     expect(await verdaccio.runView('@test/mylib')).toMatchObject({ name: '@test/mylib', version: '99.99.99' })
     expect(
@@ -56,7 +57,8 @@ describe('npm publishing with Verdaccio', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
       monorepoRoot,
-      publishToVersion: '99.99.99',
+      bump: '99.99.99',
+      publish: true,
     })
     expect(await verdaccio.runView('mylib')).toMatchObject({ name: 'mylib', version: '99.99.99' })
     expect(verdaccio.runConumser(`mylib@99.99.99`, `import { hello } from 'mylib'; console.log(hello())`)).toBe(
@@ -83,7 +85,8 @@ describe('npm publishing with Verdaccio', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
       monorepoRoot,
-      publishToVersion: '88.88.88',
+      bump: '88.88.88',
+      publish: true,
     })
     expect(verdaccio.runView('@test/app')).toMatchObject({ name: '@test/app', version: '88.88.88' })
     expect(
@@ -108,7 +111,8 @@ describe('npm publishing with Verdaccio', () => {
         cwd: monorepoRoot,
         pathToSubjectPackage: 'packages/foo',
         monorepoRoot,
-        publishToVersion: '1.4.1',
+        bump: '1.4.1',
+        publish: true,
       })
     ).toMatchObject({ resolvedVersion: '1.4.1' })
     expect(verdaccio.runView(pkgName)).toMatchObject({ version: '1.4.1' })
@@ -118,7 +122,8 @@ describe('npm publishing with Verdaccio', () => {
         cwd: monorepoRoot,
         pathToSubjectPackage: 'packages/foo',
         monorepoRoot,
-        publishToVersion: '2.7.1',
+        bump: '2.7.1',
+        publish: true,
       })
     ).toMatchObject({ resolvedVersion: '2.7.1' })
     expect(verdaccio.runView(pkgName)).toMatchObject({ version: '2.7.1' })
@@ -128,7 +133,8 @@ describe('npm publishing with Verdaccio', () => {
         cwd: monorepoRoot,
         pathToSubjectPackage: 'packages/foo',
         monorepoRoot,
-        publishToVersion: '3.1.4',
+        bump: '3.1.4',
+        publish: true,
       })
     ).toMatchObject({ resolvedVersion: '3.1.4' })
 
@@ -162,7 +168,8 @@ describe('npm publishing with Verdaccio', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: 'packages/foo',
       monorepoRoot,
-      publishToVersion: '77.77.77',
+      bump: '77.77.77',
+      publish: true,
     })
 
     expect(verdaccio.runView('foo')).toMatchObject({
@@ -188,32 +195,37 @@ describe('npm publishing with Verdaccio', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
-      publishToVersion: '2.4.0',
+      bump: '2.4.0',
+      publish: true,
     })
 
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
-      publishToVersion: 'minor',
+      bump: 'minor',
+      publish: true,
     })
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
-      publishToVersion: 'major',
+      bump: 'major',
+      publish: true,
     })
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
-      publishToVersion: '4.1.8',
+      bump: '4.1.8',
+      publish: true,
     })
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
-      publishToVersion: 'patch',
+      bump: 'patch',
+      publish: true,
     })
     expect(verdaccio.runView('mypkg')).toMatchObject({
       version: '4.1.9',
@@ -234,7 +246,8 @@ describe('npm publishing with Verdaccio', () => {
       cwd: monorepoRoot,
       pathToSubjectPackage: 'packages/calculator',
       monorepoRoot,
-      publishToVersion: 'major',
+      bump: 'major',
+      publish: true,
     }
 
     // Version 1.0.0: addition
