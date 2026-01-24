@@ -60,6 +60,10 @@ export interface PackageOutput {
    */
   inputPath: string
   /**
+   * The package name from package.json.
+   */
+  packageName: string
+  /**
    * The output directory path where the assembly was created.
    */
   outputDir: string
@@ -120,6 +124,14 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
     : findMonorepoRoot(firstSourceDir)
 
+  // Verify all source directories are under the monorepo root
+  for (const sourceDir of sourceDirs) {
+    const relative = path.relative(monorepoRoot, sourceDir)
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error(`Package directory "${sourceDir}" is not under monorepo root "${monorepoRoot}"`)
+    }
+  }
+
   // Validate publish argument before any side effects
   const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
 
@@ -127,22 +139,22 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
-  // Compute closures for all packages, keeping track of the source info
+  // Compute closures for all packages concurrently
   interface SubjectInfo {
     inputPath: string
     sourceDir: AbsolutePath
     closure: PackageClosure
   }
-  const subjects: SubjectInfo[] = []
-  for (let i = 0; i < sourceDirs.length; i++) {
-    const sourceDir = sourceDirs[i]
-    const inputPath = subjectPaths[i]
-    if (sourceDir === undefined || inputPath === undefined) {
-      throw new Error('Internal error: sourceDir or inputPath is undefined')
-    }
-    const closure = await computePackageClosure(sourceDir, monorepoRoot)
-    subjects.push({ inputPath, sourceDir, closure })
-  }
+  const subjects: SubjectInfo[] = await Promise.all(
+    sourceDirs.map(async (sourceDir, i) => {
+      const inputPath = subjectPaths[i]
+      if (inputPath === undefined) {
+        throw new Error('Internal error: inputPath is undefined')
+      }
+      const closure = await computePackageClosure(sourceDir, monorepoRoot)
+      return { inputPath, sourceDir, closure }
+    })
+  )
 
   // Resolve shared version across all packages if publishing
   let resolvedVersion: string | undefined
@@ -166,7 +178,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
       await publish(outputDir, monorepoRoot)
     }
 
-    outputs.push({ inputPath: subject.inputPath, outputDir })
+    outputs.push({ inputPath: subject.inputPath, packageName: subject.closure.subjectPackageName, outputDir })
   }
 
   // Output resolved version (same as before, using first package's perspective)
@@ -184,5 +196,6 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     throw new Error('Internal error: no outputs produced')
   }
 
+  // TODO(imaman): drop returning the outputDir?
   return { outputDir: firstOutput.outputDir, resolvedVersion, outputs }
 }
