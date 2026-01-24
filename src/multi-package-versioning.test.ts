@@ -1,3 +1,5 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { monocrate } from './index.js'
 import { pj } from './testing/monocrate-teskit.js'
@@ -57,5 +59,46 @@ describe('multi-package versioning', () => {
     expect(verdaccio.runConumser('mpv-beta@3.0.1', `import { value } from 'mpv-beta'; console.log(value)`)).toBe('beta-new')
     expect(verdaccio.runConumser('mpv-gamma@3.0.1', `import { value } from 'mpv-gamma'; console.log(value)`)).toBe('gamma-new')
     expect(verdaccio.runConumser('mpv-delta@3.0.1', `import { value } from 'mpv-delta'; console.log(value)`)).toBe('delta-new')
+  }, 120000)
+
+  it('republishing a package bundles updated in-repo dependency code without publishing the dependency', async () => {
+    const monorepoRoot = folderify({
+      '.npmrc': verdaccio.npmRc(),
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': pj('mpv-app', '0.0.0', { dependencies: { 'mpv-lib': 'workspace:*' } }),
+      'packages/app/index.js': `import { getMessage } from 'mpv-lib'; export const run = () => getMessage();`,
+      'packages/lib/package.json': pj('mpv-lib', '0.0.0'),
+      'packages/lib/index.js': `export const getMessage = () => 'original';`,
+    })
+
+    // Step 1: Publish both app and lib
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: ['packages/app', 'packages/lib'],
+      monorepoRoot,
+      publishToVersion: '1.0.0',
+    })
+
+    expect(verdaccio.runView('mpv-app')).toMatchObject({ version: '1.0.0' })
+    expect(verdaccio.runView('mpv-lib')).toMatchObject({ version: '1.0.0' })
+
+    // Step 2: Update lib's code
+    fs.writeFileSync(path.join(monorepoRoot, 'packages/lib/index.js'), `export const getMessage = () => 'updated';`)
+
+    // Step 3: Publish only app (which depends on lib)
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackage: 'packages/app',
+      monorepoRoot,
+      publishToVersion: '2.0.0',
+    })
+
+    // Step 4: Consuming app@2.0.0 should run the updated lib code
+    expect(
+      verdaccio.runConumser('mpv-app@2.0.0', `import { run } from 'mpv-app'; console.log(run())`)
+    ).toBe('updated')
+
+    // Step 5: lib's version in registry should still be 1.0.0 (not republished)
+    expect(verdaccio.runView('mpv-lib')).toMatchObject({ version: '1.0.0', versions: ['1.0.0'] })
   }, 120000)
 })
