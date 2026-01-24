@@ -7,6 +7,7 @@ import { PackageAssembler } from './package-assembler.js'
 import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
 import { AbsolutePath } from './paths.js'
+import { maxVersion } from './resolve-version.js'
 
 export interface MonocrateOptions {
   /**
@@ -127,36 +128,4 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }
 
   return { outputDir: a0.getOutputDir(), resolvedVersion }
-}
-
-function maxVersion(va: string, vb: string) {
-  const [a1, a2, a3] = parseVersion(va)
-  const [b1, b2, b3] = parseVersion(vb)
-
-  if (a1 !== b1) {
-    return a1 > b1 ? va : vb
-  }
-
-  if (a2 !== b2) {
-    return a2 > b2 ? va : vb
-  }
-
-  if (a3 !== b3) {
-    return a3 > b3 ? va : vb
-  }
-
-  return va
-}
-
-const parseVersion = (s: string): [number, number, number] => {
-  const [a, b, c] = s
-    .split('.')
-    .slice(0, 3)
-    .map(Number)
-    .filter((at) => Number.isInteger(at))
-  if (a === undefined || b === undefined || c === undefined) {
-    throw new Error(`Current version is ill-formatted: "${s}"`)
-  }
-
-  return [a, b, c]
 }
