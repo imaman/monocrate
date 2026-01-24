@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { monocrate } from './index.js'
-import { findMonorepoRoot } from './monorepo.js'
+import { RepoExplorer } from './repo-explorer.js'
 import { AbsolutePath } from './paths.js'
 import * as publishModule from './publish.js'
 import { folderify } from './testing/folderify.js'
@@ -95,7 +95,7 @@ describe('monocrate', () => {
         'packages/app/package.json': { name: '@test/app' },
       })
 
-      const found = findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
+      const found = new RepoExplorer().findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
       expect(found).toBe(monorepoRoot)
     })
 
@@ -108,7 +108,7 @@ describe('monocrate', () => {
         'packages/app/package.json': { name: '@test/app' },
       })
 
-      const found = findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
+      const found = new RepoExplorer().findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
       expect(found).toBe(monorepoRoot)
     })
 
@@ -116,7 +116,7 @@ describe('monocrate', () => {
       const tempDir = createTempDir('no-monorepo-')
       fs.mkdirSync(path.join(tempDir, 'some-package'))
 
-      expect(() => findMonorepoRoot(AbsolutePath(path.join(tempDir, 'some-package')))).toThrow(
+      expect(() => new RepoExplorer().findMonorepoRoot(AbsolutePath(path.join(tempDir, 'some-package')))).toThrow(
         'Could not find monorepo root'
       )
     })

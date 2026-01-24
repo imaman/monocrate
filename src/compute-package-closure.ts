@@ -1,5 +1,5 @@
-import type { MonorepoPackage } from './monorepo.js'
-import { discoverMonorepoPackages } from './monorepo.js'
+import type { MonorepoPackage } from './repo-explorer.js'
+import type { RepoExplorer } from './repo-explorer.js'
 import type { PackageClosure } from './package-closure.js'
 import type { AbsolutePath } from './paths.js'
 
@@ -8,9 +8,7 @@ interface VersionInfo {
   requiredBy: string
 }
 
-function detectVersionConflicts(
-  versionsByDep: Map<string, VersionInfo[]>
-): Partial<Record<string, string[]>> {
+function detectVersionConflicts(versionsByDep: Map<string, VersionInfo[]>): Partial<Record<string, string[]>> {
   const conflicts: Partial<Record<string, string[]>> = {}
 
   for (const [depName, versionInfos] of versionsByDep.entries()) {
@@ -35,8 +33,12 @@ function formatConflictError(conflicts: Partial<Record<string, string[]>>): stri
   return lines.join('\n')
 }
 
-export async function computePackageClosure(sourceDir: AbsolutePath, monorepoRoot: AbsolutePath): Promise<PackageClosure> {
-  const allRepoPackages = await discoverMonorepoPackages(monorepoRoot)
+export async function computePackageClosure(
+  sourceDir: AbsolutePath,
+  monorepoRoot: AbsolutePath,
+  repoExplorer: RepoExplorer
+): Promise<PackageClosure> {
+  const allRepoPackages = await repoExplorer.discoverMonorepoPackages(monorepoRoot)
   const subjectPackage = [...allRepoPackages.values()].find((at) => at.path === sourceDir)
   if (!subjectPackage) {
     throw new Error(`Could not find a monorepo package at ${sourceDir}`)

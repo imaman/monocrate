@@ -1,4 +1,4 @@
-import type { MonorepoPackage } from './monorepo.js'
+import type { MonorepoPackage } from './repo-explorer.js'
 
 /**
  * The transitive closure of packages needed to publish a monorepo package. Computed by traversing dependencies

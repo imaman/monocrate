@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { findMonorepoRoot } from './monorepo.js'
+import { RepoExplorer } from './repo-explorer.js'
 import { computePackageClosure } from './compute-package-closure.js'
 import { assemble } from './assemble.js'
 import { publish } from './publish.js'
@@ -77,10 +77,12 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     throw new Error(`cwd does not exist: ${cwd}`)
   }
 
+  const explorer = new RepoExplorer()
+
   const sourceDir = AbsolutePath(path.resolve(cwd, options.pathToSubjectPackage))
   const monorepoRoot = options.monorepoRoot
     ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
-    : findMonorepoRoot(sourceDir)
+    : explorer.findMonorepoRoot(sourceDir)
 
   // Validate publish argument before any side effects
   const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
@@ -89,7 +91,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
-  const closure = await computePackageClosure(sourceDir, monorepoRoot)
+  const closure = await computePackageClosure(sourceDir, monorepoRoot, explorer)
   const outputDir = AbsolutePath.join(outputRoot, RelativePath(manglePackageName(closure.subjectPackageName)))
   const resolvedVersion = await assemble(closure, outputDir, versionSpecifier)
 
