@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { monocrate } from './index.js'
+import { monocrate, monocrateMultiple } from './index.js'
 import { findMonorepoRoot } from './monorepo.js'
 import { AbsolutePath } from './paths.js'
 import * as publishModule from './publish.js'
@@ -1323,6 +1323,229 @@ console.log('Hello from bin');
           'deps/packages/lib/.npmrc': 'registry=https://lib.registry.com',
         },
       })
+    })
+  })
+
+  describe('multi-package publishing', () => {
+    it('assembles multiple packages in a single invocation', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+        'packages/core/package.json': makePackageJson({ name: '@test/core' }),
+        'packages/core/dist/index.js': `export const core = 'core';`,
+        'packages/utils/package.json': makePackageJson({ name: '@test/utils' }),
+        'packages/utils/dist/index.js': `export const utils = 'utils';`,
+      })
+
+      const result = await monocrateMultiple({
+        cwd: monorepoRoot,
+        pathsToSubjectPackages: ['packages/core', 'packages/utils'],
+        monorepoRoot,
+      })
+
+      expect(result.packages).toHaveLength(2)
+      expect(result.packages.map((p) => p.packageName)).toEqual(['@test/core', '@test/utils'])
+
+      // Verify each assembly was created
+      for (const pkg of result.packages) {
+        expect(fs.existsSync(pkg.outputDir)).toBe(true)
+        const output = unfolderify(pkg.outputDir)
+        expect(output).toHaveProperty('package.json')
+        expect(output).toHaveProperty('dist/index.js')
+      }
+    }, 30000)
+
+    it('assigns explicit version to all packages', async () => {
+      vi.spyOn(publishModule, 'publish').mockImplementation(async () => {})
+
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+        'packages/core/package.json': makePackageJson({ name: '@test/core' }),
+        'packages/core/dist/index.js': `export const core = 'core';`,
+        'packages/utils/package.json': makePackageJson({ name: '@test/utils' }),
+        'packages/utils/dist/index.js': `export const utils = 'utils';`,
+      })
+
+      const result = await monocrateMultiple({
+        cwd: monorepoRoot,
+        pathsToSubjectPackages: ['packages/core', 'packages/utils'],
+        monorepoRoot,
+        publishToVersion: '2.5.0',
+      })
+
+      expect(result.resolvedVersion).toBe('2.5.0')
+
+      // Verify both packages have the same version
+      for (const pkg of result.packages) {
+        const output = unfolderify(pkg.outputDir)
+        const pkgJson = output['package.json'] as Record<string, unknown>
+        expect(pkgJson.version).toBe('2.5.0')
+      }
+
+      vi.restoreAllMocks()
+    }, 30000)
+
+    it('processes packages with independent dependency closures', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+        'packages/app-a/package.json': makePackageJson({
+          name: '@test/app-a',
+          dependencies: { '@test/lib-a': 'workspace:*' },
+        }),
+        'packages/app-a/dist/index.js': `import { a } from '@test/lib-a'; console.log(a);`,
+        'packages/lib-a/package.json': makePackageJson({ name: '@test/lib-a' }),
+        'packages/lib-a/dist/index.js': `export const a = 'A';`,
+        'packages/app-b/package.json': makePackageJson({
+          name: '@test/app-b',
+          dependencies: { '@test/lib-b': 'workspace:*' },
+        }),
+        'packages/app-b/dist/index.js': `import { b } from '@test/lib-b'; console.log(b);`,
+        'packages/lib-b/package.json': makePackageJson({ name: '@test/lib-b' }),
+        'packages/lib-b/dist/index.js': `export const b = 'B';`,
+      })
+
+      const result = await monocrateMultiple({
+        cwd: monorepoRoot,
+        pathsToSubjectPackages: ['packages/app-a', 'packages/app-b'],
+        monorepoRoot,
+      })
+
+      expect(result.packages).toHaveLength(2)
+      const [appAResult, appBResult] = result.packages
+      if (!appAResult || !appBResult) {
+        throw new Error('Expected 2 packages')
+      }
+
+      // Verify app-a has lib-a in deps
+      const appAOutput = unfolderify(appAResult.outputDir)
+      expect(appAOutput).toHaveProperty('deps/packages/lib-a/dist/index.js')
+      expect(appAOutput).not.toHaveProperty('deps/packages/lib-b/dist/index.js')
+
+      // Verify app-b has lib-b in deps
+      const appBOutput = unfolderify(appBResult.outputDir)
+      expect(appBOutput).toHaveProperty('deps/packages/lib-b/dist/index.js')
+      expect(appBOutput).not.toHaveProperty('deps/packages/lib-a/dist/index.js')
+    }, 30000)
+
+    it('handles package depending on another subject package', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+        'packages/utils/package.json': makePackageJson({ name: '@test/utils' }),
+        'packages/utils/dist/index.js': `export const util = 'util';`,
+        'packages/app/package.json': makePackageJson({
+          name: '@test/app',
+          dependencies: { '@test/utils': 'workspace:*' },
+        }),
+        'packages/app/dist/index.js': `import { util } from '@test/utils'; console.log(util);`,
+      })
+
+      const result = await monocrateMultiple({
+        cwd: monorepoRoot,
+        pathsToSubjectPackages: ['packages/utils', 'packages/app'],
+        monorepoRoot,
+      })
+
+      expect(result.packages).toHaveLength(2)
+      const [utilsResult, appResult] = result.packages
+      if (!utilsResult || !appResult) {
+        throw new Error('Expected 2 packages')
+      }
+
+      // utils should be assembled standalone
+      const utilsOutput = unfolderify(utilsResult.outputDir)
+      expect(utilsOutput['package.json']).toMatchObject({ name: '@test/utils' })
+      expect(utilsOutput).not.toHaveProperty('deps')
+
+      // app should have utils embedded as a dep
+      const appOutput = unfolderify(appResult.outputDir)
+      expect(appOutput['package.json']).toMatchObject({ name: '@test/app' })
+      expect(appOutput).toHaveProperty('deps/packages/utils/dist/index.js')
+    }, 30000)
+
+    it('throws when no packages are specified', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+      })
+
+      await expect(
+        monocrateMultiple({
+          cwd: monorepoRoot,
+          pathsToSubjectPackages: [],
+          monorepoRoot,
+        })
+      ).rejects.toThrow('At least one package path must be specified')
+    })
+
+    it('writes resolved version to output file when specified', async () => {
+      vi.spyOn(publishModule, 'publish').mockImplementation(async () => {})
+
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+        'packages/core/package.json': makePackageJson({ name: '@test/core' }),
+        'packages/core/dist/index.js': `export const core = 'core';`,
+        'packages/utils/package.json': makePackageJson({ name: '@test/utils' }),
+        'packages/utils/dist/index.js': `export const utils = 'utils';`,
+      })
+
+      const outputDir = createTempDir()
+      const outputFile = path.join(outputDir, 'version.txt')
+
+      await monocrateMultiple({
+        cwd: monorepoRoot,
+        pathsToSubjectPackages: ['packages/core', 'packages/utils'],
+        monorepoRoot,
+        publishToVersion: '3.0.0',
+        outputFile,
+      })
+
+      expect(fs.readFileSync(outputFile, 'utf-8')).toBe('3.0.0')
+
+      vi.restoreAllMocks()
+    }, 30000)
+
+    it('creates separate output directories for each package under outputRoot', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+        'packages/core/package.json': makePackageJson({ name: '@test/core' }),
+        'packages/core/dist/index.js': `export const core = 'core';`,
+        'packages/utils/package.json': makePackageJson({ name: '@test/utils' }),
+        'packages/utils/dist/index.js': `export const utils = 'utils';`,
+      })
+
+      const outputRoot = createTempDir('monocrate-multi-output-')
+
+      const result = await monocrateMultiple({
+        cwd: monorepoRoot,
+        pathsToSubjectPackages: ['packages/core', 'packages/utils'],
+        outputRoot,
+        monorepoRoot,
+      })
+
+      // Each package should be in its own directory under outputRoot
+      for (const pkg of result.packages) {
+        expect(path.dirname(pkg.outputDir)).toBe(outputRoot)
+      }
+
+      // Directory names should be mangled package names (@test/core -> __test__core)
+      const dirNames = result.packages.map((p) => path.basename(p.outputDir))
+      expect(dirNames).toContain('__test__core')
+      expect(dirNames).toContain('__test__utils')
+    }, 30000)
+
+    it('fails fast when any package fails', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: ['packages/*'] },
+        'packages/good/package.json': makePackageJson({ name: '@test/good' }),
+        'packages/good/dist/index.js': `export const good = 'good';`,
+        // bad package has no package.json
+      })
+
+      await expect(
+        monocrateMultiple({
+          cwd: monorepoRoot,
+          pathsToSubjectPackages: ['packages/good', 'packages/bad'],
+          monorepoRoot,
+        })
+      ).rejects.toThrow('Could not find a monorepo package')
     })
   })
 })
