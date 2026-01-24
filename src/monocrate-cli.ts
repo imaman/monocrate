@@ -1,5 +1,5 @@
 import { defineCommand, runMain } from 'citty'
-import { monocrate } from './monocrate.js'
+import { monocrate, MonocrateOptions } from './monocrate.js'
 
 const sharedArgs = {
   packages: {
@@ -24,9 +24,37 @@ const sharedArgs = {
   },
   'output-file': {
     type: 'string' as const,
-    description: 'Write resolved version to file instead of stdout',
+    description: 'Write output to file instead of stdout',
     alias: 'f',
   },
+}
+
+type SharedArgs = {
+  _: string[]
+  output?: string
+  root?: string
+  bump?: string
+  'output-file'?: string
+}
+
+function buildOptions(args: SharedArgs, publish: boolean): MonocrateOptions {
+  const packages = extractPackages(args._)
+  return {
+    pathToSubjectPackage: packages,
+    outputRoot: args.output,
+    monorepoRoot: args.root,
+    bump: args.bump,
+    publish,
+    outputFile: args['output-file'],
+    cwd: process.cwd(),
+  }
+}
+
+function extractPackages(args: string[]): string[] {
+  if (args.length === 0) {
+    throw new Error('At least one package directory must be specified')
+  }
+  return args
 }
 
 const prepareCommand = defineCommand({
@@ -36,16 +64,7 @@ const prepareCommand = defineCommand({
   },
   args: sharedArgs,
   async run({ args }) {
-    const packages = extractPackages(args._)
-    await monocrate({
-      pathToSubjectPackage: packages,
-      outputRoot: args.output,
-      monorepoRoot: args.root,
-      bump: args.bump,
-      publish: false,
-      outputFile: args['output-file'],
-      cwd: process.cwd(),
-    })
+    await monocrate(buildOptions(args as SharedArgs, false))
   },
 })
 
@@ -56,25 +75,9 @@ const publishCommand = defineCommand({
   },
   args: sharedArgs,
   async run({ args }) {
-    const packages = extractPackages(args._)
-    await monocrate({
-      pathToSubjectPackage: packages,
-      outputRoot: args.output,
-      monorepoRoot: args.root,
-      bump: args.bump,
-      publish: true,
-      outputFile: args['output-file'],
-      cwd: process.cwd(),
-    })
+    await monocrate(buildOptions(args as SharedArgs, true))
   },
 })
-
-function extractPackages(args: string[]): string[] {
-  if (args.length === 0) {
-    throw new Error('At least one package directory must be specified')
-  }
-  return args
-}
 
 const mainCommand = defineCommand({
   meta: {

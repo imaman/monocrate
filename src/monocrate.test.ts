@@ -23,6 +23,7 @@ describe('monocrate', () => {
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
+        publish: false,
       })
 
       // Verify a temp directory was created
@@ -51,6 +52,7 @@ describe('monocrate', () => {
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         outputRoot,
         monorepoRoot,
+        publish: false,
       })
 
       expect(path.dirname(outputDir)).toBe(outputRoot)
@@ -78,10 +80,11 @@ describe('monocrate', () => {
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
         outputFile: path.join(dir, 'stdout'),
+        publish: false,
       }
 
-      expect(await monocrate(opts)).toMatchObject({ resolvedVersion: undefined })
-      expect(unfolderify(dir)).toEqual({})
+      expect(await monocrate(opts)).toMatchObject({ resolvedVersion: '1.1.0' })
+      expect(unfolderify(dir)).toMatchObject({ stdout: '1.1.0' })
 
       expect(await monocrate({ ...opts, bump: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
       expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
@@ -134,6 +137,7 @@ describe('monocrate', () => {
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -154,6 +158,7 @@ describe('monocrate', () => {
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
           monorepoRoot,
+        publish: false,
         })
       ).rejects.toThrow('Unexpected token')
     })
@@ -170,6 +175,7 @@ describe('monocrate', () => {
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
           monorepoRoot,
+        publish: false,
         })
       ).rejects.toThrow('Invalid package.json')
     })
@@ -185,6 +191,7 @@ describe('monocrate', () => {
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
           monorepoRoot,
+        publish: false,
         })
       ).rejects.toThrow(`Unrecognized package source dir: "${monorepoRoot}/packages/app"`)
     })
@@ -239,6 +246,7 @@ describe('monocrate', () => {
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
+        publish: false,
       })
 
       const pkgJson = unfolderify(outputDir)['package.json'] as Record<string, unknown>
@@ -270,6 +278,7 @@ describe('monocrate', () => {
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -659,6 +668,7 @@ export declare const bar: typeof foo;
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -693,6 +703,7 @@ export const bar = 'bar';
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -724,6 +735,7 @@ export const bar = foo;
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -757,6 +769,7 @@ export const helper = foo + '-helper';
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -791,6 +804,7 @@ export const bar = foo + util;
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -841,6 +855,7 @@ export declare const bar: typeof foo;
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -872,6 +887,7 @@ export const result = helper;
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -912,6 +928,7 @@ export const result = helper;
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -941,6 +958,7 @@ export const foo = b.foo;
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -1008,6 +1026,7 @@ console.log('Hello from bin');
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -1039,6 +1058,7 @@ console.log('Hello from bin');
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -1172,6 +1192,7 @@ console.log('Hello from bin');
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
+        publish: false,
       })
 
       const output = unfolderify(outputDir)
@@ -1205,6 +1226,7 @@ console.log('Hello from bin');
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
           monorepoRoot,
+        publish: false,
         })
       ).rejects.toThrow(
         'Third-party dependency version conflicts detected:\n' +
@@ -1232,6 +1254,7 @@ console.log('Hello from bin');
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
           monorepoRoot,
+        publish: false,
         })
       ).rejects.toThrow('  - lodash: ^3.10.0 (by @test/lib), ^4.17.0 (by @test/app)')
     })
@@ -1280,6 +1303,7 @@ console.log('Hello from bin');
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
           monorepoRoot,
+        publish: false,
         })
       ).rejects.toThrow('  - zod: ^2.0.0 (by @test/level2), ^3.0.0 (by @test/app)')
     })

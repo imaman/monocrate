@@ -31,21 +31,19 @@ export interface MonocrateOptions {
   /**
    * Version specifier for the assembly.
    * Accepts either an explicit semver version (e.g., "1.2.3") or an increment keyword ("patch", "minor", "major").
-   * When specified, the resolved version is either this value (if it is an explicit semver value) or is obtained by
-   * finding current version of all the packages to publish, finding the highest version of these, and then applying
+   * The resolved version is either this value (if it is an explicit semver value) or is obtained by finding the
+   * current version of all the packages to publish, finding the highest version of these, and then applying
    * the increment depicted by this value.
    *
-   * If not specified, no version resolution occurs and the package is assembled with its original version.
+   * Defaults to "minor".
    */
   bump?: string
   /**
    * Whether to publish the assemblies to npm after building.
-   * Requires bump to be specified. If bump is specified but publish is false, the assembly is prepared
-   * with the resolved version but not published (useful for inspection or manual publishing).
-   *
-   * Defaults to false.
+   * When false, the assembly is prepared with the resolved version but not published
+   * (useful for inspection or manual publishing).
    */
-  publish?: boolean
+  publish: boolean
   /**
    * Path to write the output (resolved version) to a file instead of stdout.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
@@ -65,9 +63,8 @@ export interface MonocrateResult {
   outputDir: string
   /**
    * The new version (AKA: 'resolved version') for the package (or packages).
-   * Undefined when bump was not specified.
    */
-  resolvedVersion: string | undefined
+  resolvedVersion: string
   /**
    * Details about each individual package that was assembled/published.
    */
@@ -94,8 +91,8 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
-  // Validate bump argument before any side effects
-  const versionSpecifier = parseVersionSpecifier(options.bump)
+  // Validate bump argument before any side effects (defaults to 'minor')
+  const versionSpecifier = parseVersionSpecifier(options.bump ?? 'minor')
 
   const sources = Array.isArray(options.pathToSubjectPackage)
     ? options.pathToSubjectPackage
@@ -118,12 +115,16 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     throw new Error(`Incosistency - could not find an assembler for the first package`)
   }
 
+  // versionSpecifier is always defined (defaults to 'minor'), so computeNewVersion always returns a string
   const versions = (await Promise.all(assemblers.map((a) => a.computeNewVersion(versionSpecifier)))).flatMap((v) =>
     v ? [v] : []
   )
 
   const v0 = versions.at(0)
-  const resolvedVersion = v0 ? versions.reduce((soFar, curr) => maxVersion(soFar, curr), v0) : undefined
+  if (!v0) {
+    throw new Error('Inconsistency - no versions computed')
+  }
+  const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v0)
 
   for (const assembler of assemblers) {
     await assembler.assemble(resolvedVersion)
@@ -133,13 +134,11 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     }
   }
 
-  if (resolvedVersion !== undefined) {
-    if (options.outputFile) {
-      const outputFilePath = path.resolve(cwd, options.outputFile)
-      fsSync.writeFileSync(outputFilePath, resolvedVersion)
-    } else {
-      console.log(resolvedVersion)
-    }
+  if (options.outputFile) {
+    const outputFilePath = path.resolve(cwd, options.outputFile)
+    fsSync.writeFileSync(outputFilePath, resolvedVersion)
+  } else {
+    console.log(resolvedVersion)
   }
 
   return {
