@@ -33,7 +33,13 @@ export class PackageAssembler {
     return AbsolutePath.join(this.outputRoot, RelativePath(manglePackageName(this.pkgName)))
   }
 
-  async assemble(closure: PackageClosure, versionSpecifier: VersionSpecifier | undefined): Promise<string | undefined> {
+  async computeNewVersion(versionSpecifier: VersionSpecifier | undefined) {
+    return versionSpecifier
+      ? await resolveVersion(this.sourcerDir, this.pkgName, versionSpecifier)
+      : Promise.resolve(undefined)
+  }
+
+  async assemble(closure: PackageClosure, newVersion: string | undefined): Promise<string | undefined> {
     const outputDir = this.getOutputDir()
     const locations = await collectPackageLocations(closure, outputDir)
     const packageMap = new Map(locations.map((at) => [at.name, at] as const))
@@ -46,15 +52,9 @@ export class PackageAssembler {
     }
 
     await fsPromises.mkdir(outputDir, { recursive: true })
-    const [newVersion] = await Promise.all([
-      versionSpecifier
-        ? await resolveVersion(subject.fromDir, closure.subjectPackageName, versionSpecifier)
-        : Promise.resolve(undefined),
-      (async () => {
-        const copiedFiles = await new FileCopier(packageMap).copy()
-        await new ImportRewriter(packageMap).rewriteAll(copiedFiles)
-      })(),
-    ])
+    const copiedFiles = await new FileCopier(packageMap).copy()
+    await new ImportRewriter(packageMap).rewriteAll(copiedFiles)
+
     // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
     rewritePackageJson(closure, newVersion, outputDir)
     return newVersion
