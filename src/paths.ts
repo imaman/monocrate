@@ -27,6 +27,14 @@ export namespace AbsolutePath {
   export function dirname(p: AbsolutePath): AbsolutePath {
     return AbsolutePath(path.dirname(p))
   }
+
+  /**
+   * Checks if `parent` contains `child` (or they are equal).
+   */
+  export function contains(parent: AbsolutePath, child: AbsolutePath): boolean {
+    const relative = path.relative(parent, child)
+    return !relative.startsWith('..') && !path.isAbsolute(relative)
+  }
 }
 
 /**
