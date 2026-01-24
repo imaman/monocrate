@@ -13,7 +13,7 @@ export interface MonocrateOptions {
    * Path to the package directory to assemble.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    */
-  pathToSubjectPackage: string
+  pathToSubjectPackage: string[] | string
   /**
    * Path to the output root directory where the assembly will be written.
    * The actual output will be placed in a subdirectory named after the package.
@@ -74,37 +74,87 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   if (!cwdExists) {
     throw new Error(`cwd does not exist: ${cwd}`)
   }
-
-  const sourceDir = AbsolutePath(path.resolve(cwd, options.pathToSubjectPackage))
-
-  const monorepoRoot = options.monorepoRoot
-    ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
-    : RepoExplorer.findMonorepoRoot(sourceDir)
-  const explorer = await RepoExplorer.create(monorepoRoot)
-
-  // Validate publish argument before any side effects
-  const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
-
   const outputRoot = AbsolutePath(
     options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
-  const assembler = new PackageAssembler(explorer, sourceDir, outputRoot)
-  const resolvedVersion = await assembler.computeNewVersion(versionSpecifier)
-  await assembler.assemble(resolvedVersion)
+  // Validate publish argument before any side effects
+  const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
 
-  if (versionSpecifier) {
-    await publish(assembler.getOutputDir(), monorepoRoot)
+  const sources = Array.isArray(options.pathToSubjectPackage)
+    ? options.pathToSubjectPackage
+    : [options.pathToSubjectPackage]
+
+  const sourceDirs = sources.map((at) => AbsolutePath(path.resolve(cwd, at)))
+  const sourceDir0 = sourceDirs.at(0)
+  if (!sourceDir0) {
+    throw new Error(`At least one package must be specified`)
   }
 
-  if (resolvedVersion !== undefined) {
-    if (options.outputFile) {
-      const outputFilePath = path.resolve(cwd, options.outputFile)
-      fsSync.writeFileSync(outputFilePath, resolvedVersion)
-    } else {
-      console.log(resolvedVersion)
+  const monorepoRoot = options.monorepoRoot
+    ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
+    : RepoExplorer.findMonorepoRoot(sourceDir0)
+  const explorer = await RepoExplorer.create(monorepoRoot)
+
+  const assemblers = sourceDirs.map((at) => new PackageAssembler(explorer, at, outputRoot))
+  const a0 = assemblers.at(0)
+  if (!a0) {
+    throw new Error(`Incosistency - could not find an assembler for the first package`)
+  }
+
+  const versions = (await Promise.all(assemblers.map((a) => a.computeNewVersion(versionSpecifier)))).flatMap((v) =>
+    v ? [v] : []
+  )
+  const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), '0.0.0')
+
+  for (const assembler of assemblers) {
+    await assembler.assemble(resolvedVersion)
+
+    if (versionSpecifier) {
+      await publish(assembler.getOutputDir(), monorepoRoot)
+    }
+
+    if (resolvedVersion !== '0.0.0') {
+      if (options.outputFile) {
+        const outputFilePath = path.resolve(cwd, options.outputFile)
+        fsSync.writeFileSync(outputFilePath, resolvedVersion)
+      } else {
+        console.log(resolvedVersion)
+      }
     }
   }
 
-  return { outputDir: assembler.getOutputDir(), resolvedVersion }
+  return { outputDir: a0.getOutputDir(), resolvedVersion }
+}
+
+function maxVersion(va: string, vb: string) {
+  const [a1, a2, a3] = parseVersion(va)
+  const [b1, b2, b3] = parseVersion(vb)
+
+  if (a1 !== b1) {
+    return a1 > b1 ? va : vb
+  }
+
+  if (a2 !== b2) {
+    return a2 > b2 ? va : vb
+  }
+
+  if (a3 !== b3) {
+    return a3 > b3 ? va : vb
+  }
+
+  return va
+}
+
+const parseVersion = (s: string): [number, number, number] => {
+  const [a, b, c] = s
+    .split('.')
+    .slice(0, 3)
+    .map(Number)
+    .filter((at) => Number.isInteger(at))
+  if (a === undefined || b === undefined || c === undefined) {
+    throw new Error(`Current version is ill-formatted: "${s}"`)
+  }
+
+  return [a, b, c]
 }
