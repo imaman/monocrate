@@ -235,11 +235,9 @@ describe('monocrate', () => {
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
         monorepoRoot,
       })
 
