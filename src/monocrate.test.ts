@@ -201,7 +201,7 @@ describe('monocrate', () => {
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: 'packages/app',
-          publis_h: false,
+          publish: false,
           bump: '2.8.512',
         })
       ).rejects.toThrow(`Unrecognized package source dir: "${monorepoRoot}/packages/app"`)
