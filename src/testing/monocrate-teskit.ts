@@ -66,21 +66,17 @@ export async function runMonocrate(monorepoRoot: string, sourcePackage: string, 
     monorepoRoot,
   })
 
-  // Find the nested directory (there should be exactly one subdirectory)
-  const entries = fs.readdirSync(outputDir)
-  const nestedDir = path.join(outputDir, entries[0] ?? '')
-
   let stdout = ''
   let stderr = ''
   try {
-    stdout = execSync(`node --enable-source-maps ${path.join(nestedDir, entryPoint)}`, {
+    stdout = execSync(`node --enable-source-maps ${path.join(outputDir, entryPoint)}`, {
       encoding: 'utf-8',
       stdio: 'pipe',
     })
   } catch (error) {
     stderr = (error as { stderr?: string }).stderr ?? stderr
   }
-  const output = unfolderify(nestedDir)
+  const output = unfolderify(outputDir)
 
   return { stdout, stderr, output }
 }
