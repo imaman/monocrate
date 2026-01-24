@@ -207,6 +207,7 @@ describe('monocrate', () => {
     })
 
     it('works with workspace object format (packages field)', async () => {
+      // 210
       const monorepoRoot = folderify({
         'package.json': { workspaces: { packages: ['packages/*'] } },
         'packages/app/package.json': makePackageJson({
