@@ -45,15 +45,15 @@ describe('monocrate', () => {
 `,
       })
 
-      const outputDir = createTempDir('monocrate-explicit-output-')
-      const result = await monocrate({
+      const outputRoot = createTempDir('monocrate-explicit-output-')
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
+        outputDir: outputRoot,
         monorepoRoot,
       })
 
-      expect(result.outputDir).toBe(outputDir)
+      expect(path.dirname(outputDir)).toBe(outputRoot)
     })
   })
 
@@ -71,13 +71,11 @@ describe('monocrate', () => {
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
 
-      const outputDir = createTempDir()
       const dir = createTempDir()
 
       const opts = {
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
         monorepoRoot,
         outputFile: path.join(dir, 'stdout'),
       }
@@ -132,11 +130,9 @@ describe('monocrate', () => {
         // No dist directory created - npm pack will still succeed with just package.json
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -153,12 +149,10 @@ describe('monocrate', () => {
         'packages/app/package.json': 'invalid json {{{',
       })
 
-      const outputDir = createTempDir('monocrate-output-')
       await expect(
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          outputDir,
           monorepoRoot,
         })
       ).rejects.toThrow('Unexpected token')
@@ -171,12 +165,10 @@ describe('monocrate', () => {
         'packages/app/package.json': { version: '1.0.0', main: 'dist/index.js' },
       })
 
-      const outputDir = createTempDir('monocrate-output-')
       await expect(
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          outputDir,
           monorepoRoot,
         })
       ).rejects.toThrow('Invalid package.json')
@@ -188,12 +180,10 @@ describe('monocrate', () => {
         // No packages/app/package.json
       })
 
-      const outputDir = createTempDir('monocrate-output-')
       await expect(
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          outputDir,
           monorepoRoot,
         })
       ).rejects.toThrow(`Could not find a monorepo package at ${monorepoRoot}/packages/app`)
@@ -245,11 +235,9 @@ describe('monocrate', () => {
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -278,11 +266,9 @@ describe('monocrate', () => {
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
 
-      const outputDir = createTempDir()
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -669,11 +655,9 @@ export declare const bar: typeof foo;
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -705,11 +689,9 @@ export const bar = 'bar';
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -738,11 +720,9 @@ export const bar = foo;
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -773,11 +753,9 @@ export const helper = foo + '-helper';
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -809,11 +787,9 @@ export const bar = foo + util;
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -861,11 +837,9 @@ export declare const bar: typeof foo;
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -894,11 +868,9 @@ export const result = helper;
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -936,11 +908,9 @@ export const result = helper;
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -967,11 +937,9 @@ export const foo = b.foo;
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -1036,11 +1004,9 @@ console.log('Hello from bin');
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -1069,11 +1035,9 @@ console.log('Hello from bin');
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -1204,11 +1168,9 @@ console.log('Hello from bin');
 `,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
-      await monocrate({
+      const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir,
         monorepoRoot,
       })
 
@@ -1238,12 +1200,10 @@ console.log('Hello from bin');
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
       await expect(
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          outputDir,
           monorepoRoot,
         })
       ).rejects.toThrow(
@@ -1267,12 +1227,10 @@ console.log('Hello from bin');
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
       await expect(
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          outputDir,
           monorepoRoot,
         })
       ).rejects.toThrow('  - lodash: ^3.10.0 (by @test/lib), ^4.17.0 (by @test/app)')
@@ -1317,12 +1275,10 @@ console.log('Hello from bin');
         'packages/level2/dist/index.js': `export function fromLevel2() { return 'level2'; }`,
       })
 
-      const outputDir = createTempDir('monocrate-output-')
       await expect(
         monocrate({
           cwd: monorepoRoot,
           pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          outputDir,
           monorepoRoot,
         })
       ).rejects.toThrow('  - zod: ^2.0.0 (by @test/level2), ^3.0.0 (by @test/app)')
