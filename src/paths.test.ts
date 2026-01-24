@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { AbsolutePath, RelativePath } from './paths.js'
 
+const { isUnder } = AbsolutePath
+
 describe('paths', () => {
   describe('AbsolutePath', () => {
     describe('creation', () => {
@@ -64,41 +66,17 @@ describe('paths', () => {
     })
 
     describe('isUnder', () => {
-      it('returns true when path is directly under base', () => {
-        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/project/packages'), AbsolutePath('/home/user/project'))).toBe(
-          true
-        )
-      })
+      it('checks if a path is under a base directory', () => {
+        const base = AbsolutePath('/home/user/project')
 
-      it('returns true when path is deeply nested under base', () => {
-        expect(
-          AbsolutePath.isUnder(
-            AbsolutePath('/home/user/project/packages/app/src'),
-            AbsolutePath('/home/user/project')
-          )
-        ).toBe(true)
-      })
+        expect(isUnder(AbsolutePath('/home/user/project/packages'), base)).toBe(true)
+        expect(isUnder(AbsolutePath('/home/user/project/packages/app/src'), base)).toBe(true)
+        expect(isUnder(AbsolutePath('/home/user/project'), base)).toBe(true)
 
-      it('returns true when path equals base', () => {
-        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/project'), AbsolutePath('/home/user/project'))).toBe(true)
-      })
-
-      it('returns false when path is outside base', () => {
-        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/other'), AbsolutePath('/home/user/project'))).toBe(false)
-      })
-
-      it('returns false when path is a sibling of base', () => {
-        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/sibling'), AbsolutePath('/home/user/project'))).toBe(false)
-      })
-
-      it('returns false when path is a parent of base', () => {
-        expect(AbsolutePath.isUnder(AbsolutePath('/home/user'), AbsolutePath('/home/user/project'))).toBe(false)
-      })
-
-      it('returns false when paths share a common prefix but are not related', () => {
-        expect(AbsolutePath.isUnder(AbsolutePath('/home/user/project-other'), AbsolutePath('/home/user/project'))).toBe(
-          false
-        )
+        expect(isUnder(AbsolutePath('/home/user/other'), base)).toBe(false)
+        expect(isUnder(AbsolutePath('/home/user/sibling'), base)).toBe(false)
+        expect(isUnder(AbsolutePath('/home/user'), base)).toBe(false)
+        expect(isUnder(AbsolutePath('/home/user/project-other'), base)).toBe(false)
       })
     })
   })
