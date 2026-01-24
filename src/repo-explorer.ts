@@ -25,7 +25,7 @@ export class RepoExplorer {
     const realMonorepoRoot = AbsolutePath(fs.realpathSync(monorepoRoot))
     for (const pkg of map.values()) {
       const realPkgPath = AbsolutePath(fs.realpathSync(pkg.path))
-      if (!AbsolutePath.isUnder(realPkgPath, realMonorepoRoot)) {
+      if (!AbsolutePath.contains(realMonorepoRoot, realPkgPath)) {
         throw new Error(
           `Package "${pkg.name}" is located at "${realPkgPath}" which is outside the monorepo root "${realMonorepoRoot}"`
         )

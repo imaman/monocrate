@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { AbsolutePath, RelativePath } from './paths.js'
 
-const { isUnder } = AbsolutePath
+const { contains } = AbsolutePath
 
 describe('paths', () => {
   describe('AbsolutePath', () => {
@@ -65,18 +65,18 @@ describe('paths', () => {
       })
     })
 
-    describe('isUnder', () => {
-      it('checks if child is under parent', () => {
+    describe('contains', () => {
+      it('checks if parent contains child', () => {
         const parent = AbsolutePath('/home/user/project')
 
-        expect(isUnder(AbsolutePath('/home/user/project/packages'), parent)).toBe(true)
-        expect(isUnder(AbsolutePath('/home/user/project/packages/app/src'), parent)).toBe(true)
-        expect(isUnder(AbsolutePath('/home/user/project'), parent)).toBe(true)
+        expect(contains(parent, AbsolutePath('/home/user/project/packages'))).toBe(true)
+        expect(contains(parent, AbsolutePath('/home/user/project/packages/app/src'))).toBe(true)
+        expect(contains(parent, AbsolutePath('/home/user/project'))).toBe(true)
 
-        expect(isUnder(AbsolutePath('/home/user/other'), parent)).toBe(false)
-        expect(isUnder(AbsolutePath('/home/user/sibling'), parent)).toBe(false)
-        expect(isUnder(AbsolutePath('/home/user'), parent)).toBe(false)
-        expect(isUnder(AbsolutePath('/home/user/project-other'), parent)).toBe(false)
+        expect(contains(parent, AbsolutePath('/home/user/other'))).toBe(false)
+        expect(contains(parent, AbsolutePath('/home/user/sibling'))).toBe(false)
+        expect(contains(parent, AbsolutePath('/home/user'))).toBe(false)
+        expect(contains(parent, AbsolutePath('/home/user/project-other'))).toBe(false)
       })
     })
   })

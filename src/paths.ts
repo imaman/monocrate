@@ -29,9 +29,9 @@ export namespace AbsolutePath {
   }
 
   /**
-   * Checks if `child` is under (or equal to) `parent`.
+   * Checks if `parent` contains `child` (or they are equal).
    */
-  export function isUnder(child: AbsolutePath, parent: AbsolutePath): boolean {
+  export function contains(parent: AbsolutePath, child: AbsolutePath): boolean {
     const relative = path.relative(parent, child)
     return !relative.startsWith('..') && !path.isAbsolute(relative)
   }
