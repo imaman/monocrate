@@ -63,7 +63,7 @@ describe('monocrate', () => {
     })
 
     it('writes resolved version to outputFile only when publishToVersion is set', async () => {
-      vi.spyOn(publishModule, 'publish').mockImplementation(() => {})
+      vi.spyOn(publishModule, 'publish').mockImplementation(async () => {})
 
       const monorepoRoot = folderify({
         'package.json': { workspaces: ['packages/*'] },

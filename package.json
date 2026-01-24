@@ -17,6 +17,7 @@
   "files": [
     "dist",
     "!dist/**/*.test.*",
+    "!dist/**/*.compilation-test.*",
     "!dist/testing/**"
   ],
   "scripts": {
@@ -73,6 +74,7 @@
     "esbuild": "^0.24.0",
     "glob": "^13.0.0",
     "resolve.exports": "^2.0.3",
+    "tinyexec": "^1.0.2",
     "ts-morph": "^27.0.2",
     "zod": "^4.3.5"
   }

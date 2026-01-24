@@ -1,44 +1,12 @@
-import { execFile } from 'node:child_process'
-import { z } from 'zod'
+import type { AbsolutePath } from './paths.js'
 import type { VersionSpecifier } from './version-specifier.js'
+import { NpmClient } from './npm-client.js'
 
-const NpmErrorResponse = z.object({
-  error: z.object({
-    code: z.string().optional(),
-    detail: z.string().optional(),
-  }),
-})
-
-async function getCurrentPublishedVersion(dir: string, packageName: string): Promise<string> {
-  const { error, stdout } = await new Promise<{ error: Error | undefined; stdout: string }>((resolve) => {
-    execFile('npm', ['view', '-s', '--json', packageName, 'version'], { cwd: dir }, (error, stdout) => {
-      resolve({ error: error ?? undefined, stdout })
-    })
-  })
-
-  const parsed: unknown = JSON.parse(stdout)
-
-  if (!error) {
-    if (typeof parsed !== 'string') {
-      throw new Error(`Unexpected response from npm view: ${stdout}`)
-    }
-    return parsed
-  }
-
-  const errorResult = NpmErrorResponse.safeParse(parsed)
-  if (errorResult.success) {
-    if (errorResult.data.error.code === 'E404') {
-      return '0.0.0'
-    }
-    throw new Error(
-      `npm view failed (${errorResult.data.error.code ?? '<No Error Code>'}): ${errorResult.data.error.detail ?? '<No Further Details>'}`
-    )
-  }
-
-  throw new Error(`Unexpected response from npm view: ${stdout}`)
+async function getCurrentPublishedVersion(dir: AbsolutePath, packageName: string): Promise<string> {
+  return (await new NpmClient().viewVersion(packageName, dir)) ?? '0.0.0'
 }
 
-export async function resolveVersion(dir: string, packageName: string, versionSpecifier: VersionSpecifier) {
+export async function resolveVersion(dir: AbsolutePath, packageName: string, versionSpecifier: VersionSpecifier) {
   if (versionSpecifier.tag === 'explicit') {
     return versionSpecifier.value
   }
