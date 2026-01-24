@@ -66,7 +66,7 @@ describe('multi-package versioning', () => {
       '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
       'packages/app/package.json': pj('mpv-app', '0.0.0', { dependencies: { 'mpv-lib': 'workspace:*' } }),
-      'packages/app/index.js': `import { getMessage } from 'mpv-lib'; export const run = () => getMessage();`,
+      'packages/app/index.js': `import { getMessage } from 'mpv-lib'; export const run = () => 'app:' + getMessage();`,
       'packages/lib/package.json': pj('mpv-lib', '0.0.0'),
       'packages/lib/index.js': `export const getMessage = () => 'original';`,
     })
@@ -96,7 +96,7 @@ describe('multi-package versioning', () => {
     // Step 4: Consuming app@2.0.0 should run the updated lib code
     expect(
       verdaccio.runConumser('mpv-app@2.0.0', `import { run } from 'mpv-app'; console.log(run())`)
-    ).toBe('updated')
+    ).toBe('app:updated')
 
     // Step 5: lib's version in registry should still be 1.0.0 (not republished)
     expect(verdaccio.runView('mpv-lib')).toMatchObject({ version: '1.0.0', versions: ['1.0.0'] })
