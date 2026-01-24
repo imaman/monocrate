@@ -3,8 +3,7 @@ import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { RepoExplorer } from './repo-explorer.js'
-import { computePackageClosure } from './compute-package-closure.js'
-import { assemble } from './assemble.js'
+import { PackageAssembler } from './assemble.js'
 import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
 import { AbsolutePath, RelativePath } from './paths.js'
@@ -91,9 +90,10 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
-  const closure = await computePackageClosure(sourceDir, monorepoRoot, explorer)
+  const assembler = new PackageAssembler(explorer, monorepoRoot, sourceDir)
+  const closure = await assembler.computeClosure()
   const outputDir = AbsolutePath.join(outputRoot, RelativePath(manglePackageName(closure.subjectPackageName)))
-  const resolvedVersion = await assemble(closure, outputDir, versionSpecifier)
+  const resolvedVersion = await assembler.assemble(closure, outputDir, versionSpecifier)
 
   if (versionSpecifier) {
     await publish(outputDir, monorepoRoot)
