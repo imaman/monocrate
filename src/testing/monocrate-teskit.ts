@@ -61,6 +61,7 @@ export async function runMonocrate(monorepoRoot: string, sourcePackage: string, 
     cwd: monorepoRoot,
     pathToSubjectPackage: path.join(monorepoRoot, sourcePackage),
     monorepoRoot,
+    bump: '2.8.512',
     publish: false,
   })
 
