@@ -57,26 +57,23 @@ export function makePackageJson(options: PackageJsonOptions): PackageJson {
 }
 
 export async function runMonocrate(monorepoRoot: string, sourcePackage: string, entryPoint = 'dist/index.js') {
-  const outputDir = createTempDir('monocrate-output-')
-
-  await monocrate({
+  const { outputDir: nestedDir } = await monocrate({
     cwd: monorepoRoot,
     pathToSubjectPackage: path.join(monorepoRoot, sourcePackage),
-    outputDir,
     monorepoRoot,
   })
 
   let stdout = ''
   let stderr = ''
   try {
-    stdout = execSync(`node --enable-source-maps ${path.join(outputDir, entryPoint)}`, {
+    stdout = execSync(`node --enable-source-maps ${path.join(nestedDir, entryPoint)}`, {
       encoding: 'utf-8',
       stdio: 'pipe',
     })
   } catch (error) {
     stderr = (error as { stderr?: string }).stderr ?? stderr
   }
-  const output = unfolderify(outputDir)
+  const output = unfolderify(nestedDir)
 
   return { stdout, stderr, output }
 }
