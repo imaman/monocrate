@@ -49,14 +49,18 @@ export interface MonocrateOptions {
 
 export interface MonocrateResult {
   /**
-   * The output directory path where the assembly was created.
+   * The output directory path where the assembly of the first package was created.
    */
   outputDir: string
   /**
-   * The new version (AKA: 'resolved version') for the package.
+   * The new version (AKA: 'resolved version') for the package (or packages).
    * Undefined when publishToVersion was not specified.
    */
   resolvedVersion: string | undefined
+  /**
+   *
+   */
+  summaries: { packageName: string; outputDir: string }[]
 }
 
 /**
@@ -127,5 +131,9 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     }
   }
 
-  return { outputDir: a0.getOutputDir(), resolvedVersion }
+  return {
+    outputDir: a0.getOutputDir(),
+    resolvedVersion,
+    summaries: assemblers.map((at) => ({ outputDir: at.getOutputDir(), packageName: at.pkgName })),
+  }
 }

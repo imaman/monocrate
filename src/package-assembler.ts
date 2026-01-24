@@ -11,7 +11,7 @@ import { computePackageClosure } from './compute-package-closure.js'
 import { manglePackageName } from './name-mangler.js'
 
 export class PackageAssembler {
-  private pkgName
+  readonly pkgName
   constructor(
     private readonly explorer: RepoExplorer,
     private readonly sourcerDir: AbsolutePath,
