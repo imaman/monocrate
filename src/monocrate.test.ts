@@ -37,7 +37,7 @@ describe('monocrate', () => {
       })
     })
 
-    it('uses provided outputDir when specified', async () => {
+    it('uses provided outputRoot when specified', async () => {
       const monorepoRoot = folderify({
         'package.json': { workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({ name: '@test/app' }),
@@ -49,7 +49,7 @@ describe('monocrate', () => {
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        outputDir: outputRoot,
+        outputRoot,
         monorepoRoot,
       })
 

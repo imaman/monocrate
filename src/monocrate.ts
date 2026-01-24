@@ -17,11 +17,12 @@ export interface MonocrateOptions {
    */
   pathToSubjectPackage: string
   /**
-   * Path to the output directory where the assembly will be written.
+   * Path to the output root directory where the assembly will be written.
+   * The actual output will be placed in a subdirectory named after the package.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    * If not specified, a dedicated temp directory is created under the system temp directory.
    */
-  outputDir?: string
+  outputRoot?: string
   /**
    * Path to the monorepo root directory.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
@@ -84,16 +85,16 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   // Validate publish argument before any side effects
   const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
 
-  const outputDir = AbsolutePath(
-    options.outputDir ? path.resolve(cwd, options.outputDir) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
+  const outputRoot = AbsolutePath(
+    options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
   const closure = await computePackageClosure(sourceDir, monorepoRoot)
-  const nestedOutputDir = AbsolutePath.join(outputDir, RelativePath(manglePackageName(closure.subjectPackageName)))
-  const resolvedVersion = await assemble(closure, nestedOutputDir, versionSpecifier)
+  const outputDir = AbsolutePath.join(outputRoot, RelativePath(manglePackageName(closure.subjectPackageName)))
+  const resolvedVersion = await assemble(closure, outputDir, versionSpecifier)
 
   if (versionSpecifier) {
-    await publish(nestedOutputDir, monorepoRoot)
+    await publish(outputDir, monorepoRoot)
   }
 
   if (resolvedVersion !== undefined) {
@@ -105,5 +106,5 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     }
   }
 
-  return { outputDir: nestedOutputDir, resolvedVersion }
+  return { outputDir, resolvedVersion }
 }

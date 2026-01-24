@@ -34,11 +34,11 @@ const command = defineCommand({
     },
   },
   async run({ args }) {
-    const outputDir = args.output || undefined
+    const outputRoot = args.output || undefined
     const outputFile = args['output-file'] || undefined
     await monocrate({
       pathToSubjectPackage: args.source,
-      ...(outputDir ? { outputDir } : {}),
+      ...(outputRoot ? { outputRoot } : {}),
       ...(outputFile ? { outputFile } : {}),
       monorepoRoot: args.root,
       publishToVersion: args.publish,
