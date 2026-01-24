@@ -11,15 +11,15 @@ import { computePackageClosure } from './compute-package-closure.js'
 import { manglePackageName } from './name-mangler.js'
 
 export class PackageAssembler {
-  private pkgName
+  private readonly pkgName: string
   constructor(
     private readonly explorer: RepoExplorer,
-    private readonly sourcerDir: AbsolutePath,
+    private readonly sourceDir: AbsolutePath,
     private readonly outputRoot: AbsolutePath
   ) {
-    const found = this.explorer.listPackages().find((at) => at.path === sourcerDir)
+    const found = this.explorer.listPackages().find((at) => at.path === sourceDir)
     if (!found) {
-      throw new Error(`Unrecognized package source dir: "${this.sourcerDir}"`)
+      throw new Error(`Unrecognized package source dir: "${this.sourceDir}"`)
     }
     this.pkgName = found.name
   }
@@ -28,9 +28,17 @@ export class PackageAssembler {
     return AbsolutePath.join(this.outputRoot, RelativePath(manglePackageName(this.pkgName)))
   }
 
+  getSourceDir() {
+    return this.sourceDir
+  }
+
+  getPackageName() {
+    return this.pkgName
+  }
+
   async computeNewVersion(versionSpecifier: VersionSpecifier | undefined) {
     return versionSpecifier
-      ? await resolveVersion(this.sourcerDir, this.pkgName, versionSpecifier)
+      ? await resolveVersion(this.sourceDir, this.pkgName, versionSpecifier)
       : Promise.resolve(undefined)
   }
 
