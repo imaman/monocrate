@@ -7,7 +7,8 @@ import { computePackageClosure } from './compute-package-closure.js'
 import { assemble } from './assemble.js'
 import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
-import { AbsolutePath } from './paths.js'
+import { AbsolutePath, RelativePath } from './paths.js'
+import { manglePackageName } from './name-mangler.js'
 
 export interface MonocrateOptions {
   /**
@@ -88,10 +89,11 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   )
 
   const closure = await computePackageClosure(sourceDir, monorepoRoot)
-  const resolvedVersion = await assemble(closure, outputDir, versionSpecifier)
+  const nestedOutputDir = AbsolutePath.join(outputDir, RelativePath(manglePackageName(closure.subjectPackageName)))
+  const resolvedVersion = await assemble(closure, nestedOutputDir, versionSpecifier)
 
   if (versionSpecifier) {
-    await publish(outputDir, monorepoRoot)
+    await publish(nestedOutputDir, monorepoRoot)
   }
 
   if (resolvedVersion !== undefined) {

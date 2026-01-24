@@ -9,6 +9,11 @@ import { folderify } from './testing/folderify.js'
 import { unfolderify } from './testing/unfolderify.js'
 import { createTempDir, makePackageJson, pj, runMonocrate } from './testing/monocrate-teskit.js'
 
+function getNestedDir(outputDir: string): string {
+  const entries = fs.readdirSync(outputDir)
+  return path.join(outputDir, entries[0] ?? '')
+}
+
 describe('monocrate', () => {
   describe('optional output directory', () => {
     it('creates a temp directory when outputDir is not provided', async () => {
@@ -29,8 +34,9 @@ describe('monocrate', () => {
       expect(result.outputDir).toContain('monocrate-')
       expect(fs.existsSync(result.outputDir)).toBe(true)
 
-      // Verify the assembly was created there
-      expect(unfolderify(result.outputDir)['package.json']).toEqual({
+      // Verify the assembly was created in a nested directory
+      const nestedDir = getNestedDir(result.outputDir)
+      expect(unfolderify(nestedDir)['package.json']).toEqual({
         name: '@test/app',
         version: '1.0.0',
         main: 'dist/index.js',
@@ -140,7 +146,7 @@ describe('monocrate', () => {
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
       // npm pack always includes package.json
       expect(output).toHaveProperty('package.json')
       // dist won't exist since it wasn't created
@@ -253,7 +259,7 @@ describe('monocrate', () => {
         monorepoRoot,
       })
 
-      const pkgJson = unfolderify(outputDir)['package.json'] as Record<string, unknown>
+      const pkgJson = unfolderify(getNestedDir(outputDir))['package.json'] as Record<string, unknown>
 
       expect(pkgJson.exports).toEqual({
         '.': {
@@ -286,7 +292,7 @@ describe('monocrate', () => {
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
       const pkgJson = output['package.json'] as Record<string, unknown>
 
       expect(pkgJson.description).toBe('Test package')
@@ -677,7 +683,7 @@ export declare const bar: typeof foo;
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
 
       console.error(JSON.stringify(output, null, 2))
       // Verify .js file has rewritten import
@@ -713,7 +719,7 @@ export const bar = 'bar';
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
 
       // Verify export declarations have rewritten module specifiers
       const indexJs = output['dist/index.js'] as string
@@ -746,7 +752,7 @@ export const bar = foo;
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
       const indexJs = output['dist/index.js'] as string
 
       // Third-party imports should be unchanged
@@ -781,7 +787,7 @@ export const helper = foo + '-helper';
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
 
       // Root level file should have '../deps/...'
       expect(output['dist/index.js']).toContain('../deps/packages/b/dist/index.js')
@@ -817,7 +823,7 @@ export const bar = foo + util;
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
       const indexJs = output['dist/index.js'] as string
 
       // Both imports should be rewritten with correct paths
@@ -869,7 +875,7 @@ export declare const bar: typeof foo;
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
 
       // Verify root structure
       expect(output).toHaveProperty('package.json')
@@ -902,7 +908,7 @@ export const result = helper;
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
       const indexJs = output['dist/index.js'] as string
 
       // Self-import should be rewritten to relative path
@@ -944,7 +950,7 @@ export const result = helper;
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
       const indexJs = output['dist/index.js'] as string
 
       // Subpath import should be rewritten with preserved subpath
@@ -975,7 +981,7 @@ export const foo = b.foo;
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
       const indexJs = output['dist/index.js'] as string
 
       // Dynamic import should be rewritten
@@ -1044,7 +1050,7 @@ console.log('Hello from bin');
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
 
       // Files from `files` property should be copied
       expect(output).toHaveProperty('dist/index.js')
@@ -1077,7 +1083,7 @@ console.log('Hello from bin');
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
 
       expect(output).toHaveProperty('dist/index.js')
       expect(output).toHaveProperty('types.d.ts')
@@ -1212,7 +1218,7 @@ console.log('Hello from bin');
         monorepoRoot,
       })
 
-      const output = unfolderify(outputDir)
+      const output = unfolderify(getNestedDir(outputDir))
       const pkgJson = output['package.json'] as Record<string, unknown>
 
       expect(pkgJson.files).toEqual(['dist', 'bin'])
