@@ -9,11 +9,13 @@ import { folderify } from './testing/folderify.js'
 import { unfolderify } from './testing/unfolderify.js'
 import { createTempDir, makePackageJson, pj, runMonocrate } from './testing/monocrate-teskit.js'
 
+const name = 'root-package'
+
 describe('monocrate', () => {
   describe('optional output directory', () => {
     it('creates a temp directory when outputDir is not provided', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({ name: '@test/app' }),
         'packages/app/dist/index.js': `export const foo = 'foo';
 `,
@@ -23,6 +25,8 @@ describe('monocrate', () => {
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
+        publish: false,
+        bump: '2.8.512',
       })
 
       // Verify a temp directory was created
@@ -32,14 +36,14 @@ describe('monocrate', () => {
       // Verify the assembly was created there
       expect(unfolderify(result.outputDir)['package.json']).toEqual({
         name: '@test/app',
-        version: '1.0.0',
+        version: '2.8.512',
         main: 'dist/index.js',
       })
     })
 
     it('uses provided outputRoot when specified', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({ name: '@test/app' }),
         'packages/app/dist/index.js': `export const foo = 'foo';
 `,
@@ -51,6 +55,8 @@ describe('monocrate', () => {
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         outputRoot,
         monorepoRoot,
+        publish: false,
+        bump: '2.8.512',
       })
 
       expect(path.dirname(outputDir)).toBe(outputRoot)
@@ -66,7 +72,7 @@ describe('monocrate', () => {
       vi.spyOn(publishModule, 'publish').mockImplementation(async () => {})
 
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({ name: '@test/app' }),
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
@@ -78,12 +84,14 @@ describe('monocrate', () => {
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
         outputFile: path.join(dir, 'stdout'),
+        publish: false,
+        bump: '2.8.512',
       }
 
-      expect(await monocrate(opts)).toMatchObject({ resolvedVersion: undefined })
-      expect(unfolderify(dir)).toEqual({})
+      expect(await monocrate(opts)).toMatchObject({ resolvedVersion: '2.8.512' })
+      expect(unfolderify(dir)).toEqual({ stdout: '2.8.512' })
 
-      expect(await monocrate({ ...opts, publishToVersion: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
+      expect(await monocrate({ ...opts, bump: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
       expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
     }, 30000)
   })
@@ -125,15 +133,17 @@ describe('monocrate', () => {
   describe('error handling', () => {
     it('handles package with no dist directory (npm pack includes only package.json)', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({ name: '@test/app' }),
         // No dist directory created - npm pack will still succeed with just package.json
       })
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+        pathToSubjectPackage: 'packages/app',
         monorepoRoot,
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -145,22 +155,24 @@ describe('monocrate', () => {
 
     it('throws when package.json is invalid JSON syntax', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': 'invalid json {{{',
       })
 
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+          pathToSubjectPackage: 'packages/app',
           monorepoRoot,
+          publish: false,
+          bump: '2.8.512',
         })
       ).rejects.toThrow('Unexpected token')
     })
 
     it('throws when package.json fails schema validation', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         // Missing required 'name' field
         'packages/app/package.json': { version: '1.0.0', main: 'dist/index.js' },
       })
@@ -168,23 +180,26 @@ describe('monocrate', () => {
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+          pathToSubjectPackage: 'packages/app',
           monorepoRoot,
+          publish: false,
+          bump: '2.8.512',
         })
       ).rejects.toThrow('Invalid package.json')
     })
 
     it('throws when source package directory has no package.json', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         // No packages/app/package.json
       })
 
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          monorepoRoot,
+          pathToSubjectPackage: 'packages/app',
+          publish: false,
+          bump: '2.8.512',
         })
       ).rejects.toThrow(`Unrecognized package source dir: "${monorepoRoot}/packages/app"`)
     })
@@ -205,7 +220,7 @@ describe('monocrate', () => {
 
       expect(output['package.json']).toEqual({
         name: '@test/app',
-        version: '1.0.0',
+        version: '2.8.512',
         main: 'dist/index.js',
       })
 
@@ -216,7 +231,7 @@ describe('monocrate', () => {
   describe('package.json transformation', () => {
     it('preserves exports field in package.json', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({
           name: '@test/app',
           transform: (pkg) => {
@@ -237,8 +252,9 @@ describe('monocrate', () => {
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const pkgJson = unfolderify(outputDir)['package.json'] as Record<string, unknown>
@@ -253,7 +269,7 @@ describe('monocrate', () => {
 
     it('preserves metadata fields like description and keywords', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -268,8 +284,9 @@ describe('monocrate', () => {
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -285,7 +302,7 @@ describe('monocrate', () => {
   describe('monocrate e2e', () => {
     it('assembles a simple package with an in-repo dependency', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -311,11 +328,11 @@ describe('monocrate', () => {
         'packages/lib/dist/index.d.ts': `export declare function greet(name: string): string;`,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '4.256.16384' })
 
       expect(output['package.json']).toEqual({
         name: '@test/app',
-        version: '1.0.0',
+        version: '4.256.16384',
         main: 'dist/index.js',
         types: 'dist/index.d.ts',
         dependencies: {
@@ -329,7 +346,7 @@ describe('monocrate', () => {
 
     it('assembles only the requested package when monorepo has multiple packages', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         // First app with its own lib and external dep
         'packages/app-alpha/package.json': {
           name: '@test/app-alpha',
@@ -373,11 +390,11 @@ describe('monocrate', () => {
       })
 
       // Assemble only app-alpha
-      const alpha = await runMonocrate(monorepoRoot, 'packages/app-alpha')
+      const alpha = await runMonocrate(monorepoRoot, 'packages/app-alpha', { bump: '4.16.64' })
 
       expect(alpha.output['package.json']).toEqual({
         name: '@test/app-alpha',
-        version: '1.0.0',
+        version: '4.16.64',
         main: 'dist/index.js',
         dependencies: {
           chalk: '^5.0.0',
@@ -387,11 +404,11 @@ describe('monocrate', () => {
       expect(alpha.stdout.trim()).toBe('Alpha: ALPHA')
 
       // Assemble only app-beta
-      const beta = await runMonocrate(monorepoRoot, 'packages/app-beta')
+      const beta = await runMonocrate(monorepoRoot, 'packages/app-beta', { bump: '5.25.125' })
 
       expect(beta.output['package.json']).toEqual({
         name: '@test/app-beta',
-        version: '2.0.0',
+        version: '5.25.125',
         main: 'dist/index.js',
         dependencies: {
           zod: '^3.0.0',
@@ -403,7 +420,7 @@ describe('monocrate', () => {
 
     it('assembles deep chain of in-repo dependencies', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -472,11 +489,11 @@ export function fromLevel3() {
 `,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '4.16.64' })
 
       expect(output['package.json']).toEqual({
         name: '@test/app',
-        version: '1.0.0',
+        version: '4.16.64',
         main: 'dist/index.js',
         dependencies: {
           express: '^4.18.0',
@@ -522,11 +539,11 @@ console.log(pnpmGreet());
 `,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '9.81.729' })
 
       expect(output['package.json']).toEqual({
         name: '@test/pnpm-app',
-        version: '1.0.0',
+        version: '9.81.729',
         main: 'dist/index.js',
         dependencies: {
           chalk: '^5.0.0',
@@ -539,7 +556,7 @@ console.log(pnpmGreet());
 
     it('excludes devDependencies from the output', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -573,11 +590,11 @@ console.log(greet('World'));
 `,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '3.9.27' })
 
       expect(output['package.json']).toEqual({
         name: '@test/app',
-        version: '1.0.0',
+        version: '3.9.27',
         main: 'dist/index.js',
         dependencies: {
           chalk: '^5.0.0',
@@ -597,7 +614,7 @@ console.log(greet('World'));
 }
 `
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -628,7 +645,7 @@ throwError();
 
     it('rewrites imports in both .js and .d.ts files', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/a/package.json': makePackageJson({
           name: '@myorg/a',
           dependencies: { '@myorg/b': '*', lodash: '^4.0.0' },
@@ -657,8 +674,9 @@ export declare const bar: typeof foo;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/a',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -675,7 +693,7 @@ export declare const bar: typeof foo;
 
     it('rewrites export declarations', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/a/package.json': makePackageJson({
           name: '@myorg/a',
           dependencies: { '@myorg/b': '*' },
@@ -691,8 +709,9 @@ export const bar = 'bar';
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/a',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -705,7 +724,7 @@ export const bar = 'bar';
 
     it('leaves third-party imports unchanged', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/a/package.json': makePackageJson({
           name: '@myorg/a',
           dependencies: { '@myorg/b': '*', lodash: '^4.0.0' },
@@ -722,8 +741,9 @@ export const bar = foo;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/a',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -736,7 +756,7 @@ export const bar = foo;
 
     it('rewrites imports in nested files at different depths', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/a/package.json': makePackageJson({
           name: '@myorg/a',
           dependencies: { '@myorg/b': '*' },
@@ -755,8 +775,9 @@ export const helper = foo + '-helper';
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/a',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -789,8 +810,9 @@ export const bar = foo + util;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/a',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -839,8 +861,9 @@ export declare const bar: typeof foo;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/a',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -859,7 +882,7 @@ export declare const bar: typeof foo;
 
     it('handles source package importing itself by name', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/a/package.json': makePackageJson({ name: '@myorg/a' }),
         'packages/a/dist/index.js': `import { helper } from '@myorg/a/utils/helper';
 export const result = helper;
@@ -870,8 +893,9 @@ export const result = helper;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/a',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -884,7 +908,7 @@ export const result = helper;
 
     it('handles subpath imports like @myorg/b/submodule', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/a/package.json': makePackageJson({
           name: '@myorg/a',
           dependencies: { '@myorg/b': '*' },
@@ -910,8 +934,9 @@ export const result = helper;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/a',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -924,7 +949,7 @@ export const result = helper;
 
     it('handles dynamic imports', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/a/package.json': makePackageJson({
           name: '@myorg/a',
           dependencies: { '@myorg/b': '*' },
@@ -939,8 +964,9 @@ export const foo = b.foo;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/a'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/a',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -953,7 +979,7 @@ export const foo = b.foo;
 
     it('handles cross-dependency imports between in-repo deps', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({
           name: '@myorg/app',
           dependencies: { '@myorg/lib-a': '*' },
@@ -988,7 +1014,7 @@ export const a = 'a-' + b;
   describe('files property support', () => {
     it('uses files property to determine what to copy', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -1006,8 +1032,9 @@ console.log('Hello from bin');
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -1022,7 +1049,7 @@ console.log('Hello from bin');
 
     it('copies files at package root when specified in files', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -1037,8 +1064,9 @@ console.log('Hello from bin');
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -1049,7 +1077,7 @@ console.log('Hello from bin');
 
     it('uses files property for in-repo dependencies too', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -1068,14 +1096,14 @@ console.log('Hello from bin');
         'packages/lib/src/index.ts': `// Source should not be copied`,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '3.9.27' })
 
       expect(output).toMatchObject({
         'dist/index.js': `import { greet } from '../deps/packages/lib/dist/index.js'; console.log(greet());`,
         'package.json': {
           main: 'dist/index.js',
           name: '@test/app',
-          version: '1.0.0',
+          version: '3.9.27',
         },
         'deps/packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
         'deps/packages/lib/extra/utils.js': `export const helper = 'helper';`,
@@ -1091,7 +1119,7 @@ console.log('Hello from bin');
 
     it('falls back to dist dir when files property is not specified', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -1113,7 +1141,7 @@ console.log('Hello from bin');
 
     it('handles non-standard output directory specified in main', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -1124,7 +1152,7 @@ console.log('Hello from bin');
 `,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', 'lib/index.js')
+      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { entryPoint: 'lib/index.js' })
 
       expect(output).toHaveProperty('lib/index.js')
       expect(stdout.trim()).toBe('Hello from lib')
@@ -1132,7 +1160,7 @@ console.log('Hello from bin');
 
     it('skips non-existent entries in files array gracefully', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -1155,7 +1183,7 @@ console.log('Hello from bin');
 
     it('preserves files property in output package.json', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': {
           name: '@test/app',
           version: '1.0.0',
@@ -1170,8 +1198,9 @@ console.log('Hello from bin');
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-        monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '2.8.512',
       })
 
       const output = unfolderify(outputDir)
@@ -1187,7 +1216,7 @@ console.log('Hello from bin');
   describe('version conflict detection', () => {
     it('throws with detailed error message when packages require different versions', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({
           name: '@test/app',
           dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.0' },
@@ -1203,8 +1232,9 @@ console.log('Hello from bin');
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          monorepoRoot,
+          pathToSubjectPackage: 'packages/app',
+          publish: false,
+          bump: '2.8.512',
         })
       ).rejects.toThrow(
         'Third-party dependency version conflicts detected:\n' +
@@ -1214,7 +1244,7 @@ console.log('Hello from bin');
 
     it('lists all conflicting dependencies when multiple conflicts exist', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({
           name: '@test/app',
           dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.0', chalk: '^5.0.0' },
@@ -1230,15 +1260,16 @@ console.log('Hello from bin');
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          monorepoRoot,
+          pathToSubjectPackage: 'packages/app',
+          publish: false,
+          bump: '2.8.512',
         })
       ).rejects.toThrow('  - lodash: ^3.10.0 (by @test/lib), ^4.17.0 (by @test/app)')
     })
 
     it('allows same dependency with identical versions across packages', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({
           name: '@test/app',
           dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.21' },
@@ -1257,7 +1288,7 @@ console.log('Hello from bin');
 
     it('detects conflicts in deep dependency chains', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({
           name: '@test/app',
           dependencies: { '@test/level1': 'workspace:*', zod: '^3.0.0' },
@@ -1278,8 +1309,9 @@ console.log('Hello from bin');
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
-          monorepoRoot,
+          pathToSubjectPackage: 'packages/app',
+          publish: false,
+          bump: '2.8.512',
         })
       ).rejects.toThrow('  - zod: ^2.0.0 (by @test/level2), ^3.0.0 (by @test/app)')
     })
@@ -1288,7 +1320,7 @@ console.log('Hello from bin');
   describe('.npmrc file handling', () => {
     it('includes .npmrc file when present in package directory', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': makePackageJson({ name: '@test/app' }),
         'packages/app/dist/index.js': `console.log('Hello');`,
         'packages/app/.npmrc': 'registry=https://custom.registry.com',
@@ -1301,7 +1333,7 @@ console.log('Hello from bin');
 
     it('does not fail when .npmrc is not present', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': pj('app'),
         'packages/app/dist/index.js': `export function whatever() {}`,
       })
@@ -1310,7 +1342,7 @@ console.log('Hello from bin');
 
     it('includes .npmrc from in-repo dependencies', async () => {
       const monorepoRoot = folderify({
-        'package.json': { workspaces: ['packages/*'] },
+        'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': pj('app', undefined, { dependencies: { lib: 'workspace:*' } }),
         'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
         'packages/lib/package.json': pj('lib'),

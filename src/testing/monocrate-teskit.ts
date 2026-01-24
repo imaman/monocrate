@@ -56,12 +56,16 @@ export function makePackageJson(options: PackageJsonOptions): PackageJson {
   return pkg
 }
 
-export async function runMonocrate(monorepoRoot: string, sourcePackage: string, entryPoint = 'dist/index.js') {
+export async function runMonocrate(
+  monorepoRoot: string,
+  sourcePackage: string,
+  { entryPoint = 'dist/index.js', bump = '2.8.512' }: { entryPoint?: string; bump?: string } = {}
+) {
   const { outputDir } = await monocrate({
     cwd: monorepoRoot,
     pathToSubjectPackage: path.join(monorepoRoot, sourcePackage),
     monorepoRoot,
-    bump: '2.8.512',
+    bump,
     publish: false,
   })
 
