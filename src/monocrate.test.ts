@@ -188,6 +188,7 @@ describe('monocrate', () => {
       ).rejects.toThrow('Invalid package.json')
     })
 
+    // +1
     it('throws when source package directory has no package.json', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
