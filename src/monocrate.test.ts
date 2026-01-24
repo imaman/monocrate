@@ -218,6 +218,7 @@ describe('monocrate', () => {
 
       const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
 
+      // 1
       expect(output['package.json']).toEqual({
         name: '@test/app',
         version: '2.8.512',
