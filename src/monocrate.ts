@@ -146,11 +146,8 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     closure: PackageClosure
   }
   const subjects: SubjectInfo[] = await Promise.all(
-    sourceDirs.map(async (sourceDir, i) => {
-      const inputPath = subjectPaths[i]
-      if (inputPath === undefined) {
-        throw new Error('Internal error: inputPath is undefined')
-      }
+    subjectPaths.map(async (inputPath) => {
+      const sourceDir = AbsolutePath(path.resolve(cwd, inputPath))
       const closure = await computePackageClosure(sourceDir, monorepoRoot)
       return { inputPath, sourceDir, closure }
     })
