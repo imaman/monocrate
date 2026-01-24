@@ -189,6 +189,7 @@ describe('monocrate', () => {
     })
 
     // +1
+    // Y
     it('throws when source package directory has no package.json', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
