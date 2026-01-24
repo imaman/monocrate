@@ -81,6 +81,9 @@ describe('multi-package versioning', () => {
 
     expect(verdaccio.runView('mpv-app')).toMatchObject({ version: '1.0.0' })
     expect(verdaccio.runView('mpv-lib')).toMatchObject({ version: '1.0.0' })
+    expect(
+      verdaccio.runConumser('mpv-app@1.0.0', `import { run } from 'mpv-app'; console.log(run())`)
+    ).toBe('app:original')
 
     // Step 2: Update lib's code
     fs.writeFileSync(path.join(monorepoRoot, 'packages/lib/index.js'), `export const getMessage = () => 'updated';`)
