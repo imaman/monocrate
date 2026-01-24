@@ -7,13 +7,14 @@ import { PackageAssembler } from './package-assembler.js'
 import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
 import { AbsolutePath } from './paths.js'
+import { maxVersion } from './resolve-version.js'
 
 export interface MonocrateOptions {
   /**
-   * Path to the package directory to assemble.
+   * Paths to the directories of the various package to assemble. If a string, it is transformed to a single element array.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    */
-  pathToSubjectPackage: string
+  pathToSubjectPackage: string[] | string
   /**
    * Path to the output root directory where the assembly will be written.
    * The actual output will be placed in a subdirectory named after the package.
@@ -28,9 +29,12 @@ export interface MonocrateOptions {
    */
   monorepoRoot?: string
   /**
-   * Publish the assembly to npm after building.
+   * Publish the assemblies to npm after building.
    * Accepts either an explicit semver version (e.g., "1.2.3") or an increment keyword ("patch", "minor", "major").
-   * When specified, the assembly is published to npm with the resolved version.
+   * When specified, the assembly is published to npm with the resolved version. The resolved version is either this
+   * value (if it is an explicit semver value) or is obtained by finding current version of all the packages to publish,
+   * finding the highest version of these, and then applying the increment depicted by this value.
+   *
    * If not specified, no publishing occurs.
    */
   publishToVersion?: string
@@ -48,14 +52,18 @@ export interface MonocrateOptions {
 
 export interface MonocrateResult {
   /**
-   * The output directory path where the assembly was created.
+   * The output directory path where the assembly of the first package was created.
    */
   outputDir: string
   /**
-   * The new version (AKA: 'resolved version') for the package.
+   * The new version (AKA: 'resolved version') for the package (or packages).
    * Undefined when publishToVersion was not specified.
    */
   resolvedVersion: string | undefined
+  /**
+   * Details about each individual package that was assembled/published.
+   */
+  summaries: { packageName: string; outputDir: string }[]
 }
 
 /**
@@ -74,27 +82,47 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   if (!cwdExists) {
     throw new Error(`cwd does not exist: ${cwd}`)
   }
-
-  const sourceDir = AbsolutePath(path.resolve(cwd, options.pathToSubjectPackage))
-
-  const monorepoRoot = options.monorepoRoot
-    ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
-    : RepoExplorer.findMonorepoRoot(sourceDir)
-  const explorer = await RepoExplorer.create(monorepoRoot)
-
-  // Validate publish argument before any side effects
-  const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
-
   const outputRoot = AbsolutePath(
     options.outputRoot ? path.resolve(cwd, options.outputRoot) : await fs.mkdtemp(path.join(os.tmpdir(), 'monocrate-'))
   )
 
-  const assembler = new PackageAssembler(explorer, sourceDir, outputRoot)
-  const resolvedVersion = await assembler.computeNewVersion(versionSpecifier)
-  await assembler.assemble(resolvedVersion)
+  // Validate publish argument before any side effects
+  const versionSpecifier = parseVersionSpecifier(options.publishToVersion)
 
-  if (versionSpecifier) {
-    await publish(assembler.getOutputDir(), monorepoRoot)
+  const sources = Array.isArray(options.pathToSubjectPackage)
+    ? options.pathToSubjectPackage
+    : [options.pathToSubjectPackage]
+
+  const sourceDirs = sources.map((at) => AbsolutePath(path.resolve(cwd, at)))
+  const sourceDir0 = sourceDirs.at(0)
+  if (!sourceDir0) {
+    throw new Error(`At least one package must be specified`)
+  }
+
+  const monorepoRoot = options.monorepoRoot
+    ? AbsolutePath(path.resolve(cwd, options.monorepoRoot))
+    : RepoExplorer.findMonorepoRoot(sourceDir0)
+  const explorer = await RepoExplorer.create(monorepoRoot)
+
+  const assemblers = sourceDirs.map((at) => new PackageAssembler(explorer, at, outputRoot))
+  const a0 = assemblers.at(0)
+  if (!a0) {
+    throw new Error(`Incosistency - could not find an assembler for the first package`)
+  }
+
+  const versions = (await Promise.all(assemblers.map((a) => a.computeNewVersion(versionSpecifier)))).flatMap((v) =>
+    v ? [v] : []
+  )
+
+  const v0 = versions.at(0)
+  const resolvedVersion = v0 ? versions.reduce((soFar, curr) => maxVersion(soFar, curr), v0) : undefined
+
+  for (const assembler of assemblers) {
+    await assembler.assemble(resolvedVersion)
+
+    if (versionSpecifier) {
+      await publish(assembler.getOutputDir(), monorepoRoot)
+    }
   }
 
   if (resolvedVersion !== undefined) {
@@ -106,5 +134,9 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     }
   }
 
-  return { outputDir: assembler.getOutputDir(), resolvedVersion }
+  return {
+    outputDir: a0.getOutputDir(),
+    resolvedVersion,
+    summaries: assemblers.map((at) => ({ outputDir: at.getOutputDir(), packageName: at.pkgName })),
+  }
 }
