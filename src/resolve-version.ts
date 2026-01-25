@@ -1,17 +1,26 @@
 import type { AbsolutePath } from './paths.js'
 import type { VersionSpecifier } from './version-specifier.js'
-import { NpmClient } from './npm-client.js'
+import type { NpmClient } from './npm-client.js'
 
-async function getCurrentPublishedVersion(dir: AbsolutePath, packageName: string): Promise<string> {
-  return (await new NpmClient().viewVersion(packageName, dir)) ?? '0.0.0'
+async function getCurrentPublishedVersion(
+  npmClient: NpmClient,
+  dir: AbsolutePath,
+  packageName: string
+): Promise<string> {
+  return (await npmClient.viewVersion(packageName, dir)) ?? '0.0.0'
 }
 
-export async function resolveVersion(dir: AbsolutePath, packageName: string, versionSpecifier: VersionSpecifier) {
+export async function resolveVersion(
+  npmClient: NpmClient,
+  dir: AbsolutePath,
+  packageName: string,
+  versionSpecifier: VersionSpecifier
+) {
   if (versionSpecifier.tag === 'explicit') {
     return versionSpecifier.value
   }
 
-  const currentVersion = await getCurrentPublishedVersion(dir, packageName)
+  const currentVersion = await getCurrentPublishedVersion(npmClient, dir, packageName)
   const nums = parseVersion(currentVersion)
   const indexToIncrement = { major: 0, minor: 1, patch: 2 }[versionSpecifier.tag]
   return nums.map((n, i) => (i < indexToIncrement ? n : i === indexToIncrement ? n + 1 : 0)).join('.')

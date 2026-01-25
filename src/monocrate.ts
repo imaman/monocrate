@@ -8,6 +8,7 @@ import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
 import { AbsolutePath } from './paths.js'
 import { maxVersion } from './resolve-version.js'
+import { NpmClient } from './npm-client.js'
 
 export interface MonocrateOptions {
   /**
@@ -109,7 +110,8 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     : RepoExplorer.findMonorepoRoot(sourceDir0)
   const explorer = await RepoExplorer.create(monorepoRoot)
 
-  const assemblers = sourceDirs.map((at) => new PackageAssembler(explorer, at, outputRoot))
+  const npmClient = new NpmClient()
+  const assemblers = sourceDirs.map((at) => new PackageAssembler(npmClient, explorer, at, outputRoot))
   const a0 = assemblers.at(0)
   if (!a0) {
     throw new Error(`Incosistency - could not find an assembler for the first package`)
