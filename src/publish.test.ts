@@ -237,10 +237,10 @@ describe('npm publishing with Verdaccio', () => {
     const monorepoRoot = folderify({
       '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
-      'packages/calculator/package.json': pj('calculator', '1.0.0', { main: 'index.mjs' }),
-      'packages/calculator/index.mjs': `//`,
+      'packages/calculator/package.json': pj('calculator', '1.0.0'),
+      'packages/calculator/dist/index.js': `//`,
     })
-    const indexPath = path.join(monorepoRoot, 'packages/calculator/index.mjs')
+    const indexPath = path.join(monorepoRoot, 'packages/calculator/dist/index.js')
 
     const opts = {
       cwd: monorepoRoot,
