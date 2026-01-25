@@ -1,42 +1,44 @@
+import { createRequire } from 'node:module'
 import { defineCommand, runMain } from 'citty'
 import type { MonocrateOptions } from './monocrate.js'
 import { monocrate } from './monocrate.js'
 
+const require = createRequire(import.meta.url)
+const pkg = require('../package.json') as { version: string }
+
 const cliArgsDefs = {
   packages: {
     type: 'positional' as const,
-    description:
-      'Package directories to assemble (absolute or relative). Specify one or more packages from your monorepo to bundle with their in-repo dependencies.',
+    description: 'Package directories to assemble',
     required: true,
   },
   bump: {
     type: 'string' as const,
-    description:
-      'Version specifier: explicit semver (1.2.3) or increment (patch|minor|major). For increments, finds the highest current version across all packages and bumps it. Defaults to minor.',
+    description: 'Version or increment (patch/minor/major)',
+    valueHint: 'version',
     alias: 'b',
   },
   output: {
     type: 'string' as const,
-    description:
-      'Output root directory; assembly placed in package-named subdirectory. Defaults to a temp directory. Useful for inspecting the assembly before publishing or for manual publishing.',
+    description: 'Output directory for assembled packages',
+    valueHint: 'dir',
     alias: 'o',
   },
   root: {
     type: 'string' as const,
-    description:
-      'Monorepo root directory. Auto-detected by searching for a package.json with workspaces. Specify explicitly if auto-detection fails or your structure is non-standard.',
+    description: 'Monorepo root (auto-detected if omitted)',
+    valueHint: 'dir',
     alias: 'r',
   },
-  'output-file': {
+  report: {
     type: 'string' as const,
-    description:
-      'Write the resolved version to a file instead of stdout. Useful in CI/CD pipelines to capture the published version for downstream steps.',
-    alias: 'f',
+    description: 'Write report to file',
+    valueHint: 'path',
   },
   'mirror-to': {
     type: 'string' as const,
-    description:
-      'Mirror package sources to this directory (committed files from HEAD only; fails if untracked files exist). Primary use case: copying source code from a private monorepo to a public mirror repository for open-sourced packages.',
+    description: 'Mirror source files to directory',
+    valueHint: 'dir',
     alias: 'm',
   },
 }
@@ -46,7 +48,7 @@ interface CliArgs {
   output?: string
   root?: string
   bump?: string
-  'output-file'?: string
+  report?: string
   'mirror-to'?: string
 }
 
@@ -58,7 +60,7 @@ function buildOptions(args: CliArgs, publish: boolean): MonocrateOptions {
     monorepoRoot: args.root,
     bump: args.bump,
     publish,
-    outputFile: args['output-file'],
+    report: args.report,
     cwd: process.cwd(),
     mirrorTo: args['mirror-to'],
   }
@@ -74,7 +76,7 @@ function extractPackages(args: string[]): string[] {
 const prepareCommand = defineCommand({
   meta: {
     name: 'prepare',
-    description: 'Assemble packages for publishing without actually publishing',
+    description: 'Assemble packages without publishing',
   },
   args: cliArgsDefs,
   async run({ args }) {
@@ -85,7 +87,7 @@ const prepareCommand = defineCommand({
 const publishCommand = defineCommand({
   meta: {
     name: 'publish',
-    description: 'Assemble and publish packages to npm',
+    description: 'Assemble packages and publish to npm',
   },
   args: cliArgsDefs,
   async run({ args }) {
@@ -96,6 +98,7 @@ const publishCommand = defineCommand({
 const mainCommand = defineCommand({
   meta: {
     name: 'monocrate',
+    version: pkg.version,
     description: 'Assemble and publish monorepo packages to npm',
   },
   subCommands: {

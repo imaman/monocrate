@@ -62,12 +62,12 @@ describe('monocrate', () => {
     })
   })
 
-  describe('output file option', () => {
+  describe('report option', () => {
     afterEach(() => {
       vi.restoreAllMocks()
     })
 
-    it('writes resolved version to outputFile only when publishToVersion is set', async () => {
+    it('writes resolved version to report file when specified', async () => {
       vi.spyOn(publishModule, 'publish').mockImplementation(async () => {})
 
       const monorepoRoot = folderify({
@@ -82,7 +82,7 @@ describe('monocrate', () => {
         cwd: monorepoRoot,
         pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
-        outputFile: path.join(dir, 'stdout'),
+        report: path.join(dir, 'stdout'),
         publish: false,
         bump: '2.8.512',
       }

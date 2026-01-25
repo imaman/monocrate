@@ -91,8 +91,8 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     await mirrorSources([...allPackages.values()], mirrorDir)
   }
 
-  if (options.outputFile) {
-    const outputFilePath = path.resolve(cwd, options.outputFile)
+  if (options.report) {
+    const outputFilePath = path.resolve(cwd, options.report)
     fsSync.writeFileSync(outputFilePath, resolvedVersion)
   } else {
     console.log(resolvedVersion)

@@ -34,11 +34,11 @@ export interface MonocrateOptions {
    */
   publish: boolean
   /**
-   * Path to write the output (resolved version) to a file instead of stdout.
+   * Path to write the report (resolved version) to a file instead of stdout.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    * If not specified, output is written to stdout.
    */
-  outputFile?: string
+  report?: string
   /**
    * Base directory for resolving relative paths. Must be a valid, existing directory.
    */
