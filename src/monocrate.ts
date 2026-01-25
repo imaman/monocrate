@@ -57,8 +57,7 @@ export interface MonocrateOptions {
   cwd: string
 
   /**
-   * Allows passing an npmrc file that will be used in all npm commands (unless there is a package-specific .npmrc
-   * file)
+   * Path to an .npmrc file to use for npm commands. If a package-specific .npmrc file exists, it takes precedence.
    */
   npmRcFile?: string
 }

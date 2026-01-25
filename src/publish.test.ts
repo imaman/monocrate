@@ -31,8 +31,6 @@ describe('npm publishing with Verdaccio', () => {
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
 
-    const f = verdaccio.get().npmrcPath
-    console.log(`f=${f} inside=${fs.readFileSync(f, 'utf-8')}`)
     await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
