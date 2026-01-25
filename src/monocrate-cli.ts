@@ -68,10 +68,10 @@ export function monocrateCli(): void {
     .usage(
       `From monorepo to npm in one command.
 
-Point at your package. That's it.`
+Point at your packages. That's it.`
     )
-    .example('$0 publish pkg/my-lib', '')
-    .example('$0 publish pkg/my-lib --bump patch', '')
+    .example('$0 publish pkg/foo --bump patch', 'Bump to next patch and publish')
+    .example('$0 publish libs/a libs/b', 'Multi-package (defaults to minor bump)')
     .command(
       'publish <packages...>',
       'Publish to npm',
