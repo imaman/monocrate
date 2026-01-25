@@ -43,17 +43,17 @@ async function createPackageLocation(
   pkg: MonorepoPackage,
   directoryInOutput: AbsolutePath
 ): Promise<PackageLocation> {
-  const filesToCopy = await getFilesToPack(npmClient, pkg.path)
+  const filesToCopy = await getFilesToPack(npmClient, pkg.fromDir)
 
   // Add .npmrc if it exists (npm pack doesn't include it since it's a config file)
-  const npmrcPath = AbsolutePath.join(pkg.path, RelativePath('.npmrc'))
+  const npmrcPath = AbsolutePath.join(pkg.fromDir, RelativePath('.npmrc'))
   if (fs.existsSync(npmrcPath)) {
     filesToCopy.push('.npmrc')
   }
 
   return {
     name: pkg.name,
-    fromDir: pkg.path,
+    fromDir: pkg.fromDir,
     toDir: directoryInOutput,
     filesToCopy,
     packageJson: pkg.packageJson,

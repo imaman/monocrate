@@ -16,12 +16,12 @@ export class PackageAssembler {
   constructor(
     private readonly npmClient: NpmClient,
     private readonly explorer: RepoExplorer,
-    private readonly sourcerDir: AbsolutePath,
+    private readonly fromDir: AbsolutePath,
     private readonly outputRoot: AbsolutePath
   ) {
-    const found = this.explorer.listPackages().find((at) => at.path === sourcerDir)
+    const found = this.explorer.listPackages().find((at) => at.fromDir === fromDir)
     if (!found) {
-      throw new Error(`Unrecognized package source dir: "${this.sourcerDir}"`)
+      throw new Error(`Unrecognized package source dir: "${this.fromDir}"`)
     }
     this.pkgName = found.name
   }
@@ -32,7 +32,7 @@ export class PackageAssembler {
 
   async computeNewVersion(versionSpecifier: VersionSpecifier | undefined) {
     return versionSpecifier
-      ? await resolveVersion(this.npmClient, this.sourcerDir, this.pkgName, versionSpecifier)
+      ? await resolveVersion(this.npmClient, this.fromDir, this.pkgName, versionSpecifier)
       : Promise.resolve(undefined)
   }
 

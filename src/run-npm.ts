@@ -1,8 +1,9 @@
 import { x } from 'tinyexec'
 import type { AbsolutePath } from './paths.js'
 
-interface NpmOptionsBase {
+export interface NpmOptionsBase {
   env?: Partial<Record<string, string>>
+  userconfig?: string
 }
 
 interface StdioPipe {
@@ -26,7 +27,9 @@ interface OutputResult {
   stderr: string
 }
 
-interface PolicyThrowResult { ok: true }
+interface PolicyThrowResult {
+  ok: true
+}
 type PolicyReturnResult =
   | {
       ok: false
@@ -69,11 +72,11 @@ export async function runNpm(
   const errorPolicy = options?.nonZeroExitCodePolicy ?? 'throw'
   const stdio = options?.stdio ?? 'inherit'
 
-  const proc = x('npm', [subcommand, ...args], {
-    nodeOptions: { cwd, env: options?.env, stdio },
+  const uc = options?.userconfig ? ['--userconfig', options.userconfig] : []
+  const proc = x('npm', [subcommand, ...args, ...uc], {
+    nodeOptions: { env: options?.env, cwd, stdio },
     throwOnError: false,
   })
-
   const result = await proc
 
   if (result.exitCode === undefined) {

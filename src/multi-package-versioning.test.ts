@@ -29,7 +29,6 @@ describe('multi-package versioning', () => {
     verdaccio.publishPackage('mpv-delta', '2.5.0', `export const name = 'delta'`)
 
     const monorepoRoot = folderify({
-      '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
       'packages/alpha/package.json': pj('mpv-alpha', '0.0.0'),
       'packages/alpha/index.js': `export const value = 'alpha-new'`,
@@ -47,6 +46,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: 'patch',
       publish: true,
+      npmRcFile: verdaccio.get().npmrcPath,
     })
 
     expect(result.resolvedVersion).toBe('3.0.1')
@@ -72,7 +72,6 @@ describe('multi-package versioning', () => {
 
   it('republishing a package bundles updated in-repo dependency code without publishing the dependency', async () => {
     const root = folderify({
-      '.npmrc': verdaccio.npmRc(),
       'package.json': { name: 'my-repo', workspaces: ['packages/*'] },
       'packages/app/package.json': pj('mpv-app', '0.0.0', { dependencies: { 'mpv-lib': 'workspace:*' } }),
       'packages/app/dist/index.js': `import { getMessage } from 'mpv-lib'; export const run = () => 'app:' + getMessage();`,
@@ -87,6 +86,7 @@ describe('multi-package versioning', () => {
       monorepoRoot: root,
       bump: '1.0.0',
       publish: true,
+      npmRcFile: verdaccio.get().npmrcPath,
     })
 
     expect(verdaccio.runView('mpv-app')).toMatchObject({ version: '1.0.0' })
@@ -105,6 +105,7 @@ describe('multi-package versioning', () => {
       monorepoRoot: root,
       bump: '2.0.0',
       publish: true,
+      npmRcFile: verdaccio.get().npmrcPath,
     })
 
     // Step 4: Consuming app@2.0.0 should run the updated lib code
@@ -118,7 +119,6 @@ describe('multi-package versioning', () => {
 
   it('selective publishing of dependency chain produces expected version history', async () => {
     const monorepoRoot = folderify({
-      '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
       'packages/a/package.json': pj('mpv-a', '0.0.0', { dependencies: { 'mpv-b': 'workspace:*' } }),
       'packages/a/index.js': `import { b } from 'mpv-b'; export const a = () => 'a:' + b();`,
@@ -136,6 +136,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: '1.0.0',
       publish: true,
+      npmRcFile: verdaccio.get().npmrcPath,
     })
 
     // Update C, publish A and C (major → 2.0.0)
@@ -146,6 +147,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: 'major',
       publish: true,
+      npmRcFile: verdaccio.get().npmrcPath,
     })
 
     // Update C, publish A and B (major → 3.0.0)
@@ -156,6 +158,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: 'major',
       publish: true,
+      npmRcFile: verdaccio.get().npmrcPath,
     })
 
     // Update C, publish B and C (major → 4.0.0)
@@ -166,6 +169,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: 'major',
       publish: true,
+      npmRcFile: verdaccio.get().npmrcPath,
     })
 
     expect(verdaccio.runView('mpv-a')).toMatchObject({ versions: ['1.0.0', '2.0.0', '3.0.0'] })
