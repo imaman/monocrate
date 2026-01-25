@@ -3,7 +3,7 @@ export interface MonocrateOptions {
    * Paths to the directories of the various package to assemble. If a string, it is transformed to a single element array.
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    */
-  pathToSubjectPackage: string[] | string
+  pathToSubjectPackages: string[] | string
   /**
    * Path to the output root directory where the assembly will be written.
    * The actual output will be placed in a subdirectory named after the package.

@@ -42,7 +42,7 @@ describe('multi-package versioning', () => {
 
     const result = await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: ['packages/alpha', 'packages/beta', 'packages/gamma', 'packages/delta'],
+      pathToSubjectPackages: ['packages/alpha', 'packages/beta', 'packages/gamma', 'packages/delta'],
       monorepoRoot,
       bump: 'patch',
       publish: true,
@@ -82,7 +82,7 @@ describe('multi-package versioning', () => {
     // Step 1: Publish both app and lib
     await monocrate({
       cwd: root,
-      pathToSubjectPackage: ['packages/app', 'packages/lib'],
+      pathToSubjectPackages: ['packages/app', 'packages/lib'],
       monorepoRoot: root,
       bump: '1.0.0',
       publish: true,
@@ -101,7 +101,7 @@ describe('multi-package versioning', () => {
     // Step 3: Publish only app (which depends on lib)
     await monocrate({
       cwd: root,
-      pathToSubjectPackage: 'packages/app',
+      pathToSubjectPackages: 'packages/app',
       monorepoRoot: root,
       bump: '2.0.0',
       publish: true,
@@ -132,7 +132,7 @@ describe('multi-package versioning', () => {
     // Publish A, B, C at 1.0.0
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: ['packages/a', 'packages/b', 'packages/c'],
+      pathToSubjectPackages: ['packages/a', 'packages/b', 'packages/c'],
       monorepoRoot,
       bump: '1.0.0',
       publish: true,
@@ -143,7 +143,7 @@ describe('multi-package versioning', () => {
     fs.writeFileSync(cPath, `export const c = () => 'c2';`)
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: ['packages/a', 'packages/c'],
+      pathToSubjectPackages: ['packages/a', 'packages/c'],
       monorepoRoot,
       bump: 'major',
       publish: true,
@@ -154,7 +154,7 @@ describe('multi-package versioning', () => {
     fs.writeFileSync(cPath, `export const c = () => 'c3';`)
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: ['packages/a', 'packages/b'],
+      pathToSubjectPackages: ['packages/a', 'packages/b'],
       monorepoRoot,
       bump: 'major',
       publish: true,
@@ -165,7 +165,7 @@ describe('multi-package versioning', () => {
     fs.writeFileSync(cPath, `export const c = () => 'c4';`)
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: ['packages/b', 'packages/c'],
+      pathToSubjectPackages: ['packages/b', 'packages/c'],
       monorepoRoot,
       bump: 'major',
       publish: true,

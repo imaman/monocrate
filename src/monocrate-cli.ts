@@ -16,7 +16,7 @@ const sharedOptions = {
   output: {
     alias: 'o',
     type: 'string' as const,
-    description: 'Output directory for assembled packages',
+    description: 'Output directory',
   },
   root: {
     alias: 'r',
@@ -49,7 +49,7 @@ async function runCommand(argv: YargsArgs, publish: boolean): Promise<void> {
     throw new Error('At least one package directory must be specified')
   }
   const options: MonocrateOptions = {
-    pathToSubjectPackage: packages,
+    pathToSubjectPackages: packages,
     outputRoot: argv.output,
     monorepoRoot: argv.root,
     bump: argv.bump,
@@ -65,13 +65,19 @@ export function monocrateCli(): void {
   const parser = yargs(hideBin(process.argv))
     .scriptName('monocrate')
     .version(pkg.version)
-    .usage('$0 <command> [options] <packages...>')
+    .usage(
+      `From monorepo to npm in one command.
+
+Point at your packages. That's it.`
+    )
+    .example('$0 publish pkg/foo --bump patch', 'Bump to next patch and publish')
+    .example('$0 publish libs/a libs/b', 'Multi-package (defaults to minor bump)')
     .command(
       'publish <packages...>',
-      'Assemble packages and publish to npm',
+      'Publish to npm',
       (yargs) =>
         yargs.options(sharedOptions).positional('packages', {
-          describe: 'Package directories to assemble',
+          describe: 'Package directories to publish',
           type: 'string',
           array: true,
         }),
@@ -81,10 +87,10 @@ export function monocrateCli(): void {
     )
     .command(
       'prepare <packages...>',
-      'Assemble packages without publishing',
+      'Same as publish, but stop short of publishing',
       (yargs) =>
         yargs.options(sharedOptions).positional('packages', {
-          describe: 'Package directories to assemble',
+          describe: 'Package directories to prepare',
           type: 'string',
           array: true,
         }),
@@ -92,9 +98,12 @@ export function monocrateCli(): void {
         await runCommand(argv, false)
       }
     )
-    .demandCommand(1, 'You must specify a command (publish or prepare)')
+    .demandCommand(1, 'Try: monocrate publish <package-dir>')
     .strict()
     .help()
+    .version(pkg.version)
+    .option('help', { hidden: true })
+    .option('version', { hidden: true })
 
   void Promise.resolve(parser.parse()).catch((error: unknown) => {
     console.error('Fatal error:', error instanceof Error ? error.stack : error)
