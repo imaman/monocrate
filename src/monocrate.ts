@@ -67,8 +67,11 @@ export interface MonocrateOptions {
 
   /**
    * Path to a directory where source files should be mirrored.
-   * Mirrors all assembled packages (the main package and its in-repo dependencies).
    *
+   * Primary use case: copying exact source code from a private monorepo to a public mirror
+   * repository for published, open-sourced, packages.
+   *
+   * Mirrors all assembled packages (the main package and its in-repo dependencies).
    * Only committed files (from HEAD) are copied, preserving their path structure relative
    * to the monorepo root. Fails if any package has untracked files.
    * Each package's target directory is wiped before copying.
