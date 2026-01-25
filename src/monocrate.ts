@@ -69,8 +69,9 @@ export interface MonocrateOptions {
    * Path to a directory where source files should be mirrored.
    * Mirrors all assembled packages (the main package and its in-repo dependencies).
    *
-   * Only git-tracked files (committed or staged) are copied, preserving their path structure
-   * relative to the monorepo root. Each package's target directory is wiped before copying.
+   * Only committed files (from HEAD) are copied, preserving their path structure relative
+   * to the monorepo root. Fails if any package has untracked files.
+   * Each package's target directory is wiped before copying.
    *
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    */

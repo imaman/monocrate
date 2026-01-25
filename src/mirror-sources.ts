@@ -11,13 +11,33 @@ interface CopyOperation {
 }
 
 /**
- * Lists files in a directory that are tracked by git.
- * Uses `git ls-files` to get only committed/staged files.
+ * Lists files in a directory that are committed in git (not just staged).
+ * Uses `git ls-tree` to get only files from HEAD.
+ * Throws if there are any untracked files.
  */
-function listGitTrackedFiles(packageDir: AbsolutePath): RelativePath[] {
-  // Get only tracked files (committed or staged)
-  // --cached: show tracked files
-  const output = execSync('git ls-files --cached', {
+function listCommittedFiles(packageDir: AbsolutePath): RelativePath[] {
+  // Check for untracked files (not gitignored)
+  const untrackedOutput = execSync('git ls-files --others --exclude-standard', {
+    cwd: packageDir,
+    encoding: 'utf-8',
+  })
+  const untrackedFiles = untrackedOutput
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
+  if (untrackedFiles.length > 0) {
+    throw new Error(
+      `Cannot mirror: found ${String(untrackedFiles.length)} untracked file(s) in ${packageDir}. ` +
+        `First few: ${untrackedFiles.slice(0, 3).join(', ')}. ` +
+        `Commit or gitignore them before mirroring.`
+    )
+  }
+
+  // Get only committed files from HEAD
+  // -r: recursive
+  // --name-only: show only file names
+  const output = execSync('git ls-tree -r --name-only HEAD', {
     cwd: packageDir,
     encoding: 'utf-8',
   })
@@ -34,7 +54,7 @@ function collectCopyOperations(packages: MonorepoPackage[], mirrorDir: AbsoluteP
 
   for (const pkg of packages) {
     const targetDir = AbsolutePath.join(mirrorDir, pkg.pathInRepo)
-    const files = listGitTrackedFiles(pkg.fromDir)
+    const files = listCommittedFiles(pkg.fromDir)
 
     for (const relativePath of files) {
       const sourceFile = AbsolutePath.join(pkg.fromDir, relativePath)
@@ -61,7 +81,8 @@ function collectCopyOperations(packages: MonorepoPackage[], mirrorDir: AbsoluteP
 /**
  * Mirrors source code of packages to a target directory.
  * Each package's files are copied preserving the path structure relative to the monorepo root.
- * Only git-tracked files (committed or staged) are copied.
+ * Only committed files (from HEAD) are copied.
+ * Throws if any package has untracked files.
  * Each package's target directory is wiped before copying.
  */
 export async function mirrorSources(packages: MonorepoPackage[], mirrorDir: AbsolutePath): Promise<void> {

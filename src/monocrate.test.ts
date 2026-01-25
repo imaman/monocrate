@@ -1329,7 +1329,7 @@ console.log('Hello from bin');
       })
 
       // Initialize git repo so git ls-files works
-      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1364,7 +1364,7 @@ console.log('Hello from bin');
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
       })
 
-      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1395,7 +1395,7 @@ console.log('Hello from bin');
         'packages/app/debug.log': 'some debug logs',
       })
 
-      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1425,7 +1425,7 @@ console.log('Hello from bin');
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
 
-      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1469,7 +1469,7 @@ console.log('Hello from bin');
         'packages/shared/dist/index.js': `shared dist`,
       })
 
-      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1491,6 +1491,33 @@ console.log('Hello from bin');
       expect(mirrored).toHaveProperty('packages/shared/package.json')
       expect(mirrored).toHaveProperty('packages/shared/src/index.ts')
     }, 30000)
+
+    it('errors if there are untracked files', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': pj('@test/app'),
+        'packages/app/src/index.ts': `export const foo = 'foo';`,
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      // Initialize git and commit files
+      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
+
+      // Create an untracked file
+      fs.writeFileSync(path.join(monorepoRoot, 'packages/app/leftover-temp.ts'), 'some temp content')
+
+      const mirrorDir = createTempDir('mirror-')
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackage: 'packages/app',
+          publish: false,
+          bump: '1.0.0',
+          mirrorTo: mirrorDir,
+        })
+      ).rejects.toThrow(/Cannot mirror: found 1 untracked file\(s\).*leftover-temp\.ts/)
+    })
 
     it('does not mirror when mirrorTo is not specified', async () => {
       const monorepoRoot = folderify({
