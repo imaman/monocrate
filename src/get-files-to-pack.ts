@@ -1,5 +1,5 @@
 import type { AbsolutePath } from './paths.js'
-import { NpmClient } from './npm-client.js'
+import type { NpmClient } from './npm-client.js'
 
 /**
  * Gets the list of files that npm would include in a package tarball.
@@ -9,8 +9,8 @@ import { NpmClient } from './npm-client.js'
  * @returns Array of relative file paths that npm would include
  * @example getFilesToPack("/home/user/my-package") => ["dist/index.js", "README.md", "package.json"]
  */
-export async function getFilesToPack(packageDir: AbsolutePath): Promise<string[]> {
-  const o = await new NpmClient().pack(packageDir, { dryRun: true })
+export async function getFilesToPack(npmClient: NpmClient, packageDir: AbsolutePath): Promise<string[]> {
+  const o = await npmClient.pack(packageDir, { dryRun: true })
   if (o.length !== 1) {
     throw new Error(`Expected npm pack to return a single element array`)
   }
