@@ -6,6 +6,7 @@ import type { MonorepoPackage } from './repo-explorer.js'
 import { getFilesToPack } from './get-files-to-pack.js'
 import { AbsolutePath, RelativePath } from './paths.js'
 import type { PackageJson } from './package-json.js'
+import type { NpmClient } from './npm-client.js'
 
 /**
  * Resolves an import specifier to a package-relative path using Node.js resolution semantics.
@@ -37,8 +38,12 @@ export function resolveImport(packageJson: PackageJson, subpath: string): string
   return `${subpath}.js`
 }
 
-async function createPackageLocation(pkg: MonorepoPackage, directoryInOutput: AbsolutePath): Promise<PackageLocation> {
-  const filesToCopy = await getFilesToPack(pkg.path)
+async function createPackageLocation(
+  npmClient: NpmClient,
+  pkg: MonorepoPackage,
+  directoryInOutput: AbsolutePath
+): Promise<PackageLocation> {
+  const filesToCopy = await getFilesToPack(npmClient, pkg.path)
 
   // Add .npmrc if it exists (npm pack doesn't include it since it's a config file)
   const npmrcPath = AbsolutePath.join(pkg.path, RelativePath('.npmrc'))
@@ -56,6 +61,7 @@ async function createPackageLocation(pkg: MonorepoPackage, directoryInOutput: Ab
 }
 
 export async function collectPackageLocations(
+  npmClient: NpmClient,
   closure: PackageClosure,
   outputDir: AbsolutePath
 ): Promise<PackageLocation[]> {
@@ -63,6 +69,7 @@ export async function collectPackageLocations(
   return Promise.all(
     closure.members.map((dep) =>
       createPackageLocation(
+        npmClient,
         dep,
         dep.name === closure.subjectPackageName
           ? outputDir
