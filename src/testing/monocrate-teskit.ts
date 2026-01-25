@@ -25,8 +25,7 @@ interface PackageJsonOptions {
 export function pj(name: string, version = '1.0.0', more: Partial<PackageJson> = {}) {
   // TODO(imaman): type "module" by default?
   return {
-    // TODO(imaman): align with index.mjs
-    main: 'index.js',
+    main: 'dist/index.js',
     ...more,
     name,
     version,

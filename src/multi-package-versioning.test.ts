@@ -56,53 +56,61 @@ describe('multi-package versioning', () => {
     expect(verdaccio.runView('mpv-delta')).toMatchObject({ version: '3.0.1' })
     expect(result.summaries.map((s) => s.packageName)).toEqual(['mpv-alpha', 'mpv-beta', 'mpv-gamma', 'mpv-delta'])
 
-    expect(verdaccio.runConumser('mpv-alpha@3.0.1', `import { value } from 'mpv-alpha'; console.log(value)`)).toBe('alpha-new')
-    expect(verdaccio.runConumser('mpv-beta@3.0.1', `import { value } from 'mpv-beta'; console.log(value)`)).toBe('beta-new')
-    expect(verdaccio.runConumser('mpv-gamma@3.0.1', `import { value } from 'mpv-gamma'; console.log(value)`)).toBe('gamma-new')
-    expect(verdaccio.runConumser('mpv-delta@3.0.1', `import { value } from 'mpv-delta'; console.log(value)`)).toBe('delta-new')
+    expect(verdaccio.runConumser('mpv-alpha@3.0.1', `import { value } from 'mpv-alpha'; console.log(value)`)).toBe(
+      'alpha-new'
+    )
+    expect(verdaccio.runConumser('mpv-beta@3.0.1', `import { value } from 'mpv-beta'; console.log(value)`)).toBe(
+      'beta-new'
+    )
+    expect(verdaccio.runConumser('mpv-gamma@3.0.1', `import { value } from 'mpv-gamma'; console.log(value)`)).toBe(
+      'gamma-new'
+    )
+    expect(verdaccio.runConumser('mpv-delta@3.0.1', `import { value } from 'mpv-delta'; console.log(value)`)).toBe(
+      'delta-new'
+    )
   }, 120000)
 
   it('republishing a package bundles updated in-repo dependency code without publishing the dependency', async () => {
-    const monorepoRoot = folderify({
+    const root = folderify({
       '.npmrc': verdaccio.npmRc(),
-      'package.json': { workspaces: ['packages/*'] },
+      'package.json': { name: 'my-repo', workspaces: ['packages/*'] },
       'packages/app/package.json': pj('mpv-app', '0.0.0', { dependencies: { 'mpv-lib': 'workspace:*' } }),
-      'packages/app/index.js': `import { getMessage } from 'mpv-lib'; export const run = () => 'app:' + getMessage();`,
+      'packages/app/dist/index.js': `import { getMessage } from 'mpv-lib'; export const run = () => 'app:' + getMessage();`,
       'packages/lib/package.json': pj('mpv-lib', '0.0.0'),
-      'packages/lib/index.js': `export const getMessage = () => 'original';`,
+      'packages/lib/dist/index.js': `export const getMessage = () => 'original';`,
     })
 
     // Step 1: Publish both app and lib
     await monocrate({
-      cwd: monorepoRoot,
+      cwd: root,
       pathToSubjectPackage: ['packages/app', 'packages/lib'],
-      monorepoRoot,
+      monorepoRoot: root,
       bump: '1.0.0',
       publish: true,
     })
 
     expect(verdaccio.runView('mpv-app')).toMatchObject({ version: '1.0.0' })
     expect(verdaccio.runView('mpv-lib')).toMatchObject({ version: '1.0.0' })
-    expect(
-      verdaccio.runConumser('mpv-app@1.0.0', `import { run } from 'mpv-app'; console.log(run())`)
-    ).toBe('app:original')
+    expect(verdaccio.runConumser('mpv-app@1.0.0', `import { run } from 'mpv-app'; console.log(run())`)).toBe(
+      'app:original'
+    )
 
     // Step 2: Update lib's code
-    fs.writeFileSync(path.join(monorepoRoot, 'packages/lib/index.js'), `export const getMessage = () => 'updated';`)
+    fs.writeFileSync(path.join(root, 'packages/lib/dist/index.js'), `export const getMessage = () => 'updated'`)
 
     // Step 3: Publish only app (which depends on lib)
     await monocrate({
-      cwd: monorepoRoot,
+      cwd: root,
       pathToSubjectPackage: 'packages/app',
-      monorepoRoot,
+      monorepoRoot: root,
       bump: '2.0.0',
       publish: true,
     })
 
     // Step 4: Consuming app@2.0.0 should run the updated lib code
-    expect(
-      verdaccio.runConumser('mpv-app@2.0.0', `import { run } from 'mpv-app'; console.log(run())`)
-    ).toBe('app:updated')
+    expect(verdaccio.runConumser('mpv-app@2.0.0', `import { run } from 'mpv-app'; console.log(run())`)).toBe(
+      'app:updated'
+    )
 
     // Step 5: lib's version in registry should still be 1.0.0 (not republished)
     expect(verdaccio.runView('mpv-lib')).toMatchObject({ version: '1.0.0', versions: ['1.0.0'] })
