@@ -32,7 +32,7 @@ export class VerdaccioTestkit {
     await stopVerdaccio(this.get())
   }
 
-  npmRc() {
+  npmR_c() {
     return fs.readFileSync(this.get().npmrcPath).toString()
   }
 
@@ -55,7 +55,7 @@ export class VerdaccioTestkit {
 
   publishPackage(name: string, version: string, jsSourceCode: string) {
     const dir = folderify({
-      '.npmrc': this.npmRc(),
+      '.npmrc': fs.readFileSync(this.get().npmrcPath, 'utf-8'),
       'package.json': { name, version, main: 'index.js' },
       'index.js': jsSourceCode,
     })

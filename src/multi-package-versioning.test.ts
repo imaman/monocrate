@@ -29,7 +29,6 @@ describe('multi-package versioning', () => {
     verdaccio.publishPackage('mpv-delta', '2.5.0', `export const name = 'delta'`)
 
     const monorepoRoot = folderify({
-      '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
       'packages/alpha/package.json': pj('mpv-alpha', '0.0.0'),
       'packages/alpha/index.js': `export const value = 'alpha-new'`,
@@ -73,7 +72,6 @@ describe('multi-package versioning', () => {
 
   it('republishing a package bundles updated in-repo dependency code without publishing the dependency', async () => {
     const root = folderify({
-      '.npmrc': verdaccio.npmRc(),
       'package.json': { name: 'my-repo', workspaces: ['packages/*'] },
       'packages/app/package.json': pj('mpv-app', '0.0.0', { dependencies: { 'mpv-lib': 'workspace:*' } }),
       'packages/app/dist/index.js': `import { getMessage } from 'mpv-lib'; export const run = () => 'app:' + getMessage();`,
@@ -121,7 +119,6 @@ describe('multi-package versioning', () => {
 
   it('selective publishing of dependency chain produces expected version history', async () => {
     const monorepoRoot = folderify({
-      '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
       'packages/a/package.json': pj('mpv-a', '0.0.0', { dependencies: { 'mpv-b': 'workspace:*' } }),
       'packages/a/index.js': `import { b } from 'mpv-b'; export const a = () => 'a:' + b();`,
