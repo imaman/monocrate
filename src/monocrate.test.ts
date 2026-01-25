@@ -1388,9 +1388,11 @@ console.log('Hello from bin');
       const mirrored = unfolderify(mirrorDir)
 
       // Should mirror files preserving path structure
-      expect(mirrored).toHaveProperty('packages/app/package.json')
-      expect(mirrored).toHaveProperty('packages/app/src/index.ts')
-      expect(mirrored).toHaveProperty('packages/app/dist/index.js')
+      expect(mirrored).toEqual({
+        'packages/app/package.json': { name: '@test/app', version: '0.9.9', main: 'dist/index.js' },
+        'packages/app/src/index.ts': `export const foo = 'foo';`,
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
     })
 
     it('mirrors all packages in the closure including dependencies', async () => {

@@ -30,7 +30,7 @@ const cliArgsDefs = {
   },
   'mirror-to': {
     type: 'string' as const,
-    description: 'Mirror source code of all packages in the closure to this directory',
+    description: 'Mirrors the source code of the packages (and their in-repo dependencies) to this directory',
     alias: 'm',
   },
 }

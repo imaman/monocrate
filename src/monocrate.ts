@@ -11,7 +11,7 @@ import { AbsolutePath } from './paths.js'
 import { maxVersion } from './resolve-version.js'
 import { NpmClient } from './npm-client.js'
 import { computePackageClosure } from './compute-package-closure.js'
-import { mirrorSources } from './source-mirror.js'
+import { mirrorSources } from './mirror-sources.js'
 
 export interface MonocrateOptions {
   /**
