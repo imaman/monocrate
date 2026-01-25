@@ -17,11 +17,8 @@ export class NpmClient {
     this.env = options?.env
   }
 
-  async publish(dir: AbsolutePath, _options?: { userconfig?: AbsolutePath }): Promise<void> {
-    await runNpm('publish', [], dir, {
-      stdio: 'inherit',
-      env: this.env,
-    })
+  async publish(dir: AbsolutePath): Promise<void> {
+    await runNpm('publish', [], dir, { stdio: 'inherit', env: this.env })
   }
 
   /**
