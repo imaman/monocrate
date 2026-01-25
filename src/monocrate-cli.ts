@@ -1,50 +1,41 @@
 import { createRequire } from 'node:module'
-import { defineCommand, runMain } from 'citty'
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
 import type { MonocrateOptions } from './monocrate.js'
 import { monocrate } from './monocrate.js'
 
 const require = createRequire(import.meta.url)
 const pkg = require('../package.json') as { version: string }
 
-const cliArgsDefs = {
-  packages: {
-    type: 'positional' as const,
-    description: 'Package directories to assemble',
-    required: true,
-  },
+const sharedOptions = {
   bump: {
+    alias: 'b',
     type: 'string' as const,
     description: 'Version or increment (patch/minor/major)',
-    valueHint: 'version',
-    alias: 'b',
   },
   output: {
+    alias: 'o',
     type: 'string' as const,
     description: 'Output directory for assembled packages',
-    valueHint: 'dir',
-    alias: 'o',
   },
   root: {
+    alias: 'r',
     type: 'string' as const,
     description: 'Monorepo root (auto-detected if omitted)',
-    valueHint: 'dir',
-    alias: 'r',
   },
   report: {
     type: 'string' as const,
     description: 'Write report to file',
-    valueHint: 'path',
   },
   'mirror-to': {
+    alias: 'm',
     type: 'string' as const,
     description: 'Mirror source files to directory',
-    valueHint: 'dir',
-    alias: 'm',
   },
 }
 
-interface CliArgs {
-  _: string[]
+interface YargsArgs {
+  packages?: string[]
   output?: string
   root?: string
   bump?: string
@@ -52,63 +43,60 @@ interface CliArgs {
   'mirror-to'?: string
 }
 
-function buildOptions(args: CliArgs, publish: boolean): MonocrateOptions {
-  const packages = extractPackages(args._)
-  return {
-    pathToSubjectPackage: packages,
-    outputRoot: args.output,
-    monorepoRoot: args.root,
-    bump: args.bump,
-    publish,
-    report: args.report,
-    cwd: process.cwd(),
-    mirrorTo: args['mirror-to'],
-  }
-}
-
-function extractPackages(args: string[]): string[] {
-  if (args.length === 0) {
+async function runCommand(argv: YargsArgs, publish: boolean): Promise<void> {
+  const packages = argv.packages ?? []
+  if (packages.length === 0) {
     throw new Error('At least one package directory must be specified')
   }
-  return args
+  const options: MonocrateOptions = {
+    pathToSubjectPackage: packages,
+    outputRoot: argv.output,
+    monorepoRoot: argv.root,
+    bump: argv.bump,
+    publish,
+    report: argv.report,
+    cwd: process.cwd(),
+    mirrorTo: argv['mirror-to'],
+  }
+  await monocrate(options)
 }
 
-const prepareCommand = defineCommand({
-  meta: {
-    name: 'prepare',
-    description: 'Assemble packages without publishing',
-  },
-  args: cliArgsDefs,
-  async run({ args }) {
-    await monocrate(buildOptions(args, false))
-  },
-})
-
-const publishCommand = defineCommand({
-  meta: {
-    name: 'publish',
-    description: 'Assemble packages and publish to npm',
-  },
-  args: cliArgsDefs,
-  async run({ args }) {
-    await monocrate(buildOptions(args, true))
-  },
-})
-
-const mainCommand = defineCommand({
-  meta: {
-    name: 'monocrate',
-    version: pkg.version,
-    description: 'Assemble and publish monorepo packages to npm',
-  },
-  subCommands: {
-    publish: publishCommand,
-    prepare: prepareCommand,
-  },
-})
-
 export function monocrateCli(): void {
-  runMain(mainCommand).catch((error: unknown) => {
+  const parser = yargs(hideBin(process.argv))
+    .scriptName('monocrate')
+    .version(pkg.version)
+    .usage('$0 <command> [options] <packages...>')
+    .command(
+      'publish <packages...>',
+      'Assemble packages and publish to npm',
+      (yargs) =>
+        yargs.options(sharedOptions).positional('packages', {
+          describe: 'Package directories to assemble',
+          type: 'string',
+          array: true,
+        }),
+      async (argv) => {
+        await runCommand(argv, true)
+      }
+    )
+    .command(
+      'prepare <packages...>',
+      'Assemble packages without publishing',
+      (yargs) =>
+        yargs.options(sharedOptions).positional('packages', {
+          describe: 'Package directories to assemble',
+          type: 'string',
+          array: true,
+        }),
+      async (argv) => {
+        await runCommand(argv, false)
+      }
+    )
+    .demandCommand(1, 'You must specify a command (publish or prepare)')
+    .strict()
+    .help()
+
+  void Promise.resolve(parser.parse()).catch((error: unknown) => {
     console.error('Fatal error:', error instanceof Error ? error.stack : error)
     process.exit(1)
   })
