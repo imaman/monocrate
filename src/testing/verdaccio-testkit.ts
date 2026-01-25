@@ -10,6 +10,7 @@ interface VerdaccioServer {
   process: ChildProcess
   url: string
   configDir: string
+  npmrcPath: string
 }
 
 export class VerdaccioTestkit {
@@ -32,10 +33,7 @@ export class VerdaccioTestkit {
   }
 
   npmRc() {
-    // Verdaccio requires some form of auth token even with $all access
-    // Extract host from URL for the _authToken line (npm requires host without protocol)
-    const u = this.get().url
-    return `registry=${u}\n//${new URL(u).host}/:_authToken=fake-token-for-testing\n`
+    return fs.readFileSync(this.get().npmrcPath)
   }
 
   runView(packageName: string): unknown {
@@ -108,6 +106,14 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
   }
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
 
+  // Verdaccio requires some form of auth token even with $all access
+  // Extract host from URL for the _authToken line (npm requires host without protocol)
+  const u = url
+  const npmrcContent = `registry=${u}\n//${new URL(u).host}/:_authToken=fake-token-for-testing\n`
+
+  const npmrcPath = path.join(configDir, 'verdaccio.npmrc')
+  fs.writeFileSync(npmrcPath, npmrcContent)
+
   return new Promise((resolve, reject) => {
     const verdaccioProcess = spawn('npx', ['verdaccio', '--config', configPath, '--listen', String(port)], {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -133,6 +139,7 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
             process: verdaccioProcess,
             url,
             configDir,
+            npmrcPath,
           })
         }, 500)
       }
