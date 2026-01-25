@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { AbsolutePath } from './paths.js'
+import type { NpmOptionsBase} from './run-npm.js';
 import { runNpm } from './run-npm.js'
 
 const NpmErrorResponse = z.object({
@@ -11,14 +12,10 @@ const NpmErrorResponse = z.object({
 })
 
 export class NpmClient {
-  private readonly env: Partial<Record<string, string>> | undefined
-
-  constructor(options?: { env?: Partial<Record<string, string>> }) {
-    this.env = options?.env
-  }
+  constructor(private readonly npmOptions?: NpmOptionsBase) {}
 
   async publish(dir: AbsolutePath): Promise<void> {
-    await runNpm('publish', [], dir, { stdio: 'inherit', env: this.env })
+    await runNpm('publish', [], dir, { ...this.npmOptions, stdio: 'inherit' })
   }
 
   /**
@@ -28,9 +25,9 @@ export class NpmClient {
    */
   async viewVersion(packageName: string, cwd: AbsolutePath): Promise<string | undefined> {
     const { ok, stdout } = await runNpm('view', ['-s', '--json', packageName, 'version'], cwd, {
+      ...this.npmOptions,
       stdio: 'pipe',
       nonZeroExitCodePolicy: 'return',
-      env: this.env,
     })
 
     if (!ok) {
@@ -56,8 +53,8 @@ export class NpmClient {
 
   async pack(dir: AbsolutePath, options?: { dryRun?: boolean }) {
     const { stdout, ok } = await runNpm('pack', ['--json', ...(options?.dryRun ? ['--dry-run'] : [])], dir, {
+      ...this.npmOptions,
       stdio: 'pipe',
-      env: this.env,
       nonZeroExitCodePolicy: 'return',
     })
 
