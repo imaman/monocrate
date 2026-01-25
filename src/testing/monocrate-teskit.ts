@@ -16,11 +16,10 @@ export function createTempDir(prefix = 'monocrate-testing-'): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix))
 }
 
-interface PackageJsonOptions {
-  name: string
-  dependencies?: Record<string, string>
-}
-
+/**
+ * Creates a package.json object with sensible defaults for npm pack compatibility.
+ * Required fields (name, version) are always included.
+ */
 export function pj(name: string, version?: string, more?: Partial<PackageJson>): PackageJson
 export function pj(name: string, more?: Partial<PackageJson>): PackageJson
 export function pj(
@@ -35,14 +34,6 @@ export function pj(
     name,
     ...version,
   }
-}
-
-/**
- * Creates a package.json object with sensible defaults for npm pack compatibility.
- * Required fields (name, version) are always included.
- */
-export function makePackageJson(options: PackageJsonOptions): PackageJson {
-  return pj(options.name, { dependencies: options.dependencies })
 }
 
 export async function runMonocrate(

@@ -7,7 +7,7 @@ import { AbsolutePath } from './paths.js'
 import * as publishModule from './publish.js'
 import { folderify } from './testing/folderify.js'
 import { unfolderify } from './testing/unfolderify.js'
-import { createTempDir, makePackageJson, pj, runMonocrate } from './testing/monocrate-teskit.js'
+import { createTempDir, pj, runMonocrate } from './testing/monocrate-teskit.js'
 
 const name = 'root-package'
 
@@ -16,7 +16,7 @@ describe('monocrate', () => {
     it('creates a temp directory when outputDir is not provided', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
 
@@ -43,7 +43,7 @@ describe('monocrate', () => {
     it('uses provided outputRoot when specified', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         'packages/app/dist/index.js': `export const foo = 'foo';
 `,
       })
@@ -72,7 +72,7 @@ describe('monocrate', () => {
 
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
 
@@ -133,7 +133,7 @@ describe('monocrate', () => {
     it('handles package with no dist directory (npm pack includes only package.json)', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         // No dist directory created - npm pack will still succeed with just package.json
       })
 
@@ -212,7 +212,7 @@ describe('monocrate', () => {
       // Create monorepo with a symlink to the external package
       const monorepoRoot = folderify({
         'package.json': { workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
 
@@ -232,12 +232,9 @@ describe('monocrate', () => {
     it('works with workspace object format (packages field)', async () => {
       const monorepoRoot = folderify({
         'package.json': { workspaces: { packages: ['packages/*'] } },
-        'packages/app/package.json': makePackageJson({
-          name: '@test/app',
-          dependencies: { '@test/lib': 'workspace:*' },
-        }),
+        'packages/app/package.json': pj('@test/app', { dependencies: { '@test/lib': 'workspace:*' } }),
         'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
-        'packages/lib/package.json': makePackageJson({ name: '@test/lib' }),
+        'packages/lib/package.json': pj('@test/lib'),
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!' }`,
       })
       const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
@@ -709,14 +706,11 @@ export declare const bar: typeof foo;
     it('rewrites export declarations', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/a/package.json': makePackageJson({
-          name: '@myorg/a',
-          dependencies: { '@myorg/b': '*' },
-        }),
+        'packages/a/package.json': pj('@myorg/a', { dependencies: { '@myorg/b': '*' } }),
         'packages/a/dist/index.js': `export { foo } from '@myorg/b';
 export * from '@myorg/b';
 `,
-        'packages/b/package.json': makePackageJson({ name: '@myorg/b' }),
+        'packages/b/package.json': pj('@myorg/b'),
         'packages/b/dist/index.js': `export const foo = 'foo';
 export const bar = 'bar';
 `,
@@ -740,16 +734,13 @@ export const bar = 'bar';
     it('leaves third-party imports unchanged', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/a/package.json': makePackageJson({
-          name: '@myorg/a',
-          dependencies: { '@myorg/b': '*', lodash: '^4.0.0' },
-        }),
+        'packages/a/package.json': pj('@myorg/a', { dependencies: { '@myorg/b': '*', lodash: '^4.0.0' } }),
         'packages/a/dist/index.js': `import { foo } from '@myorg/b';
 import _ from 'lodash';
 import * as path from 'node:path';
 export const bar = foo;
 `,
-        'packages/b/package.json': makePackageJson({ name: '@myorg/b' }),
+        'packages/b/package.json': pj('@myorg/b'),
         'packages/b/dist/index.js': `export const foo = 'foo';
 `,
       })
@@ -772,10 +763,7 @@ export const bar = foo;
     it('rewrites imports in nested files at different depths', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/a/package.json': makePackageJson({
-          name: '@myorg/a',
-          dependencies: { '@myorg/b': '*' },
-        }),
+        'packages/a/package.json': pj('@myorg/a', { dependencies: { '@myorg/b': '*' } }),
         'packages/a/dist/index.js': `import { foo } from '@myorg/b';
 export { helper } from './utils/helper.js';
 export const bar = foo;
@@ -783,7 +771,7 @@ export const bar = foo;
         'packages/a/dist/utils/helper.js': `import { foo } from '@myorg/b';
 export const helper = foo + '-helper';
 `,
-        'packages/b/package.json': makePackageJson({ name: '@myorg/b' }),
+        'packages/b/package.json': pj('@myorg/b'),
         'packages/b/dist/index.js': `export const foo = 'foo';
 `,
       })
@@ -807,18 +795,15 @@ export const helper = foo + '-helper';
     it('handles packages in different monorepo directories', async () => {
       const monorepoRoot = folderify({
         'package.json': { name: 'my-monorepo', workspaces: ['packages/*', 'libs/*'] },
-        'packages/a/package.json': makePackageJson({
-          name: '@myorg/a',
-          dependencies: { '@myorg/b': '*', '@myorg/utils': '*' },
-        }),
+        'packages/a/package.json': pj('@myorg/a', { dependencies: { '@myorg/b': '*', '@myorg/utils': '*' } }),
         'packages/a/dist/index.js': `import { foo } from '@myorg/b';
 import { util } from '@myorg/utils';
 export const bar = foo + util;
 `,
-        'packages/b/package.json': makePackageJson({ name: '@myorg/b' }),
+        'packages/b/package.json': pj('@myorg/b'),
         'packages/b/dist/index.js': `export const foo = 'foo';
 `,
-        'libs/utils/package.json': makePackageJson({ name: '@myorg/utils' }),
+        'libs/utils/package.json': pj('@myorg/utils'),
         'libs/utils/dist/index.js': `export const util = 'util';
 `,
       })
@@ -890,7 +875,7 @@ export declare const bar: typeof foo;
     it('handles source package importing itself by name', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/a/package.json': makePackageJson({ name: '@myorg/a' }),
+        'packages/a/package.json': pj('@myorg/a'),
         'packages/a/dist/index.js': `import { helper } from '@myorg/a/utils/helper';
 export const result = helper;
 `,
@@ -916,15 +901,12 @@ export const result = helper;
     it('handles subpath imports like @myorg/b/submodule', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/a/package.json': makePackageJson({
-          name: '@myorg/a',
-          dependencies: { '@myorg/b': '*' },
-        }),
+        'packages/a/package.json': pj('@myorg/a', { dependencies: { '@myorg/b': '*' } }),
         'packages/a/dist/index.js': `import { helper } from '@myorg/b/utils/helper';
 export const result = helper;
 `,
         // Package b uses exports field to map subpaths to dist directory
-        'packages/b/package.json': pj('@myorg/b', undefined, {
+        'packages/b/package.json': pj('@myorg/b', {
           exports: {
             '.': './dist/index.js',
             './utils/*': './dist/utils/*',
@@ -954,14 +936,11 @@ export const result = helper;
     it('handles dynamic imports', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/a/package.json': makePackageJson({
-          name: '@myorg/a',
-          dependencies: { '@myorg/b': '*' },
-        }),
+        'packages/a/package.json': pj('@myorg/a', { dependencies: { '@myorg/b': '*' } }),
         'packages/a/dist/index.js': `const b = await import('@myorg/b');
 export const foo = b.foo;
 `,
-        'packages/b/package.json': makePackageJson({ name: '@myorg/b' }),
+        'packages/b/package.json': pj('@myorg/b'),
         'packages/b/dist/index.js': `export const foo = 'foo';
 `,
       })
@@ -984,21 +963,15 @@ export const foo = b.foo;
     it('handles cross-dependency imports between in-repo deps', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({
-          name: '@myorg/app',
-          dependencies: { '@myorg/lib-a': '*' },
-        }),
+        'packages/app/package.json': pj('@myorg/app', { dependencies: { '@myorg/lib-a': '*' } }),
         'packages/app/dist/index.js': `import { a } from '@myorg/lib-a';
 console.log(a);
 `,
-        'packages/lib-a/package.json': makePackageJson({
-          name: '@myorg/lib-a',
-          dependencies: { '@myorg/lib-b': '*' },
-        }),
+        'packages/lib-a/package.json': pj('@myorg/lib-a', { dependencies: { '@myorg/lib-b': '*' } }),
         'packages/lib-a/dist/index.js': `import { b } from '@myorg/lib-b';
 export const a = 'a-' + b;
 `,
-        'packages/lib-b/package.json': makePackageJson({ name: '@myorg/lib-b' }),
+        'packages/lib-b/package.json': pj('@myorg/lib-b'),
         'packages/lib-b/dist/index.js': `export const b = 'b';
 `,
       })
@@ -1221,15 +1194,9 @@ console.log('Hello from bin');
     it('throws with detailed error message when packages require different versions', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({
-          name: '@test/app',
-          dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.0' },
-        }),
+        'packages/app/package.json': pj('@test/app', { dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.0' } }),
         'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
-        'packages/lib/package.json': makePackageJson({
-          name: '@test/lib',
-          dependencies: { lodash: '^3.10.0' },
-        }),
+        'packages/lib/package.json': pj('@test/lib', { dependencies: { lodash: '^3.10.0' } }),
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
       })
 
@@ -1249,15 +1216,11 @@ console.log('Hello from bin');
     it('lists all conflicting dependencies when multiple conflicts exist', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({
-          name: '@test/app',
+        'packages/app/package.json': pj('@test/app', {
           dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.0', chalk: '^5.0.0' },
         }),
         'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
-        'packages/lib/package.json': makePackageJson({
-          name: '@test/lib',
-          dependencies: { lodash: '^3.10.0', chalk: '^4.0.0' },
-        }),
+        'packages/lib/package.json': pj('@test/lib', { dependencies: { lodash: '^3.10.0', chalk: '^4.0.0' } }),
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
       })
 
@@ -1274,15 +1237,11 @@ console.log('Hello from bin');
     it('allows same dependency with identical versions across packages', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({
-          name: '@test/app',
+        'packages/app/package.json': pj('@test/app', {
           dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.21' },
         }),
         'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
-        'packages/lib/package.json': makePackageJson({
-          name: '@test/lib',
-          dependencies: { lodash: '^4.17.21' },
-        }),
+        'packages/lib/package.json': pj('@test/lib', { dependencies: { lodash: '^4.17.21' } }),
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
       })
 
@@ -1293,20 +1252,15 @@ console.log('Hello from bin');
     it('detects conflicts in deep dependency chains', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({
-          name: '@test/app',
+        'packages/app/package.json': pj('@test/app', {
           dependencies: { '@test/level1': 'workspace:*', zod: '^3.0.0' },
         }),
         'packages/app/dist/index.js': `import { fromLevel1 } from '@test/level1'; console.log(fromLevel1());`,
-        'packages/level1/package.json': makePackageJson({
-          name: '@test/level1',
+        'packages/level1/package.json': pj('@test/level1', {
           dependencies: { '@test/level2': 'workspace:*' },
         }),
         'packages/level1/dist/index.js': `import { fromLevel2 } from '@test/level2'; export function fromLevel1() { return fromLevel2(); }`,
-        'packages/level2/package.json': makePackageJson({
-          name: '@test/level2',
-          dependencies: { zod: '^2.0.0' },
-        }),
+        'packages/level2/package.json': pj('@test/level2', { dependencies: { zod: '^2.0.0' } }),
         'packages/level2/dist/index.js': `export function fromLevel2() { return 'level2'; }`,
       })
 
@@ -1325,7 +1279,7 @@ console.log('Hello from bin');
     it('includes .npmrc file when present in package directory', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         'packages/app/dist/index.js': `console.log('Hello');`,
         'packages/app/.npmrc': 'registry=https://custom.registry.com',
       })
