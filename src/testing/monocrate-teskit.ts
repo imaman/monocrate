@@ -38,22 +38,6 @@ export function pj(name: string, version = '1.0.0', more: Partial<PackageJson> =
  */
 export function makePackageJson(options: PackageJsonOptions): PackageJson {
   return pj(options.name, undefined, { dependencies: options.dependencies })
-  // const pkg: PackageJson = {
-  //   name: options.name,
-  //   version: '1.0.0',
-  //   // TODO(imaman): algin with index.js
-  //   main: 'dist/index.js',
-  // }
-
-  // if (options.dependencies !== undefined) {
-  //   pkg.dependencies = options.dependencies
-  // }
-
-  // if (options.transform !== undefined) {
-  //   options.transform(pkg)
-  // }
-
-  // return pkg
 }
 
 export async function runMonocrate(
