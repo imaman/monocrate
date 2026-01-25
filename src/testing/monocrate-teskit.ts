@@ -22,13 +22,18 @@ interface PackageJsonOptions {
   // transform?: (pkg: PackageJson) => void
 }
 
-export function pj(name: string, version = '1.0.0', more: Partial<PackageJson> = {}) {
-  // TODO(imaman): type "module" by default?
+export function pj(name: string, version?: string, more?: Partial<PackageJson>): PackageJson
+export function pj(name: string, more?: Partial<PackageJson>): PackageJson
+export function pj(
+  ...[name, a1, a2]: [string] | [string, string?, Partial<PackageJson>?] | [string, Partial<PackageJson>?]
+): PackageJson {
+  const version = typeof a1 === 'string' ? { version: a1 } : {}
+  const more = typeof a1 === 'object' ? a1 : typeof a2 === 'object' ? a2 : {}
   return {
     main: 'dist/index.js',
     ...more,
     name,
-    version,
+    ...version,
   }
 }
 
