@@ -6,7 +6,13 @@ From monorepo to npm in one command.
 
 Publishing from a monorepo breaks when your package depends on internal packages. npm doesn't understand workspace references like `@myorg/utils`. You're forced to either publish every internal package separately, manually copy and merge files, or bundle everything into a single file (losing module structure and type declarations).
 
-Monocrate copies your package's compiled code along with all its in-repo dependencies, rewrites imports to use relative paths, and merges third-party dependencies into a single `package.json`. The result is a self-contained directory ready for `npm publish`.
+Monocrate gives you:
+
+- **One command** — point at your package, done
+- **Self-contained output** — internal dependencies are included, nothing else to publish
+- **Preserved module structure** — no flattening into a single file, tree-shaking works
+- **Type declarations included** — `.d.ts` files just work
+- **Open-source mirroring** — `--mirror-to` copies sources to a public repo alongside publishing
 
 ## Install
 
