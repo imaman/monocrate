@@ -19,16 +19,21 @@ export function createTempDir(prefix = 'monocrate-testing-'): string {
 interface PackageJsonOptions {
   name: string
   dependencies?: Record<string, string>
-  transform?: (pkg: PackageJson) => void
 }
 
-export function pj(name: string, version = '1.0.0', more: Partial<PackageJson> = {}) {
-  // TODO(imaman): type "module" by default?
+export function pj(name: string, version?: string, more?: Partial<PackageJson>): PackageJson
+export function pj(name: string, more?: Partial<PackageJson>): PackageJson
+export function pj(
+  ...[name, a1, a2]: [string] | [string, string?, Partial<PackageJson>?] | [string, Partial<PackageJson>?]
+): PackageJson {
+  const version = typeof a1 === 'string' ? { version: a1 } : {}
+  const more = typeof a1 === 'object' ? a1 : typeof a2 === 'object' ? a2 : {}
   return {
+    version: '0.9.9',
     main: 'dist/index.js',
     ...more,
     name,
-    version,
+    ...version,
   }
 }
 
@@ -37,22 +42,7 @@ export function pj(name: string, version = '1.0.0', more: Partial<PackageJson> =
  * Required fields (name, version) are always included.
  */
 export function makePackageJson(options: PackageJsonOptions): PackageJson {
-  const pkg: PackageJson = {
-    name: options.name,
-    version: '1.0.0',
-    // TODO(imaman): algin with index.js
-    main: 'dist/index.js',
-  }
-
-  if (options.dependencies !== undefined) {
-    pkg.dependencies = options.dependencies
-  }
-
-  if (options.transform !== undefined) {
-    options.transform(pkg)
-  }
-
-  return pkg
+  return pj(options.name, { dependencies: options.dependencies })
 }
 
 export async function runMonocrate(
