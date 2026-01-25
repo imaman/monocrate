@@ -71,9 +71,9 @@ function extractPackages(args: string[]): string[] {
   return args
 }
 
-const prepareCommand = defineCommand({
+const rehearseCommand = defineCommand({
   meta: {
-    name: 'prepare',
+    name: 'rehearse',
     description: 'Assemble packages for publishing without actually publishing',
   },
   args: cliArgsDefs,
@@ -85,7 +85,7 @@ const prepareCommand = defineCommand({
 const publishCommand = defineCommand({
   meta: {
     name: 'publish',
-    description: 'Assemble and publish packages to npm',
+    description: 'publish packages to npm',
   },
   args: cliArgsDefs,
   async run({ args }) {
@@ -99,7 +99,7 @@ const mainCommand = defineCommand({
     description: 'Assemble and publish monorepo packages to npm',
   },
   subCommands: {
-    prepare: prepareCommand,
+    prepare: rehearseCommand,
     publish: publishCommand,
   },
 })
