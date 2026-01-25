@@ -66,9 +66,12 @@ export interface MonocrateOptions {
   npmrcPath?: string
 
   /**
-   * Path to a directory where source code of all packages in the closure should be mirrored.
-   * The mirrored files preserve the path structure relative to the monorepo root.
-   * Only files that are NOT gitignored are copied. Each package's target directory is wiped before copying.
+   * Path to a directory where source files should be mirrored.
+   * Mirrors all assembled packages (the main package and its in-repo dependencies).
+   *
+   * Only git-tracked files (committed or staged) are copied, preserving their path structure
+   * relative to the monorepo root. Each package's target directory is wiped before copying.
+   *
    * Can be absolute or relative. Relative paths are resolved from the cwd option.
    */
   mirrorTo?: string

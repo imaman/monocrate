@@ -1195,7 +1195,9 @@ console.log('Hello from bin');
     it('throws with detailed error message when packages require different versions', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': pj('@test/app', { dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.0' } }),
+        'packages/app/package.json': pj('@test/app', {
+          dependencies: { '@test/lib': 'workspace:*', lodash: '^4.17.0' },
+        }),
         'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
         'packages/lib/package.json': pj('@test/lib', { dependencies: { lodash: '^3.10.0' } }),
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
@@ -1321,7 +1323,7 @@ console.log('Hello from bin');
     it('mirrors source files to the specified directory preserving path structure', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         'packages/app/src/index.ts': `export const foo = 'foo';`,
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
@@ -1352,13 +1354,12 @@ console.log('Hello from bin');
     it('mirrors all packages in the closure including dependencies', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({
-          name: '@test/app',
+        'packages/app/package.json': pj('@test/app', {
           dependencies: { '@test/lib': 'workspace:*' },
         }),
         'packages/app/src/index.ts': `import { greet } from '@test/lib';`,
         'packages/app/dist/index.js': `import { greet } from '@test/lib';`,
-        'packages/lib/package.json': makePackageJson({ name: '@test/lib' }),
+        'packages/lib/package.json': pj('@test/lib'),
         'packages/lib/src/index.ts': `export function greet() { return 'Hello!'; }`,
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
       })
@@ -1388,7 +1389,7 @@ console.log('Hello from bin');
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
         '.gitignore': 'node_modules\n*.log\n',
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         'packages/app/src/index.ts': `export const foo = 'foo';`,
         'packages/app/dist/index.js': `export const foo = 'foo';`,
         'packages/app/debug.log': 'some debug logs',
@@ -1419,7 +1420,7 @@ console.log('Hello from bin');
     it('wipes target directory before copying', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         'packages/app/src/index.ts': `export const foo = 'foo';`,
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
@@ -1453,19 +1454,17 @@ console.log('Hello from bin');
     it('mirrors packages from multiple subject packages', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app1/package.json': makePackageJson({
-          name: '@test/app1',
+        'packages/app1/package.json': pj('@test/app1', {
           dependencies: { '@test/shared': 'workspace:*' },
         }),
         'packages/app1/src/index.ts': `app1 source`,
         'packages/app1/dist/index.js': `app1 dist`,
-        'packages/app2/package.json': makePackageJson({
-          name: '@test/app2',
+        'packages/app2/package.json': pj('@test/app2', {
           dependencies: { '@test/shared': 'workspace:*' },
         }),
         'packages/app2/src/index.ts': `app2 source`,
         'packages/app2/dist/index.js': `app2 dist`,
-        'packages/shared/package.json': makePackageJson({ name: '@test/shared' }),
+        'packages/shared/package.json': pj('@test/shared'),
         'packages/shared/src/index.ts': `shared source`,
         'packages/shared/dist/index.js': `shared dist`,
       })
@@ -1496,7 +1495,7 @@ console.log('Hello from bin');
     it('does not mirror when mirrorTo is not specified', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/package.json': pj('@test/app'),
         'packages/app/src/index.ts': `export const foo = 'foo';`,
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
