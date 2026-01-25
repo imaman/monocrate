@@ -99,8 +99,8 @@ const mainCommand = defineCommand({
     description: 'Assemble and publish monorepo packages to npm',
   },
   subCommands: {
-    prepare: prepareCommand,
     publish: publishCommand,
+    prepare: prepareCommand,
   },
 })
 
