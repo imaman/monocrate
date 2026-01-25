@@ -155,13 +155,13 @@ describe('npm publishing with Verdaccio', () => {
       '.npmrc': verdaccio.npmRc(),
       'package.json': { workspaces: ['packages/*'] },
       'packages/foo/package.json': pj('foo', '1.0.0', { dependencies: { boo: 'workspace:*', naturals: '^3.0.0' } }),
-      'packages/foo/index.js': [
+      'packages/foo/dist/index.js': [
         `import { classify } from 'boo'`,
         `import { divisorsOf } from 'naturals'`,
         `export function analyze(n) { return n + ' is ' + classify(n) + ". Divisors: " + divisorsOf(n).join(', ') }`,
       ].join('\n'),
       'packages/boo/package.json': pj('boo', '1.0.0', { dependencies: { 'is-even': '~2.4.0' } }),
-      'packages/boo/index.js': `import isEven from 'is-even'; export function classify(n) { return isEven(n) ? 'even' : 'odd'; }`,
+      'packages/boo/dist/index.js': `import isEven from 'is-even'; export function classify(n) { return isEven(n) ? 'even' : 'odd'; }`,
     })
 
     await monocrate({
