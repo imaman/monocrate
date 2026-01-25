@@ -5,32 +5,38 @@ import { monocrate } from './monocrate.js'
 const cliArgsDefs = {
   packages: {
     type: 'positional' as const,
-    description: 'Package directories to assemble',
+    description:
+      'Package directories to assemble (absolute or relative). Specify one or more packages from your monorepo to bundle with their in-repo dependencies.',
     required: true,
   },
   bump: {
     type: 'string' as const,
-    description: 'Version: x.y.z (explicit) or patch|minor|major (increment)',
+    description:
+      'Version specifier: explicit semver (1.2.3) or increment (patch|minor|major). For increments, finds the highest current version across all packages and bumps it. Defaults to minor.',
     alias: 'b',
   },
   output: {
     type: 'string' as const,
-    description: 'Output directory (creates a dedicated temp directory if not specified)',
+    description:
+      'Output root directory; assembly placed in package-named subdirectory. Defaults to a temp directory. Useful for inspecting the assembly before publishing or for manual publishing.',
     alias: 'o',
   },
   root: {
     type: 'string' as const,
-    description: 'Monorepo root directory (auto-detected if not specified)',
+    description:
+      'Monorepo root directory. Auto-detected by searching for a package.json with workspaces. Specify explicitly if auto-detection fails or your structure is non-standard.',
     alias: 'r',
   },
   'output-file': {
     type: 'string' as const,
-    description: 'Write output to file instead of stdout',
+    description:
+      'Write the resolved version to a file instead of stdout. Useful in CI/CD pipelines to capture the published version for downstream steps.',
     alias: 'f',
   },
   'mirror-to': {
     type: 'string' as const,
-    description: 'Mirrors the source code of the packages (and their in-repo dependencies) to this directory',
+    description:
+      'Mirror package sources to this directory (committed files from HEAD only; fails if untracked files exist). Primary use case: copying source code from a private monorepo to a public mirror repository for open-sourced packages.',
     alias: 'm',
   },
 }
