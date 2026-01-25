@@ -101,6 +101,9 @@ Point at your package. That's it.`
     .demandCommand(1, 'Try: monocrate publish <package-dir>')
     .strict()
     .help()
+    .version(pkg.version)
+    .option('help', { hidden: true })
+    .option('version', { hidden: true })
 
   void Promise.resolve(parser.parse()).catch((error: unknown) => {
     console.error('Fatal error:', error instanceof Error ? error.stack : error)

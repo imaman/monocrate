@@ -80,7 +80,7 @@ describe('monocrate', () => {
 
       const opts = {
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+        pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
         report: path.join(dir, 'stdout'),
         publish: false,
