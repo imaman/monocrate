@@ -22,7 +22,7 @@ describe('monocrate', () => {
 
       const result = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+        pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
         monorepoRoot,
         publish: false,
         bump: '2.8.512',
@@ -51,7 +51,7 @@ describe('monocrate', () => {
       const outputRoot = createTempDir('monocrate-explicit-output-')
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+        pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
         outputRoot,
         monorepoRoot,
         publish: false,
@@ -139,7 +139,7 @@ describe('monocrate', () => {
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         monorepoRoot,
         publish: false,
         bump: '2.8.512',
@@ -161,7 +161,7 @@ describe('monocrate', () => {
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: 'packages/app',
+          pathToSubjectPackages: 'packages/app',
           monorepoRoot,
           publish: false,
           bump: '2.8.512',
@@ -179,7 +179,7 @@ describe('monocrate', () => {
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: 'packages/app',
+          pathToSubjectPackages: 'packages/app',
           monorepoRoot,
           publish: false,
           bump: '2.8.512',
@@ -196,7 +196,7 @@ describe('monocrate', () => {
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: 'packages/app',
+          pathToSubjectPackages: 'packages/app',
           publish: false,
           bump: '2.8.512',
         })
@@ -222,7 +222,7 @@ describe('monocrate', () => {
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+          pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
           monorepoRoot,
           publish: false,
           bump: '2.4.6',
@@ -270,7 +270,7 @@ describe('monocrate', () => {
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '2.8.512',
       })
@@ -302,7 +302,7 @@ describe('monocrate', () => {
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '2.8.512',
       })
@@ -686,7 +686,7 @@ export declare const bar: typeof foo;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/a',
+        pathToSubjectPackages: 'packages/a',
         publish: false,
         bump: '2.8.512',
       })
@@ -718,7 +718,7 @@ export const bar = 'bar';
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/a',
+        pathToSubjectPackages: 'packages/a',
         publish: false,
         bump: '2.8.512',
       })
@@ -747,7 +747,7 @@ export const bar = foo;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/a',
+        pathToSubjectPackages: 'packages/a',
         publish: false,
         bump: '2.8.512',
       })
@@ -778,7 +778,7 @@ export const helper = foo + '-helper';
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/a',
+        pathToSubjectPackages: 'packages/a',
         publish: false,
         bump: '2.8.512',
       })
@@ -810,7 +810,7 @@ export const bar = foo + util;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/a',
+        pathToSubjectPackages: 'packages/a',
         publish: false,
         bump: '2.8.512',
       })
@@ -853,7 +853,7 @@ export declare const bar: typeof foo;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/a',
+        pathToSubjectPackages: 'packages/a',
         publish: false,
         bump: '2.8.512',
       })
@@ -885,7 +885,7 @@ export const result = helper;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/a',
+        pathToSubjectPackages: 'packages/a',
         publish: false,
         bump: '2.8.512',
       })
@@ -920,7 +920,7 @@ export const result = helper;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/a',
+        pathToSubjectPackages: 'packages/a',
         publish: false,
         bump: '2.8.512',
       })
@@ -947,7 +947,7 @@ export const foo = b.foo;
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/a',
+        pathToSubjectPackages: 'packages/a',
         publish: false,
         bump: '2.8.512',
       })
@@ -1009,7 +1009,7 @@ console.log('Hello from bin');
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '2.8.512',
       })
@@ -1041,7 +1041,7 @@ console.log('Hello from bin');
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '2.8.512',
       })
@@ -1175,7 +1175,7 @@ console.log('Hello from bin');
 
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '2.8.512',
       })
@@ -1205,7 +1205,7 @@ console.log('Hello from bin');
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: 'packages/app',
+          pathToSubjectPackages: 'packages/app',
           publish: false,
           bump: '2.8.512',
         })
@@ -1229,7 +1229,7 @@ console.log('Hello from bin');
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: 'packages/app',
+          pathToSubjectPackages: 'packages/app',
           publish: false,
           bump: '2.8.512',
         })
@@ -1269,7 +1269,7 @@ console.log('Hello from bin');
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: 'packages/app',
+          pathToSubjectPackages: 'packages/app',
           publish: false,
           bump: '2.8.512',
         })
@@ -1334,7 +1334,7 @@ console.log('Hello from bin');
 
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '1.0.0',
         mirrorTo: mirrorDir,
@@ -1369,7 +1369,7 @@ console.log('Hello from bin');
 
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '1.0.0',
         mirrorTo: mirrorDir,
@@ -1400,7 +1400,7 @@ console.log('Hello from bin');
 
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '1.0.0',
         mirrorTo: mirrorDir,
@@ -1434,7 +1434,7 @@ console.log('Hello from bin');
 
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '1.0.0',
         mirrorTo: mirrorDir,
@@ -1474,7 +1474,7 @@ console.log('Hello from bin');
 
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: ['packages/app1', 'packages/app2'],
+        pathToSubjectPackages: ['packages/app1', 'packages/app2'],
         publish: false,
         bump: '1.0.0',
         mirrorTo: mirrorDir,
@@ -1510,7 +1510,7 @@ console.log('Hello from bin');
       await expect(
         monocrate({
           cwd: monorepoRoot,
-          pathToSubjectPackage: 'packages/app',
+          pathToSubjectPackages: 'packages/app',
           publish: false,
           bump: '1.0.0',
           mirrorTo: mirrorDir,
@@ -1529,7 +1529,7 @@ console.log('Hello from bin');
       // No mirrorTo option
       const result = await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/app',
+        pathToSubjectPackages: 'packages/app',
         publish: false,
         bump: '1.0.0',
       })

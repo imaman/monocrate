@@ -50,7 +50,7 @@ export async function runMonocrate(
 ) {
   const { outputDir } = await monocrate({
     cwd: monorepoRoot,
-    pathToSubjectPackage: path.join(monorepoRoot, sourcePackage),
+    pathToSubjectPackages: path.join(monorepoRoot, sourcePackage),
     monorepoRoot,
     bump,
     publish: false,

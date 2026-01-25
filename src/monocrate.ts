@@ -40,9 +40,9 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   // Validate bump argument before any side effects (defaults to 'minor')
   const versionSpecifier = parseVersionSpecifier(options.bump ?? 'minor')
 
-  const sources = Array.isArray(options.pathToSubjectPackage)
-    ? options.pathToSubjectPackage
-    : [options.pathToSubjectPackage]
+  const sources = Array.isArray(options.pathToSubjectPackages)
+    ? options.pathToSubjectPackages
+    : [options.pathToSubjectPackages]
 
   const sourceDirs = sources.map((at) => AbsolutePath(path.resolve(cwd, at)))
   const sourceDir0 = sourceDirs.at(0)

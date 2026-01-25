@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import type { MonocrateOptions } from './index.js';
+import type { MonocrateOptions } from './index.js'
 import { monocrate } from './index.js'
 import { pj } from './testing/monocrate-teskit.js'
 import { folderify } from './testing/folderify.js'
@@ -34,7 +34,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mylib'),
       monorepoRoot,
       bump: '99.99.99',
       publish: true,
@@ -55,7 +55,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mylib'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mylib'),
       monorepoRoot,
       bump: '99.99.99',
       publish: true,
@@ -82,7 +82,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/app'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
       monorepoRoot,
       bump: '88.88.88',
       publish: true,
@@ -108,7 +108,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/foo',
+        pathToSubjectPackages: 'packages/foo',
         monorepoRoot,
         bump: '1.4.1',
         publish: true,
@@ -120,7 +120,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/foo',
+        pathToSubjectPackages: 'packages/foo',
         monorepoRoot,
         bump: '2.7.1',
         publish: true,
@@ -132,7 +132,7 @@ describe('npm publishing with Verdaccio', () => {
     expect(
       await monocrate({
         cwd: monorepoRoot,
-        pathToSubjectPackage: 'packages/foo',
+        pathToSubjectPackages: 'packages/foo',
         monorepoRoot,
         bump: '3.1.4',
         publish: true,
@@ -167,7 +167,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: 'packages/foo',
+      pathToSubjectPackages: 'packages/foo',
       monorepoRoot,
       bump: '77.77.77',
       publish: true,
@@ -194,7 +194,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       bump: '2.4.0',
       publish: true,
@@ -203,7 +203,7 @@ describe('npm publishing with Verdaccio', () => {
 
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       bump: 'minor',
       publish: true,
@@ -211,7 +211,7 @@ describe('npm publishing with Verdaccio', () => {
     })
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       bump: 'major',
       publish: true,
@@ -219,7 +219,7 @@ describe('npm publishing with Verdaccio', () => {
     })
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       bump: '4.1.8',
       publish: true,
@@ -227,7 +227,7 @@ describe('npm publishing with Verdaccio', () => {
     })
     await monocrate({
       cwd: monorepoRoot,
-      pathToSubjectPackage: path.join(monorepoRoot, 'packages/mypkg'),
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mypkg'),
       monorepoRoot,
       bump: 'patch',
       publish: true,
@@ -249,7 +249,7 @@ describe('npm publishing with Verdaccio', () => {
 
     const opts: MonocrateOptions = {
       cwd: monorepoRoot,
-      pathToSubjectPackage: 'packages/calculator',
+      pathToSubjectPackages: 'packages/calculator',
       monorepoRoot,
       bump: 'major',
       publish: true,
