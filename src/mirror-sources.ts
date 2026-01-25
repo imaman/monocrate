@@ -86,6 +86,8 @@ function collectCopyOperations(packages: MonorepoPackage[], mirrorDir: AbsoluteP
  * Each package's target directory is wiped before copying.
  */
 export async function mirrorSources(packages: MonorepoPackage[], mirrorDir: AbsolutePath): Promise<void> {
+  // TODO(imaman): can we dedup with file-copier.ts?
+
   // Phase 1: Wipe target directories for each package
   for (const pkg of packages) {
     const targetDir = AbsolutePath.join(mirrorDir, pkg.pathInRepo)
@@ -103,6 +105,7 @@ export async function mirrorSources(packages: MonorepoPackage[], mirrorDir: Abso
     await fsPromises.mkdir(dir, { recursive: true })
   }
 
+  // TODO(imaman): make the loop run concurrently (with some controlled concurrency).
   // Phase 4: Copy all files
   for (const op of operations) {
     await fsPromises.copyFile(op.source, op.destination)
