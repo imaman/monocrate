@@ -72,7 +72,14 @@ export async function runNpm(
   const errorPolicy = options?.nonZeroExitCodePolicy ?? 'throw'
   const stdio = options?.stdio ?? 'inherit'
 
-  const proc = x('npm', [subcommand, ...args], { nodeOptions: { ...options, cwd, stdio }, throwOnError: false })
+  console.log(
+    `INVOKING: ${['npm', [subcommand, ...args], { nodeOptions: { ...options, cwd, stdio }, throwOnError: false }].map((a) => JSON.stringify(a)).join(' ')}`
+  )
+  const uc = options?.userconfig ? ['--userconfig', options.userconfig] : []
+  const proc = x('npm', [subcommand, ...args, ...uc], {
+    nodeOptions: { env: options?.env, cwd, stdio },
+    throwOnError: false,
+  })
   const result = await proc
 
   if (result.exitCode === undefined) {

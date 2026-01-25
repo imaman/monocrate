@@ -33,7 +33,7 @@ export class VerdaccioTestkit {
   }
 
   npmRc() {
-    return fs.readFileSync(this.get().npmrcPath)
+    return fs.readFileSync(this.get().npmrcPath).toString()
   }
 
   runView(packageName: string): unknown {
