@@ -48,6 +48,7 @@
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@types/node": "^20.19.29",
+    "@types/yargs": "^17.0.35",
     "@vitest/coverage-v8": "^1.2.0",
     "eslint": "^9.0.0",
     "eslint-plugin-unused-imports": "^4.3.0",
@@ -70,12 +71,12 @@
     ]
   },
   "dependencies": {
-    "citty": "^0.1.6",
     "esbuild": "^0.24.0",
     "glob": "^13.0.0",
     "resolve.exports": "^2.0.3",
     "tinyexec": "^1.0.2",
     "ts-morph": "^27.0.2",
+    "yargs": "^18.0.0",
     "zod": "^4.3.5"
   }
 }
