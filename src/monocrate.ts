@@ -10,7 +10,6 @@ import { parseVersionSpecifier } from './version-specifier.js'
 import { AbsolutePath } from './paths.js'
 import { maxVersion } from './resolve-version.js'
 import { NpmClient } from './npm-client.js'
-import { computePackageClosure } from './compute-package-closure.js'
 import { mirrorSources } from './mirror-sources.js'
 
 export interface MonocrateOptions {
@@ -146,11 +145,12 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }
   const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v)
 
-  // Compute closures for all assemblers to collect all packages involved
-  const closures = assemblers.map((a) => computePackageClosure(a.pkgName, explorer))
-
+  const allPackages = new Map<string, MonorepoPackage>()
   for (const assembler of assemblers) {
-    await assembler.assemble(resolvedVersion)
+    const members = await assembler.assemble(resolvedVersion)
+    for (const pkg of members) {
+      allPackages.set(pkg.name, pkg)
+    }
 
     if (options.publish) {
       await publish(npmClient, assembler.getOutputDir())
@@ -160,15 +160,6 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   // Mirror source files if mirrorTo is specified
   if (options.mirrorTo) {
     const mirrorDir = AbsolutePath(path.resolve(cwd, options.mirrorTo))
-
-    // Collect all unique packages from all closures
-    const allPackages = new Map<string, MonorepoPackage>()
-    for (const closure of closures) {
-      for (const pkg of closure.members) {
-        allPackages.set(pkg.name, pkg)
-      }
-    }
-
     await mirrorSources([...allPackages.values()], mirrorDir)
   }
 
