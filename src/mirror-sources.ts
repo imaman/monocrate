@@ -14,7 +14,7 @@ interface CopyOperation {
  * Lists files in a directory that are tracked by git (i.e., not gitignored).
  * Uses `git ls-files` to get the list of tracked and untracked-but-not-ignored files.
  */
-function listNonGitIgnoredFiles(packageDir: AbsolutePath): string[] {
+function listNonGitIgnoredFiles(packageDir: AbsolutePath): RelativePath[] {
   // Get tracked files and untracked files that are not ignored
   // --cached: show tracked files
   // --others: show untracked files
@@ -28,6 +28,7 @@ function listNonGitIgnoredFiles(packageDir: AbsolutePath): string[] {
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
+    .map((line) => RelativePath(line))
 }
 
 function collectCopyOperations(packages: MonorepoPackage[], mirrorDir: AbsolutePath): CopyOperation[] {
@@ -38,22 +39,20 @@ function collectCopyOperations(packages: MonorepoPackage[], mirrorDir: AbsoluteP
     const files = listNonGitIgnoredFiles(pkg.fromDir)
 
     for (const relativePath of files) {
-      const sourceFile = AbsolutePath(path.join(pkg.fromDir, relativePath))
+      const sourceFile = AbsolutePath.join(pkg.fromDir, relativePath)
 
-      // Skip if source doesn't exist (could happen if file was deleted after ls-files)
       if (!fs.existsSync(sourceFile)) {
-        continue
+        throw new Error(`Source file does not exist: ${sourceFile}`)
       }
 
-      // Skip directories (git ls-files only returns files, but just in case)
       const stat = fs.statSync(sourceFile)
       if (stat.isDirectory()) {
-        continue
+        throw new Error(`git ls-files returned a directory, which is unexpected: ${sourceFile}`)
       }
 
       operations.push({
         source: sourceFile,
-        destination: AbsolutePath.join(targetDir, RelativePath(relativePath)),
+        destination: AbsolutePath.join(targetDir, relativePath),
       })
     }
   }
