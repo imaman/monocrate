@@ -69,7 +69,7 @@ export class VerdaccioTestkit {
   runConumser(depToInstall: string, ...jsSourceCode: string[]) {
     const fileName = `dist/index.js`
     const dir = folderify({
-      'package.json': { name: 'na', version: '1.0.0', type: 'module' },
+      'package.json': { name: 'na', version: '1.0.0' },
       [fileName]: jsSourceCode.join('\n'),
     })
     this.runInstall(dir, depToInstall)
