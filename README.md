@@ -1,193 +1,110 @@
 # Monocrate
 
-> From monorepo to npm in one command
+From monorepo to npm in one command.
 
-Monocrate bundles monorepo packages for npm publishing by automatically resolving in-repo dependencies, copying compiled code, and generating a unified package.json with all third-party dependencies merged.
+## Why
 
-## The Problem
+Publishing from a monorepo breaks when your package depends on internal packages. npm doesn't understand workspace references like `@myorg/utils`. You're forced to either publish every internal package separately, manually copy and merge files, or bundle everything into a single file (losing module structure and type declarations).
 
-Publishing a package from a monorepo to npm is surprisingly painful. Your package might depend on other internal packages (like `@myorg/utils` or `@myorg/core`), but npm doesn't understand workspace dependencies. You end up with one of these bad options:
+Monocrate copies your package's compiled code along with all its in-repo dependencies, rewrites imports to use relative paths, and merges third-party dependencies into a single `package.json`. The result is a self-contained directory ready for `npm publish`.
 
-1. **Publish everything** - Every internal dependency must be published separately, even if they're implementation details
-2. **Manual bundling** - Copy files, manually merge package.json dependencies, hope you didn't miss anything
-3. **Complex build pipelines** - Esbuild/Rollup/Webpack configurations that bundle everything into a single file, losing the module structure
-
-## The Solution
-
-Monocrate takes a different approach: it bundles your package and all its in-repo dependencies into a single publishable directory, preserving the original module structure. Third-party dependencies are collected from all packages and merged into a single package.json.
-
-```
-monorepo/
-  packages/
-    app/          <-- You want to publish this
-    utils/        <-- app depends on this
-    core/         <-- utils depends on this
-
-$ monocrate bundle @myorg/app --output ./publish
-
-publish/
-  index.js        <-- app's compiled code
-  _deps/
-    _myorg_utils/ <-- utils' compiled code
-    _myorg_core/  <-- core's compiled code
-  package.json    <-- Merged dependencies from all packages
-```
-
-## Installation
+## Install
 
 ```bash
 npm install -g monocrate
 ```
 
-Or use without installing:
+## Usage
 
 ```bash
-npx monocrate bundle my-package --output ./publish
+# Prepare for inspection without publishing
+monocrate prepare packages/my-app
+
+# Publish directly to npm
+monocrate publish packages/my-app --bump patch
 ```
 
-## Quick Start
+### Commands
 
-**1. Build your packages**
+**`prepare <packages...>`** — Assemble packages but don't publish. Useful for inspecting output or manual publishing.
+
+**`publish <packages...>`** — Assemble and publish to npm.
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `-b, --bump` | Version bump: `patch`, `minor`, `major`, or explicit version like `1.2.3`. Defaults to `minor`. |
+| `-o, --output` | Output directory. Defaults to a temp directory. |
+| `-r, --root` | Monorepo root. Auto-detected if omitted. |
+| `-m, --mirror-to` | Mirror source files to another directory (for open-source mirrors). |
+| `--report` | Write the resolved version to a file instead of stdout. |
+
+### Examples
 
 ```bash
-# Ensure all packages have been compiled to their dist/ directories
-npm run build --workspaces
-```
+# Bump patch version and publish
+monocrate publish packages/cli --bump patch
 
-**2. Bundle for publishing**
+# Publish multiple packages with synchronized versions
+monocrate publish packages/core packages/cli
 
-```bash
-monocrate bundle @myorg/app --output ./publish
-```
+# Prepare to a specific directory for inspection
+monocrate prepare packages/app --output ./publish-staging
 
-**3. Publish to npm**
-
-```bash
-cd publish && npm publish
-```
-
-## Programmatic API
-
-Monocrate can be used as a library in your build scripts:
-
-```typescript
-import { bundle } from 'monocrate';
-
-const result = await bundle({
-  packagePath: '/path/to/monorepo/packages/my-app',
-  monorepoRoot: '/path/to/monorepo',
-  outputDir: '/tmp/my-app-bundle',
-});
-
-if (result.success) {
-  console.log('Bundle created at:', result.outputPath);
-  console.log('Included packages:', result.includedPackages);
-  console.log('Dependencies:', result.mergedDependencies);
-} else {
-  console.error('Bundle failed:', result.error);
-  console.error('Details:', result.details);
-}
-```
-
-### Convenience Function
-
-For simpler use cases when running from the monorepo root:
-
-```typescript
-import { bundlePackage } from 'monocrate';
-
-// Automatically discovers packages from workspace configuration
-const result = await bundlePackage('@myorg/app', '/tmp/bundle');
-```
-
-## Configuration Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `packagePath` | `string` | required | Absolute path to the package to bundle |
-| `monorepoRoot` | `string` | required | Absolute path to the monorepo root |
-| `outputDir` | `string` | required | Absolute path to the output directory |
-| `includeSourceMaps` | `boolean` | `true` | Include `.map` files in the bundle |
-| `includeDeclarations` | `boolean` | `true` | Include `.d.ts` files in the bundle |
-| `versionConflictStrategy` | `'highest' \| 'error' \| 'warn'` | `'warn'` | How to handle version conflicts |
-| `cleanOutputDir` | `boolean` | `true` | Remove existing output directory before bundling |
-| `distDirName` | `string` | `'dist'` | Name of the compiled output directory |
-
-### Version Conflict Strategies
-
-When multiple packages depend on the same third-party package with different versions:
-
-- **`'highest'`** - Silently use the highest semver-compatible version
-- **`'warn'`** - Use highest version, but log a warning
-- **`'error'`** - Fail the bundle operation
-
-```typescript
-const result = await bundle({
-  // ...
-  versionConflictStrategy: 'error', // Strict mode
-});
+# Mirror sources to a public repo after publishing
+monocrate publish packages/sdk --mirror-to ../public-repo/packages
 ```
 
 ## How It Works
 
-1. **Discover packages** - Reads workspace configuration (npm, yarn, or pnpm) to find all packages in the monorepo
+1. Discovers all packages in the monorepo via workspace configuration
+2. Builds a dependency graph starting from your target package
+3. Copies each package's `dist/` directory to the output
+4. Rewrites import statements from package names to relative paths
+5. Generates a `package.json` with merged third-party dependencies
 
-2. **Build dependency graph** - Starting from your target package, recursively finds all in-repo dependencies and builds a topologically-sorted graph
+### Output Structure
 
-3. **Validate builds** - Ensures all packages have been compiled (have a `dist/` directory)
-
-4. **Assemble bundle** - Copies compiled code:
-   - Root package's `dist/` goes to output root
-   - Dependencies' `dist/` go to `_deps/<package-name>/`
-
-5. **Transform package.json** - Generates a publish-ready package.json:
-   - Removes workspace-specific fields (`workspaces`, `private`, `devDependencies`)
-   - Removes in-repo dependencies
-   - Merges third-party dependencies from all included packages
-
-## Bundle Result
-
-The `bundle()` function returns a discriminated union:
-
-```typescript
-// Success
-{
-  success: true,
-  outputPath: string,           // Path to the bundle
-  packageJson: PackageJson,     // Generated package.json
-  mergedDependencies: object,   // All third-party deps
-  includedPackages: string[],   // List of bundled packages
-  versionConflicts: VersionConflict[], // Any conflicts found
-}
-
-// Failure
-{
-  success: false,
-  error: string,        // Error message
-  details?: string,     // Additional context
-  cause?: Error,        // Underlying error
-}
 ```
+monorepo/
+  packages/
+    app/          ← you want to publish this
+    utils/        ← app depends on this
+    core/         ← utils depends on this
+
+output/
+  package.json    ← merged deps, in-repo refs removed
+  dist/           ← app's compiled code
+  deps/
+    packages/
+      utils/dist/ ← utils' compiled code (imports rewritten)
+      core/dist/  ← core's compiled code (imports rewritten)
+```
+
+Entry points (`main`, `types`, `exports`) work unchanged because the `dist/` directory stays in the same relative position.
 
 ## Requirements
 
-- **Node.js 20+**
-- **Built packages** - All packages must have a `dist/` directory with compiled code
-- **Workspace configuration** - npm workspaces, yarn workspaces, or pnpm-workspace.yaml
+- Node.js 20+
+- All packages must be compiled (have a `dist/` directory)
+- Monorepo must use npm, yarn, or pnpm workspaces
 
-## Supported Package Managers
+## Programmatic API
 
-Monocrate automatically detects your package manager from:
+```typescript
+import { monocrate } from 'monocrate';
 
-- `pnpm-workspace.yaml`
-- `workspaces` field in root `package.json`
-- Lock files (`pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`)
+const result = await monocrate({
+  pathToSubjectPackages: ['packages/my-app'],
+  cwd: process.cwd(),
+  publish: false,
+  bump: 'minor',
+});
 
-## Documentation
-
-- [API Reference](./docs/api.md) - Complete programmatic API documentation
-- [How It Works](./docs/how-it-works.md) - Deep dive into the bundling process
-- [Troubleshooting](./docs/troubleshooting.md) - Common errors and solutions
+console.log(result.resolvedVersion);  // "1.3.0"
+console.log(result.outputDir);        // "/tmp/monocrate-xyz/my-app"
+```
 
 ## License
 
