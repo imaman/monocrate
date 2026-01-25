@@ -3,12 +3,15 @@ import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { RepoExplorer } from './repo-explorer.js'
+import type { MonorepoPackage } from './repo-explorer.js'
 import { PackageAssembler } from './package-assembler.js'
 import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
 import { AbsolutePath } from './paths.js'
 import { maxVersion } from './resolve-version.js'
 import { NpmClient } from './npm-client.js'
+import { computePackageClosure } from './compute-package-closure.js'
+import { mirrorSources } from './source-mirror.js'
 
 export interface MonocrateOptions {
   /**
@@ -62,6 +65,14 @@ export interface MonocrateOptions {
    * https://docs.npmjs.com/cli/v11/configuring-npm/npmrc#files).
    */
   npmrcPath?: string
+
+  /**
+   * Path to a directory where source code of all packages in the closure should be mirrored.
+   * The mirrored files preserve the path structure relative to the monorepo root.
+   * Only files that are NOT gitignored are copied. Each package's target directory is wiped before copying.
+   * Can be absolute or relative. Relative paths are resolved from the cwd option.
+   */
+  mirrorTo?: string
 }
 
 export interface MonocrateResult {
@@ -135,12 +146,30 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }
   const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v)
 
+  // Compute closures for all assemblers to collect all packages involved
+  const closures = assemblers.map((a) => computePackageClosure(a.pkgName, explorer))
+
   for (const assembler of assemblers) {
     await assembler.assemble(resolvedVersion)
 
     if (options.publish) {
       await publish(npmClient, assembler.getOutputDir())
     }
+  }
+
+  // Mirror source files if mirrorTo is specified
+  if (options.mirrorTo) {
+    const mirrorDir = AbsolutePath(path.resolve(cwd, options.mirrorTo))
+
+    // Collect all unique packages from all closures
+    const allPackages = new Map<string, MonorepoPackage>()
+    for (const closure of closures) {
+      for (const pkg of closure.members) {
+        allPackages.set(pkg.name, pkg)
+      }
+    }
+
+    await mirrorSources([...allPackages.values()], mirrorDir)
   }
 
   if (options.outputFile) {

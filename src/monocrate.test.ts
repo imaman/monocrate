@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { execSync } from 'node:child_process'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { monocrate } from './index.js'
 import { RepoExplorer } from './repo-explorer.js'
@@ -1359,6 +1360,201 @@ console.log('Hello from bin');
           'deps/packages/lib/.npmrc': 'registry=https://lib.registry.com',
         },
       })
+    })
+  })
+
+  describe('--mirror-to option', () => {
+    it('mirrors source files to the specified directory preserving path structure', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/src/index.ts': `export const foo = 'foo';`,
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      // Initialize git repo so git ls-files works
+      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+
+      const mirrorDir = createTempDir('mirror-')
+
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '1.0.0',
+        mirrorTo: mirrorDir,
+      })
+
+      const mirrored = unfolderify(mirrorDir)
+
+      // Should mirror files preserving path structure
+      expect(mirrored).toHaveProperty('packages/app/package.json')
+      expect(mirrored).toHaveProperty('packages/app/src/index.ts')
+      expect(mirrored).toHaveProperty('packages/app/dist/index.js')
+    })
+
+    it('mirrors all packages in the closure including dependencies', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': makePackageJson({
+          name: '@test/app',
+          dependencies: { '@test/lib': 'workspace:*' },
+        }),
+        'packages/app/src/index.ts': `import { greet } from '@test/lib';`,
+        'packages/app/dist/index.js': `import { greet } from '@test/lib';`,
+        'packages/lib/package.json': makePackageJson({ name: '@test/lib' }),
+        'packages/lib/src/index.ts': `export function greet() { return 'Hello!'; }`,
+        'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
+      })
+
+      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+
+      const mirrorDir = createTempDir('mirror-')
+
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '1.0.0',
+        mirrorTo: mirrorDir,
+      })
+
+      const mirrored = unfolderify(mirrorDir)
+
+      // Should mirror both app and its dependency lib
+      expect(mirrored).toHaveProperty('packages/app/package.json')
+      expect(mirrored).toHaveProperty('packages/app/src/index.ts')
+      expect(mirrored).toHaveProperty('packages/lib/package.json')
+      expect(mirrored).toHaveProperty('packages/lib/src/index.ts')
+    })
+
+    it('excludes gitignored files from mirroring', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        '.gitignore': 'node_modules\n*.log\n',
+        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/src/index.ts': `export const foo = 'foo';`,
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+        'packages/app/debug.log': 'some debug logs',
+      })
+
+      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+
+      const mirrorDir = createTempDir('mirror-')
+
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '1.0.0',
+        mirrorTo: mirrorDir,
+      })
+
+      const mirrored = unfolderify(mirrorDir)
+
+      // Should include non-ignored files
+      expect(mirrored).toHaveProperty('packages/app/package.json')
+      expect(mirrored).toHaveProperty('packages/app/src/index.ts')
+
+      // Should exclude gitignored files
+      expect(mirrored).not.toHaveProperty('packages/app/debug.log')
+    })
+
+    it('wipes target directory before copying', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/src/index.ts': `export const foo = 'foo';`,
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+
+      const mirrorDir = createTempDir('mirror-')
+
+      // Create a pre-existing file in the mirror directory
+      fs.mkdirSync(path.join(mirrorDir, 'packages/app'), { recursive: true })
+      fs.writeFileSync(path.join(mirrorDir, 'packages/app/old-file.txt'), 'old content')
+
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '1.0.0',
+        mirrorTo: mirrorDir,
+      })
+
+      const mirrored = unfolderify(mirrorDir)
+
+      // New files should be present
+      expect(mirrored).toHaveProperty('packages/app/package.json')
+      expect(mirrored).toHaveProperty('packages/app/src/index.ts')
+
+      // Old file should be gone (directory was wiped)
+      expect(mirrored).not.toHaveProperty('packages/app/old-file.txt')
+    })
+
+    it('mirrors packages from multiple subject packages', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app1/package.json': makePackageJson({
+          name: '@test/app1',
+          dependencies: { '@test/shared': 'workspace:*' },
+        }),
+        'packages/app1/src/index.ts': `app1 source`,
+        'packages/app1/dist/index.js': `app1 dist`,
+        'packages/app2/package.json': makePackageJson({
+          name: '@test/app2',
+          dependencies: { '@test/shared': 'workspace:*' },
+        }),
+        'packages/app2/src/index.ts': `app2 source`,
+        'packages/app2/dist/index.js': `app2 dist`,
+        'packages/shared/package.json': makePackageJson({ name: '@test/shared' }),
+        'packages/shared/src/index.ts': `shared source`,
+        'packages/shared/dist/index.js': `shared dist`,
+      })
+
+      execSync('git init && git add .', { cwd: monorepoRoot, stdio: 'pipe' })
+
+      const mirrorDir = createTempDir('mirror-')
+
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: ['packages/app1', 'packages/app2'],
+        publish: false,
+        bump: '1.0.0',
+        mirrorTo: mirrorDir,
+      })
+
+      const mirrored = unfolderify(mirrorDir)
+
+      // All three packages should be mirrored
+      expect(mirrored).toHaveProperty('packages/app1/package.json')
+      expect(mirrored).toHaveProperty('packages/app1/src/index.ts')
+      expect(mirrored).toHaveProperty('packages/app2/package.json')
+      expect(mirrored).toHaveProperty('packages/app2/src/index.ts')
+      expect(mirrored).toHaveProperty('packages/shared/package.json')
+      expect(mirrored).toHaveProperty('packages/shared/src/index.ts')
+    }, 30000)
+
+    it('does not mirror when mirrorTo is not specified', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': makePackageJson({ name: '@test/app' }),
+        'packages/app/src/index.ts': `export const foo = 'foo';`,
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      // No mirrorTo option
+      const result = await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackage: 'packages/app',
+        publish: false,
+        bump: '1.0.0',
+      })
+
+      // Should complete without error, outputDir should exist
+      expect(fs.existsSync(result.outputDir)).toBe(true)
     })
   })
 })
