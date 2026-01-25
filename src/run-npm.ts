@@ -73,7 +73,9 @@ export async function runNpm(
   const stdio = options?.stdio ?? 'inherit'
 
   const uc = options?.userconfig ? ['--userconfig', options.userconfig] : []
-  const proc = x('npm', [subcommand, ...args, ...uc], {
+  const fullArgs = [subcommand, ...args, ...uc]
+  const synopsis = `${cwd}$ npm ${fullArgs.map((a) => JSON.stringify(a)).join(' ')}`
+  const proc = x('npm', fullArgs, {
     nodeOptions: { env: options?.env, cwd, stdio },
     throwOnError: false,
   })
@@ -84,7 +86,11 @@ export async function runNpm(
   }
 
   if (result.exitCode !== 0) {
-    const error = new Error(`npm ${subcommand} exited with code ${String(result.exitCode)}`)
+    let message = `An NPM command exited with code ${String(result.exitCode)} - ${synopsis}`
+    if (stdio === 'pipe') {
+      message += `\n${result.stdout}`
+    }
+    const error = new Error(message)
     if (errorPolicy === 'throw') {
       throw error
     }

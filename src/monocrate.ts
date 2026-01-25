@@ -57,9 +57,11 @@ export interface MonocrateOptions {
   cwd: string
 
   /**
-   * Path to an .npmrc file to use for npm commands. If a package-specific .npmrc file exists, it takes precedence.
+   * Path to an .npmrc file to use in npm commands as "userconfig". Settings from this file are merged with any
+   * package-specific .npmrc file, with the package-specific file's settings winning on conflicts (see
+   * https://docs.npmjs.com/cli/v11/configuring-npm/npmrc#files).
    */
-  npmRcFile?: string
+  npmrcPath?: string
 }
 
 export interface MonocrateResult {
@@ -115,7 +117,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     : RepoExplorer.findMonorepoRoot(sourceDir0)
   const explorer = await RepoExplorer.create(monorepoRoot)
 
-  const npmClient = new NpmClient({ userconfig: options.npmRcFile })
+  const npmClient = new NpmClient({ userconfig: options.npmrcPath })
   const assemblers = sourceDirs.map((at) => new PackageAssembler(npmClient, explorer, at, outputRoot))
   const a0 = assemblers.at(0)
   if (!a0) {
