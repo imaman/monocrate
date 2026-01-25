@@ -132,7 +132,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     await assembler.assemble(resolvedVersion)
 
     if (options.publish) {
-      await publish(assembler.getOutputDir(), monorepoRoot)
+      await publish(npmClient, assembler.getOutputDir(), monorepoRoot)
     }
   }
 
