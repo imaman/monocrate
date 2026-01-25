@@ -28,6 +28,11 @@ const cliArgsDefs = {
     description: 'Write output to file instead of stdout',
     alias: 'f',
   },
+  'mirror-to': {
+    type: 'string' as const,
+    description: 'Mirrors the source code of the packages (and their in-repo dependencies) to this directory',
+    alias: 'm',
+  },
 }
 
 interface CliArgs {
@@ -36,6 +41,7 @@ interface CliArgs {
   root?: string
   bump?: string
   'output-file'?: string
+  'mirror-to'?: string
 }
 
 function buildOptions(args: CliArgs, publish: boolean): MonocrateOptions {
@@ -48,6 +54,7 @@ function buildOptions(args: CliArgs, publish: boolean): MonocrateOptions {
     publish,
     outputFile: args['output-file'],
     cwd: process.cwd(),
+    mirrorTo: args['mirror-to'],
   }
 }
 

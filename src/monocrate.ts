@@ -3,12 +3,14 @@ import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { RepoExplorer } from './repo-explorer.js'
+import type { MonorepoPackage } from './repo-explorer.js'
 import { PackageAssembler } from './package-assembler.js'
 import { publish } from './publish.js'
 import { parseVersionSpecifier } from './version-specifier.js'
 import { AbsolutePath } from './paths.js'
 import { maxVersion } from './resolve-version.js'
 import { NpmClient } from './npm-client.js'
+import { mirrorSources } from './mirror-sources.js'
 
 export interface MonocrateOptions {
   /**
@@ -62,6 +64,21 @@ export interface MonocrateOptions {
    * https://docs.npmjs.com/cli/v11/configuring-npm/npmrc#files).
    */
   npmrcPath?: string
+
+  /**
+   * Path to a directory where source files should be mirrored.
+   *
+   * Primary use case: copying exact source code from a private monorepo to a public mirror
+   * repository for published, open-sourced, packages.
+   *
+   * Mirrors all assembled packages (the main package and its in-repo dependencies).
+   * Only committed files (from HEAD) are copied, preserving their path structure relative
+   * to the monorepo root. Fails if any package has untracked files.
+   * Each package's target directory is wiped before copying.
+   *
+   * Can be absolute or relative. Relative paths are resolved from the cwd option.
+   */
+  mirrorTo?: string
 }
 
 export interface MonocrateResult {
@@ -135,12 +152,22 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }
   const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v)
 
+  const allPackages = new Map<string, MonorepoPackage>()
   for (const assembler of assemblers) {
-    await assembler.assemble(resolvedVersion)
+    const members = await assembler.assemble(resolvedVersion)
+    for (const pkg of members) {
+      allPackages.set(pkg.name, pkg)
+    }
 
     if (options.publish) {
       await publish(npmClient, assembler.getOutputDir())
     }
+  }
+
+  // Mirror source files if mirrorTo is specified
+  if (options.mirrorTo) {
+    const mirrorDir = AbsolutePath(path.resolve(cwd, options.mirrorTo))
+    await mirrorSources([...allPackages.values()], mirrorDir)
   }
 
   if (options.outputFile) {
