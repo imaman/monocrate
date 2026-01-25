@@ -257,16 +257,13 @@ describe('monocrate', () => {
     it('preserves exports field in package.json', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': makePackageJson({
-          name: '@test/app',
-          transform: (pkg) => {
-            pkg.types = 'dist/index.d.ts'
-            pkg.exports = {
-              '.': {
-                types: './dist/index.d.ts',
-                import: './dist/index.js',
-              },
-            }
+        'packages/app/package.json': pj('@test/app', undefined, {
+          types: 'dist/index.d.ts',
+          exports: {
+            '.': {
+              types: './dist/index.d.ts',
+              import: './dist/index.js',
+            },
           },
         }),
         'packages/app/dist/index.js': `export const foo = 'foo';
@@ -671,12 +668,9 @@ throwError();
     it('rewrites imports in both .js and .d.ts files', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
-        'packages/a/package.json': makePackageJson({
-          name: '@myorg/a',
+        'packages/a/package.json': pj('@myorg/a', undefined, {
           dependencies: { '@myorg/b': '*', lodash: '^4.0.0' },
-          transform: (pkg) => {
-            pkg.types = 'dist/index.d.ts'
-          },
+          types: 'dist/index.d.ts',
         }),
         'packages/a/dist/index.js': `import { foo } from '@myorg/b';
 export const bar = foo;
@@ -684,12 +678,9 @@ export const bar = foo;
         'packages/a/dist/index.d.ts': `import { foo } from '@myorg/b';
 export declare const bar: typeof foo;
 `,
-        'packages/b/package.json': makePackageJson({
-          name: '@myorg/b',
+        'packages/b/package.json': pj('@myorg/b', undefined, {
           dependencies: { lodash: '^4.0.0' },
-          transform: (pkg) => {
-            pkg.types = 'dist/index.d.ts'
-          },
+          types: 'dist/index.d.ts',
         }),
         'packages/b/dist/index.js': `export const foo = 'foo';
 `,
@@ -855,12 +846,9 @@ export const bar = foo + util;
     it('verifies output directory structure matches spec', async () => {
       const monorepoRoot = folderify({
         'package.json': { name: 'my-monorepo', workspaces: ['packages/*', 'libs/*'] },
-        'packages/a/package.json': makePackageJson({
-          name: '@myorg/a',
+        'packages/a/package.json': pj('@myorg/a', undefined, {
           dependencies: { '@myorg/b': '*' },
-          transform: (pkg) => {
-            pkg.types = 'dist/index.d.ts'
-          },
+          types: 'dist/index.d.ts',
         }),
         'packages/a/dist/index.js': `import { foo } from '@myorg/b';
 export const bar = foo;
@@ -872,12 +860,7 @@ export declare const bar: typeof foo;
 `,
         'packages/a/dist/utils/helper.d.ts': `export declare const x: number;
 `,
-        'packages/b/package.json': makePackageJson({
-          name: '@myorg/b',
-          transform: (pkg) => {
-            pkg.types = 'dist/index.d.ts'
-          },
-        }),
+        'packages/b/package.json': pj('@myorg/b', undefined, { types: 'dist/index.d.ts' }),
         'packages/b/dist/index.js': `export const foo = 'foo';
 `,
         'packages/b/dist/index.d.ts': `export declare const foo: string;
@@ -942,13 +925,10 @@ export const result = helper;
 export const result = helper;
 `,
         // Package b uses exports field to map subpaths to dist directory
-        'packages/b/package.json': makePackageJson({
-          name: '@myorg/b',
-          transform: (pkg) => {
-            pkg.exports = {
-              '.': './dist/index.js',
-              './utils/*': './dist/utils/*',
-            }
+        'packages/b/package.json': pj('@myorg/b', undefined, {
+          exports: {
+            '.': './dist/index.js',
+            './utils/*': './dist/utils/*',
           },
         }),
         'packages/b/dist/index.js': `export const foo = 'foo';
