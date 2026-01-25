@@ -71,9 +71,9 @@ describe('multi-package versioning', () => {
   }, 120000)
 
   it('republishing a package bundles updated in-repo dependency code without publishing the dependency', async () => {
-    const monorepoRoot = folderify({
+    const root = folderify({
       '.npmrc': verdaccio.npmRc(),
-      'package.json': { workspaces: ['packages/*'] },
+      'package.json': { name: 'my-repo', workspaces: ['packages/*'] },
       'packages/app/package.json': pj('mpv-app', '0.0.0', { dependencies: { 'mpv-lib': 'workspace:*' } }),
       'packages/app/dist/index.js': `import { getMessage } from 'mpv-lib'; export const run = () => 'app:' + getMessage();`,
       'packages/lib/package.json': pj('mpv-lib', '0.0.0'),
@@ -82,9 +82,9 @@ describe('multi-package versioning', () => {
 
     // Step 1: Publish both app and lib
     await monocrate({
-      cwd: monorepoRoot,
+      cwd: root,
       pathToSubjectPackage: ['packages/app', 'packages/lib'],
-      monorepoRoot,
+      monorepoRoot: root,
       bump: '1.0.0',
       publish: true,
     })
@@ -96,16 +96,13 @@ describe('multi-package versioning', () => {
     )
 
     // Step 2: Update lib's code
-    fs.writeFileSync(
-      path.join(monorepoRoot, 'packages/lib/dist/index.js'),
-      `export const getMessage = () => 'updated';`
-    )
+    fs.writeFileSync(path.join(root, 'packages/lib/dist/index.js'), `export const getMessage = () => 'updated'`)
 
     // Step 3: Publish only app (which depends on lib)
     await monocrate({
-      cwd: monorepoRoot,
+      cwd: root,
       pathToSubjectPackage: 'packages/app',
-      monorepoRoot,
+      monorepoRoot: root,
       bump: '2.0.0',
       publish: true,
     })
