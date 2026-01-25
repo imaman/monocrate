@@ -55,6 +55,12 @@ export interface MonocrateOptions {
    * Base directory for resolving relative paths. Must be a valid, existing directory.
    */
   cwd: string
+
+  /**
+   * Allows passing an npmrc file that will be used in all npm commands (unless there is a package-specific .npmrc
+   * file)
+   */
+  npmRcFile?: string
 }
 
 export interface MonocrateResult {
@@ -110,7 +116,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     : RepoExplorer.findMonorepoRoot(sourceDir0)
   const explorer = await RepoExplorer.create(monorepoRoot)
 
-  const npmClient = new NpmClient()
+  const npmClient = new NpmClient({ userconfig: options.npmRcFile })
   const assemblers = sourceDirs.map((at) => new PackageAssembler(npmClient, explorer, at, outputRoot))
   const a0 = assemblers.at(0)
   if (!a0) {
