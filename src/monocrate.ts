@@ -14,6 +14,9 @@ import { mirrorSources } from './mirror-sources.js'
 import type { MonocrateResult } from './monocrate-result.js'
 import type { MonocrateOptions } from './monocrate-options.js'
 
+export type { MonocrateOptions } from './monocrate-options.js'
+export type { MonocrateResult } from './monocrate-result.js'
+
 /**
  * Assembles a monorepo package and its in-repo dependencies for npm publishing.
  * @param options - Configuration options for the assembly process
