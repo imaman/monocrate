@@ -1,6 +1,5 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { execSync } from 'node:child_process'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { monocrate } from './index.js'
 import { RepoExplorer } from './repo-explorer.js'
@@ -8,7 +7,7 @@ import { AbsolutePath } from './paths.js'
 import * as publishModule from './publish.js'
 import { folderify } from './testing/folderify.js'
 import { unfolderify } from './testing/unfolderify.js'
-import { createTempDir, pj, runMonocrate } from './testing/monocrate-teskit.js'
+import { createTempDir, initGitRepo, pj, runMonocrate } from './testing/monocrate-teskit.js'
 
 const name = 'root-package'
 
@@ -1329,7 +1328,7 @@ console.log('Hello from bin');
       })
 
       // Initialize git repo so git ls-files works
-      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
+      initGitRepo(monorepoRoot)
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1364,7 +1363,7 @@ console.log('Hello from bin');
         'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
       })
 
-      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
+      initGitRepo(monorepoRoot)
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1395,7 +1394,7 @@ console.log('Hello from bin');
         'packages/app/debug.log': 'some debug logs',
       })
 
-      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
+      initGitRepo(monorepoRoot)
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1425,7 +1424,7 @@ console.log('Hello from bin');
         'packages/app/dist/index.js': `export const foo = 'foo';`,
       })
 
-      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
+      initGitRepo(monorepoRoot)
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1469,7 +1468,7 @@ console.log('Hello from bin');
         'packages/shared/dist/index.js': `shared dist`,
       })
 
-      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
+      initGitRepo(monorepoRoot)
 
       const mirrorDir = createTempDir('mirror-')
 
@@ -1501,7 +1500,7 @@ console.log('Hello from bin');
       })
 
       // Initialize git and commit files
-      execSync('git init && git add . && git commit -m "test"', { cwd: monorepoRoot, stdio: 'pipe' })
+      initGitRepo(monorepoRoot)
 
       // Create an untracked file
       fs.writeFileSync(path.join(monorepoRoot, 'packages/app/leftover-temp.ts'), 'some temp content')

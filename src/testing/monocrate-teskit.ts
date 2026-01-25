@@ -16,6 +16,13 @@ export function createTempDir(prefix = 'monocrate-testing-'): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix))
 }
 
+export function initGitRepo(cwd: string): void {
+  execSync(
+    'git init && git config user.email "test@test.com" && git config user.name "Test" && git add . && git commit -m "test"',
+    { cwd, stdio: 'pipe' }
+  )
+}
+
 /**
  * Creates a package.json object with sensible defaults for npm pack compatibility.
  * Required fields (name, version) are always included.
