@@ -42,8 +42,6 @@ export class PackageAssembler {
     const locations = await collectPackageLocations(this.npmClient, closure, outputDir)
     const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
-    // TODO(imaman): transition to explict integration with verdaccio testkit in which cass we will not need to inject an
-    // npmrc file
     const subject = packageMap.get(closure.subjectPackageName)
     if (!subject) {
       throw new Error(`Internal mismatch: could not find location data of "${closure.subjectPackageName}"`)
