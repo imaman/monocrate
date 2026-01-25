@@ -122,17 +122,17 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     v ? [v] : []
   )
 
-  const v0 = versions.at(0)
-  if (!v0) {
+  const v = versions.at(0)
+  if (!v) {
     throw new Error('Inconsistency - no versions computed')
   }
-  const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v0)
+  const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v)
 
   for (const assembler of assemblers) {
     await assembler.assemble(resolvedVersion)
 
     if (options.publish) {
-      await publish(npmClient, assembler.getOutputDir(), monorepoRoot)
+      await publish(npmClient, assembler.getOutputDir())
     }
   }
 

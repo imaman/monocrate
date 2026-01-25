@@ -6,7 +6,7 @@ import { AbsolutePath, RelativePath } from './paths.js'
 
 export interface MonorepoPackage {
   name: string
-  path: AbsolutePath
+  fromDir: AbsolutePath
   pathInRepo: RelativePath
   packageJson: PackageJson
 }
@@ -24,7 +24,7 @@ export class RepoExplorer {
     // Use realpath to resolve symlinks and catch cases where a symlink points outside
     const realMonorepoRoot = AbsolutePath(fs.realpathSync(monorepoRoot))
     for (const pkg of map.values()) {
-      const realPkgPath = AbsolutePath(fs.realpathSync(pkg.path))
+      const realPkgPath = AbsolutePath(fs.realpathSync(pkg.fromDir))
       if (!AbsolutePath.contains(realMonorepoRoot, realPkgPath)) {
         throw new Error(
           `Package "${pkg.name}" is located at "${realPkgPath}" which is outside the monorepo root "${realMonorepoRoot}"`
@@ -135,7 +135,7 @@ export class RepoExplorer {
         if (packageJson.name) {
           packages.set(packageJson.name, {
             name: packageJson.name,
-            path: packageDir,
+            fromDir: packageDir,
             pathInRepo: RelativePath(path.relative(monorepoRoot, packageDir)),
             packageJson,
           })
