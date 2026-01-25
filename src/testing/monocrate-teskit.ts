@@ -30,6 +30,7 @@ export function pj(
   const version = typeof a1 === 'string' ? { version: a1 } : {}
   const more = typeof a1 === 'object' ? a1 : typeof a2 === 'object' ? a2 : {}
   return {
+    version: '0.9.9',
     main: 'dist/index.js',
     ...more,
     name,
@@ -42,7 +43,7 @@ export function pj(
  * Required fields (name, version) are always included.
  */
 export function makePackageJson(options: PackageJsonOptions): PackageJson {
-  return pj(options.name, undefined, { dependencies: options.dependencies })
+  return pj(options.name, { dependencies: options.dependencies })
 }
 
 export async function runMonocrate(
