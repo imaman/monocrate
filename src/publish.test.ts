@@ -1,7 +1,6 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import type { MonocrateOptions } from './index.js';
 import { monocrate } from './index.js'
 import { pj } from './testing/monocrate-teskit.js'
 import { folderify } from './testing/folderify.js'
@@ -38,7 +37,7 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       bump: '99.99.99',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
     expect(await verdaccio.runView('@test/mylib')).toMatchObject({ name: '@test/mylib', version: '99.99.99' })
     expect(
@@ -59,7 +58,7 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       bump: '99.99.99',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
     expect(await verdaccio.runView('mylib')).toMatchObject({ name: 'mylib', version: '99.99.99' })
     expect(verdaccio.runConumser(`mylib@99.99.99`, `import { hello } from 'mylib'; console.log(hello())`)).toBe(
@@ -86,7 +85,7 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       bump: '88.88.88',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
     expect(verdaccio.runView('@test/app')).toMatchObject({ name: '@test/app', version: '88.88.88' })
     expect(
@@ -112,7 +111,7 @@ describe('npm publishing with Verdaccio', () => {
         monorepoRoot,
         bump: '1.4.1',
         publish: true,
-        npmrcPath: verdaccio.npmrcPath(),
+        npmRcFile: verdaccio.npmrcPath(),
       })
     ).toMatchObject({ resolvedVersion: '1.4.1' })
     expect(verdaccio.runView(pkgName)).toMatchObject({ version: '1.4.1' })
@@ -124,7 +123,7 @@ describe('npm publishing with Verdaccio', () => {
         monorepoRoot,
         bump: '2.7.1',
         publish: true,
-        npmrcPath: verdaccio.npmrcPath(),
+        npmRcFile: verdaccio.npmrcPath(),
       })
     ).toMatchObject({ resolvedVersion: '2.7.1' })
     expect(verdaccio.runView(pkgName)).toMatchObject({ version: '2.7.1' })
@@ -136,7 +135,7 @@ describe('npm publishing with Verdaccio', () => {
         monorepoRoot,
         bump: '3.1.4',
         publish: true,
-        npmrcPath: verdaccio.npmrcPath(),
+        npmRcFile: verdaccio.npmrcPath(),
       })
     ).toMatchObject({ resolvedVersion: '3.1.4' })
 
@@ -171,7 +170,7 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       bump: '77.77.77',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
 
     expect(verdaccio.runView('foo')).toMatchObject({
@@ -198,7 +197,7 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       bump: '2.4.0',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
 
     await monocrate({
@@ -207,7 +206,7 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       bump: 'minor',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
     await monocrate({
       cwd: monorepoRoot,
@@ -215,7 +214,7 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       bump: 'major',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
     await monocrate({
       cwd: monorepoRoot,
@@ -223,7 +222,7 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       bump: '4.1.8',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
     await monocrate({
       cwd: monorepoRoot,
@@ -231,7 +230,7 @@ describe('npm publishing with Verdaccio', () => {
       monorepoRoot,
       bump: 'patch',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
     expect(verdaccio.runView('mypkg')).toMatchObject({
       version: '4.1.9',
@@ -241,19 +240,19 @@ describe('npm publishing with Verdaccio', () => {
 
   it('verify the packaged code changes indeed changes with each published version', async () => {
     const monorepoRoot = folderify({
-      'package.json': { name: 'my-repo', workspaces: ['packages/*'] },
+      'package.json': { workspaces: ['packages/*'] },
       'packages/calculator/package.json': pj('calculator', '1.0.0'),
       'packages/calculator/dist/index.js': `//`,
     })
     const indexPath = path.join(monorepoRoot, 'packages/calculator/dist/index.js')
 
-    const opts: MonocrateOptions = {
+    const opts = {
       cwd: monorepoRoot,
       pathToSubjectPackage: 'packages/calculator',
       monorepoRoot,
       bump: 'major',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     }
 
     // Version 1.0.0: addition

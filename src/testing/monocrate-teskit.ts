@@ -19,7 +19,7 @@ export function createTempDir(prefix = 'monocrate-testing-'): string {
 interface PackageJsonOptions {
   name: string
   dependencies?: Record<string, string>
-  // transform?: (pkg: PackageJson) => void
+  transform?: (pkg: PackageJson) => void
 }
 
 export function pj(name: string, version = '1.0.0', more: Partial<PackageJson> = {}) {
@@ -37,23 +37,22 @@ export function pj(name: string, version = '1.0.0', more: Partial<PackageJson> =
  * Required fields (name, version) are always included.
  */
 export function makePackageJson(options: PackageJsonOptions): PackageJson {
-  return pj(options.name, undefined, { dependencies: options.dependencies })
-  // const pkg: PackageJson = {
-  //   name: options.name,
-  //   version: '1.0.0',
-  //   // TODO(imaman): algin with index.js
-  //   main: 'dist/index.js',
-  // }
+  const pkg: PackageJson = {
+    name: options.name,
+    version: '1.0.0',
+    // TODO(imaman): algin with index.js
+    main: 'dist/index.js',
+  }
 
-  // if (options.dependencies !== undefined) {
-  //   pkg.dependencies = options.dependencies
-  // }
+  if (options.dependencies !== undefined) {
+    pkg.dependencies = options.dependencies
+  }
 
-  // if (options.transform !== undefined) {
-  //   options.transform(pkg)
-  // }
+  if (options.transform !== undefined) {
+    options.transform(pkg)
+  }
 
-  // return pkg
+  return pkg
 }
 
 export async function runMonocrate(

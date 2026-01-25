@@ -46,7 +46,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: 'patch',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
 
     expect(result.resolvedVersion).toBe('3.0.1')
@@ -86,7 +86,7 @@ describe('multi-package versioning', () => {
       monorepoRoot: root,
       bump: '1.0.0',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
 
     expect(verdaccio.runView('mpv-app')).toMatchObject({ version: '1.0.0' })
@@ -105,7 +105,7 @@ describe('multi-package versioning', () => {
       monorepoRoot: root,
       bump: '2.0.0',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
 
     // Step 4: Consuming app@2.0.0 should run the updated lib code
@@ -136,7 +136,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: '1.0.0',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
 
     // Update C, publish A and C (major → 2.0.0)
@@ -147,7 +147,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: 'major',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
 
     // Update C, publish A and B (major → 3.0.0)
@@ -158,7 +158,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: 'major',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
 
     // Update C, publish B and C (major → 4.0.0)
@@ -169,7 +169,7 @@ describe('multi-package versioning', () => {
       monorepoRoot,
       bump: 'major',
       publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
+      npmRcFile: verdaccio.npmrcPath(),
     })
 
     expect(verdaccio.runView('mpv-a')).toMatchObject({ versions: ['1.0.0', '2.0.0', '3.0.0'] })
