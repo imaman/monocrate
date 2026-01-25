@@ -1,6 +1,10 @@
+import { createRequire } from 'node:module'
 import { defineCommand, runMain } from 'citty'
 import type { MonocrateOptions } from './monocrate.js'
 import { monocrate } from './monocrate.js'
+
+const require = createRequire(import.meta.url)
+const pkg = require('../package.json') as { version: string }
 
 const cliArgsDefs = {
   packages: {
@@ -10,27 +14,31 @@ const cliArgsDefs = {
   },
   bump: {
     type: 'string' as const,
-    description: 'Version: x.y.z (explicit) or patch|minor|major (increment)',
+    description: 'Version or increment (patch/minor/major)',
+    valueHint: 'version',
     alias: 'b',
   },
   output: {
     type: 'string' as const,
-    description: 'Output directory (creates a dedicated temp directory if not specified)',
+    description: 'Output directory for assembled packages',
+    valueHint: 'dir',
     alias: 'o',
   },
   root: {
     type: 'string' as const,
-    description: 'Monorepo root directory (auto-detected if not specified)',
+    description: 'Monorepo root (auto-detected if omitted)',
+    valueHint: 'dir',
     alias: 'r',
   },
-  'output-file': {
+  report: {
     type: 'string' as const,
-    description: 'Write output to file instead of stdout',
-    alias: 'f',
+    description: 'Write report to file',
+    valueHint: 'path',
   },
   'mirror-to': {
     type: 'string' as const,
-    description: 'Mirrors the source code of the packages (and their in-repo dependencies) to this directory',
+    description: 'Mirror source files to directory',
+    valueHint: 'dir',
     alias: 'm',
   },
 }
@@ -40,7 +48,7 @@ interface CliArgs {
   output?: string
   root?: string
   bump?: string
-  'output-file'?: string
+  report?: string
   'mirror-to'?: string
 }
 
@@ -52,7 +60,7 @@ function buildOptions(args: CliArgs, publish: boolean): MonocrateOptions {
     monorepoRoot: args.root,
     bump: args.bump,
     publish,
-    outputFile: args['output-file'],
+    report: args.report,
     cwd: process.cwd(),
     mirrorTo: args['mirror-to'],
   }
@@ -68,7 +76,7 @@ function extractPackages(args: string[]): string[] {
 const prepareCommand = defineCommand({
   meta: {
     name: 'prepare',
-    description: 'Assemble packages for publishing without actually publishing',
+    description: 'Assemble packages without publishing',
   },
   args: cliArgsDefs,
   async run({ args }) {
@@ -79,7 +87,7 @@ const prepareCommand = defineCommand({
 const publishCommand = defineCommand({
   meta: {
     name: 'publish',
-    description: 'Assemble and publish packages to npm',
+    description: 'Assemble packages and publish to npm',
   },
   args: cliArgsDefs,
   async run({ args }) {
@@ -90,11 +98,12 @@ const publishCommand = defineCommand({
 const mainCommand = defineCommand({
   meta: {
     name: 'monocrate',
+    version: pkg.version,
     description: 'Assemble and publish monorepo packages to npm',
   },
   subCommands: {
-    prepare: prepareCommand,
     publish: publishCommand,
+    prepare: prepareCommand,
   },
 })
 
