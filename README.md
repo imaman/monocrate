@@ -1,5 +1,9 @@
 # Monocrate
 
+[![npm version](https://img.shields.io/npm/v/monocrate.svg)](https://www.npmjs.com/package/monocrate)
+[![CI](https://github.com/imaman/monocrate/actions/workflows/ci.yml/badge.svg)](https://github.com/imaman/monocrate/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 From monorepo to npm in one command.
 
 ## Why
@@ -66,8 +70,8 @@ monocrate publish packages/sdk --mirror-to ../public-repo/packages
 
 1. Discovers all packages in the monorepo via workspace configuration
 2. Builds a dependency graph starting from your target package
-3. Copies each package's `dist/` directory to the output
-4. Rewrites import statements from package names to relative paths
+3. Copies each package's publishable files (determined by `npm pack`) to the output
+4. Rewrites import statements from package names to relative paths (using `exports` or `main` fields)
 5. Generates a `package.json` with merged third-party dependencies
 
 ### Output Structure
@@ -81,19 +85,19 @@ monorepo/
 
 output/
   package.json    ← merged deps, in-repo refs removed
-  dist/           ← app's compiled code
+  <app files>     ← app's publishable files
   deps/
     packages/
-      utils/dist/ ← utils' compiled code (imports rewritten)
-      core/dist/  ← core's compiled code (imports rewritten)
+      utils/      ← utils' publishable files (imports rewritten)
+      core/       ← core's publishable files (imports rewritten)
 ```
 
-Entry points (`main`, `types`, `exports`) work unchanged because the `dist/` directory stays in the same relative position.
+Entry points (`main`, `types`, `exports`) work unchanged because each package's file structure stays in the same relative position.
 
 ## Requirements
 
 - Node.js 20+
-- All packages must be compiled (have a `dist/` directory)
+- Packages must have valid entry points (`exports` or `main` field in package.json)
 - Monorepo must use npm, yarn, or pnpm workspaces
 
 ## Programmatic API
