@@ -19,7 +19,6 @@ export function createTempDir(prefix = 'monocrate-testing-'): string {
 interface PackageJsonOptions {
   name: string
   dependencies?: Record<string, string>
-  // transform?: (pkg: PackageJson) => void
 }
 
 export function pj(name: string, version?: string, more?: Partial<PackageJson>): PackageJson
