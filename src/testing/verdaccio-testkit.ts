@@ -32,10 +32,6 @@ export class VerdaccioTestkit {
     await stopVerdaccio(this.get())
   }
 
-  npmR_c() {
-    return fs.readFileSync(this.get().npmrcPath).toString()
-  }
-
   runView(packageName: string): unknown {
     // Verify the package was published by checking npm view
     const viewResult = execSync(`npm view ${packageName} --registry=${this.get().url} --json`, {
