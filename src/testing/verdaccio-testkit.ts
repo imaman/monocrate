@@ -28,6 +28,10 @@ export class VerdaccioTestkit {
     return this.server
   }
 
+  npmrcPath() {
+    return this.get().npmrcPath
+  }
+
   async shutdown() {
     await stopVerdaccio(this.get())
   }
