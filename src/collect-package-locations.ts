@@ -67,7 +67,7 @@ export async function collectPackageLocations(
 ): Promise<PackageLocation[]> {
   // TODO(imaman): use promises()
   return Promise.all(
-    closure.members.map((dep) =>
+    closure.runtimeMembers.map((dep) =>
       createPackageLocation(
         npmClient,
         dep,

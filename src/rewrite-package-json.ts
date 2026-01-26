@@ -5,7 +5,7 @@ import type { PackageClosure } from './package-closure.js'
 import type { AbsolutePath } from './paths.js'
 
 export function rewritePackageJson(closure: PackageClosure, version: string | undefined, outputDir: AbsolutePath) {
-  const subject = closure.members.find((at) => at.name === closure.subjectPackageName)
+  const subject = closure.runtimeMembers.find((at) => at.name === closure.subjectPackageName)
   if (!subject) {
     throw new Error(`Incosistency in subject package name: "${closure.subjectPackageName}"`)
   }

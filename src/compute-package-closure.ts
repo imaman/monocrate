@@ -101,8 +101,8 @@ export function computePackageClosure(pkgName: string, repoExplorer: RepoExplore
 
   return {
     subjectPackageName: subjectPackage.name,
-    members: [...visited.values()],
-    devMembers: [...devVisited.values()],
+    runtimeMembers: [...visited.values()],
+    compiletimeMembers: [...devVisited.values()],
     allThirdPartyDeps,
   }
 }

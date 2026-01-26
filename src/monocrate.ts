@@ -76,12 +76,12 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   const allPackages = new Map<string, MonorepoPackage>()
   const allPackagesForMirror = new Map<string, MonorepoPackage>()
   for (const assembler of assemblers) {
-    const { members, devMembers } = await assembler.assemble(resolvedVersion)
-    for (const pkg of members) {
+    const { runtimeMembers, compiletimeMembers } = await assembler.assemble(resolvedVersion)
+    for (const pkg of runtimeMembers) {
       allPackages.set(pkg.name, pkg)
       allPackagesForMirror.set(pkg.name, pkg)
     }
-    for (const pkg of devMembers) {
+    for (const pkg of compiletimeMembers) {
       allPackagesForMirror.set(pkg.name, pkg)
     }
 
