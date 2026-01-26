@@ -17,6 +17,8 @@ export function createTempDir(prefix = 'monocrate-testing-'): string {
 }
 
 export function initGitRepo(cwd: string): void {
+  // Disable commit signing for test repos (gpgsign=false) to avoid failures
+  // when the environment has signing configured but the signing service is unavailable
   execSync(
     'git init && git config user.email "test@test.com" && git config user.name "Test" && git config commit.gpgsign false && git add . && git commit -m "test"',
     { cwd, stdio: 'pipe' }

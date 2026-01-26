@@ -73,14 +73,9 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }
   const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v)
 
-  const allPackages = new Map<string, MonorepoPackage>()
   const allPackagesForMirror = new Map<string, MonorepoPackage>()
   for (const assembler of assemblers) {
-    const { runtimeMembers, compiletimeMembers } = await assembler.assemble(resolvedVersion)
-    for (const pkg of runtimeMembers) {
-      allPackages.set(pkg.name, pkg)
-      allPackagesForMirror.set(pkg.name, pkg)
-    }
+    const { compiletimeMembers } = await assembler.assemble(resolvedVersion)
     for (const pkg of compiletimeMembers) {
       allPackagesForMirror.set(pkg.name, pkg)
     }
