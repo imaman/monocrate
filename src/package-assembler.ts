@@ -36,9 +36,7 @@ export class PackageAssembler {
       : Promise.resolve(undefined)
   }
 
-  async assemble(
-    newVersion: string | undefined
-  ): Promise<{ runtimeMembers: MonorepoPackage[]; compiletimeMembers: MonorepoPackage[] }> {
+  async assemble(newVersion: string | undefined): Promise<{ compiletimeMembers: MonorepoPackage[] }> {
     const closure = computePackageClosure(this.pkgName, this.explorer)
     const outputDir = this.getOutputDir()
     const locations = await collectPackageLocations(this.npmClient, closure, outputDir)
@@ -56,6 +54,6 @@ export class PackageAssembler {
     // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
     rewritePackageJson(closure, newVersion, outputDir)
 
-    return { runtimeMembers: closure.runtimeMembers, compiletimeMembers: closure.compiletimeMembers }
+    return { compiletimeMembers: closure.compiletimeMembers }
   }
 }

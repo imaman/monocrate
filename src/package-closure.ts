@@ -7,9 +7,9 @@ import type { MonorepoPackage } from './repo-explorer.js'
 export interface PackageClosure {
   /** The name of package we care about (the root of the closure). */
   subjectPackageName: string
-  /** The subject package and all in-repo production dependencies (direct or transitive). */
+  /** The subject package and its in-repo production dependencies (direct or transitive). */
   runtimeMembers: MonorepoPackage[]
-  /** The subject package and all in-repo dependencies reachable via production or dev dependencies (direct or transitive). May overlap with runtimeMembers. */
+  /** The subject package and its in-repo production and dev dependencies (direct or transitive). Is a superset of runtimeMembers. */
   compiletimeMembers: MonorepoPackage[]
   /** Merged third-party dependencies from all packages in the closure. */
   allThirdPartyDeps: Partial<Record<string, string>>
