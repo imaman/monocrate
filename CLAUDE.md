@@ -37,7 +37,7 @@ Only `dependencies` are traversed and included—`devDependencies` are ignored e
 ### Main Responsibilities
 
 - `main.ts` - CLI entry point (shebang)
-- `monocrate-cli.ts` - CLI argument parsing (uses citty)
+- `monocrate-cli.ts` - CLI argument parsing (uses yargs)
 - `index.ts` - Library exports (public API re-exports)
 
 ### Core Flow

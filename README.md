@@ -45,7 +45,7 @@ monocrate publish packages/my-app --bump patch
 | Flag | Description |
 |------|-------------|
 | `-b, --bump` | Version bump: `patch`, `minor`, `major`, or explicit version like `1.2.3`. Defaults to `minor`. |
-| `-o, --output` | Output directory. Defaults to a temp directory. |
+| `-o, --output-dir` | Output directory. Defaults to a temp directory. |
 | `-r, --root` | Monorepo root. Auto-detected if omitted. |
 | `-m, --mirror-to` | Mirror source files to another directory (for open-source mirrors). |
 | `--report` | Write the resolved version to a file instead of stdout. |
@@ -60,7 +60,7 @@ monocrate publish packages/cli --bump patch
 monocrate publish packages/core packages/cli
 
 # Prepare to a specific directory for inspection
-monocrate prepare packages/app --output ./publish-staging
+monocrate prepare packages/app --output-dir ./publish-staging
 
 # Mirror sources to a public repo after publishing
 monocrate publish packages/sdk --mirror-to ../public-repo/packages
