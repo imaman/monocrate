@@ -76,9 +76,33 @@ export function computePackageClosure(pkgName: string, repoExplorer: RepoExplore
     allThirdPartyDeps[depName] = first.version
   }
 
+  // Collect devMembers: packages reachable via both production and dev dependencies
+  const devVisited = new Map<string, MonorepoPackage>()
+
+  function collectAllDeps(pkg: MonorepoPackage): void {
+    if (devVisited.has(pkg.name)) {
+      return
+    }
+    devVisited.set(pkg.name, pkg)
+
+    const allDeps = {
+      ...pkg.packageJson.dependencies,
+      ...pkg.packageJson.devDependencies,
+    }
+    for (const [depName] of Object.entries(allDeps)) {
+      const depPackage = repoExplorer.lookupPackage(depName)
+      if (depPackage) {
+        collectAllDeps(depPackage)
+      }
+    }
+  }
+
+  collectAllDeps(subjectPackage)
+
   return {
     subjectPackageName: subjectPackage.name,
     members: [...visited.values()],
+    devMembers: [...devVisited.values()],
     allThirdPartyDeps,
   }
 }

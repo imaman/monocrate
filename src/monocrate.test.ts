@@ -1518,6 +1518,42 @@ console.log('Hello from bin');
       ).rejects.toThrow(/Cannot mirror: found 1 untracked file\(s\).*leftover-temp\.ts/)
     })
 
+    it('mirrors devDependencies in addition to production dependencies', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': pj('@test/app', {
+          devDependencies: { '@test/build-tool': 'workspace:*' },
+        }),
+        'packages/app/src/index.ts': `export const foo = 'foo';`,
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+        'packages/build-tool/package.json': pj('@test/build-tool'),
+        'packages/build-tool/src/index.ts': `export function build() { return 'building'; }`,
+        'packages/build-tool/dist/index.js': `export function build() { return 'building'; }`,
+      })
+
+      initGitRepo(monorepoRoot)
+
+      const mirrorDir = createTempDir('mirror-')
+
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        publish: false,
+        bump: '1.0.0',
+        mirrorTo: mirrorDir,
+      })
+
+      const mirrored = unfolderify(mirrorDir)
+
+      // Should mirror app (the subject)
+      expect(mirrored).toHaveProperty('packages/app/package.json')
+      expect(mirrored).toHaveProperty('packages/app/src/index.ts')
+
+      // Should also mirror devDependency build-tool
+      expect(mirrored).toHaveProperty('packages/build-tool/package.json')
+      expect(mirrored).toHaveProperty('packages/build-tool/src/index.ts')
+    })
+
     it('does not mirror when mirrorTo is not specified', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },

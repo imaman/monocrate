@@ -74,10 +74,15 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v)
 
   const allPackages = new Map<string, MonorepoPackage>()
+  const allPackagesForMirror = new Map<string, MonorepoPackage>()
   for (const assembler of assemblers) {
-    const members = await assembler.assemble(resolvedVersion)
+    const { members, devMembers } = await assembler.assemble(resolvedVersion)
     for (const pkg of members) {
       allPackages.set(pkg.name, pkg)
+      allPackagesForMirror.set(pkg.name, pkg)
+    }
+    for (const pkg of devMembers) {
+      allPackagesForMirror.set(pkg.name, pkg)
     }
 
     if (options.publish) {
@@ -88,7 +93,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   // Mirror source files if mirrorTo is specified
   if (options.mirrorTo) {
     const mirrorDir = AbsolutePath(path.resolve(cwd, options.mirrorTo))
-    await mirrorSources([...allPackages.values()], mirrorDir)
+    await mirrorSources([...allPackagesForMirror.values()], mirrorDir)
   }
 
   if (options.report) {

@@ -18,7 +18,7 @@ export function createTempDir(prefix = 'monocrate-testing-'): string {
 
 export function initGitRepo(cwd: string): void {
   execSync(
-    'git init && git config user.email "test@test.com" && git config user.name "Test" && git add . && git commit -m "test"',
+    'git init && git config user.email "test@test.com" && git config user.name "Test" && git config commit.gpgsign false && git add . && git commit -m "test"',
     { cwd, stdio: 'pipe' }
   )
 }
