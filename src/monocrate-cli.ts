@@ -13,7 +13,7 @@ const sharedOptions = {
     type: 'string' as const,
     description: 'Version or increment (patch/minor/major)',
   },
-  output: {
+  'output-dir': {
     alias: 'o',
     type: 'string' as const,
     description: 'Output directory',
@@ -36,7 +36,7 @@ const sharedOptions = {
 
 interface YargsArgs {
   packages?: string[]
-  output?: string
+  'output-dir'?: string
   root?: string
   bump?: string
   report?: string
@@ -50,7 +50,8 @@ async function runCommand(argv: YargsArgs, publish: boolean): Promise<void> {
   }
   const options: MonocrateOptions = {
     pathToSubjectPackages: packages,
-    outputRoot: argv.output,
+    // CLI uses --output-dir for clearer user-facing terminology
+    outputRoot: argv['output-dir'],
     monorepoRoot: argv.root,
     bump: argv.bump,
     publish,

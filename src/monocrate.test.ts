@@ -48,17 +48,17 @@ describe('monocrate', () => {
 `,
       })
 
-      const outputRoot = createTempDir('monocrate-explicit-output-')
+      const specifiedOutputRoot = createTempDir('monocrate-explicit-output-')
       const { outputDir } = await monocrate({
         cwd: monorepoRoot,
         pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
-        outputRoot,
+        outputRoot: specifiedOutputRoot,
         monorepoRoot,
         publish: false,
         bump: '2.8.512',
       })
 
-      expect(path.dirname(outputDir)).toBe(outputRoot)
+      expect(path.dirname(outputDir)).toBe(specifiedOutputRoot)
     })
   })
 
