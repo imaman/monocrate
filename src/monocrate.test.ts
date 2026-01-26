@@ -623,6 +623,29 @@ console.log(greet('World'));
       expect(stdout.trim()).toBe('Hello, World!')
     })
 
+    it('excludes in-repo devDependencies from the packaged output', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': pj('@test/app', {
+          dependencies: { '@test/lib': 'workspace:*' },
+          devDependencies: { '@test/build-tool': 'workspace:*' },
+        }),
+        'packages/app/dist/index.js': `export const app = 'app';`,
+        'packages/lib/package.json': pj('@test/lib'),
+        'packages/lib/dist/index.js': `export const lib = 'lib';`,
+        'packages/build-tool/package.json': pj('@test/build-tool'),
+        'packages/build-tool/dist/index.js': `export const build = 'build';`,
+      })
+
+      const { output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '1.0.0' })
+
+      // lib (production dependency) should be included
+      expect(output).toHaveProperty('deps/packages/lib/package.json')
+
+      // build-tool (devDependency) should NOT be included in packaged output
+      expect(output).not.toHaveProperty('deps/packages/build-tool/package.json')
+    })
+
     it('preserves line numbers in stack traces', async () => {
       // Line 1: export function throwError() {
       // Line 2:   throw new Error('intentional error');
@@ -1516,6 +1539,88 @@ console.log('Hello from bin');
           mirrorTo: mirrorDir,
         })
       ).rejects.toThrow(/Cannot mirror: found 1 untracked file\(s\).*leftover-temp\.ts/)
+    })
+
+    it('mirrors devDependencies in addition to production dependencies', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': pj('@test/app', {
+          devDependencies: { '@test/build-tool': 'workspace:*' },
+        }),
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+        'packages/build-tool/package.json': pj('@test/build-tool'),
+        'packages/build-tool/dist/index.js': `export function build() { return 'building'; }`,
+      })
+
+      initGitRepo(monorepoRoot)
+
+      const mirrorDir = createTempDir('mirror-')
+
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        publish: false,
+        bump: '1.0.0',
+        mirrorTo: mirrorDir,
+      })
+
+      const mirrored = unfolderify(mirrorDir)
+
+      expect(mirrored).toEqual({
+        'packages/app/package.json': { name: '@test/app', version: '0.9.9', main: 'dist/index.js', devDependencies: { '@test/build-tool': 'workspace:*' } },
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+        'packages/build-tool/package.json': { name: '@test/build-tool', version: '0.9.9', main: 'dist/index.js' },
+        'packages/build-tool/dist/index.js': `export function build() { return 'building'; }`,
+      })
+    })
+
+    it('mirrors transitive dependencies across prod and dev boundaries', async () => {
+      // Test that:
+      // - prod deps of devdeps are included (app --devDep--> build-tool --dep--> shared)
+      // - devdeps of prod deps are included (app --dep--> lib --devDep--> test-util)
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': pj('@test/app', {
+          dependencies: { '@test/lib': 'workspace:*' },
+          devDependencies: { '@test/build-tool': 'workspace:*' },
+        }),
+        'packages/app/dist/index.js': `export const app = 'app';`,
+        'packages/lib/package.json': pj('@test/lib', {
+          devDependencies: { '@test/test-util': 'workspace:*' },
+        }),
+        'packages/lib/dist/index.js': `export const lib = 'lib';`,
+        'packages/build-tool/package.json': pj('@test/build-tool', {
+          dependencies: { '@test/shared': 'workspace:*' },
+        }),
+        'packages/build-tool/dist/index.js': `export const build = 'build';`,
+        'packages/shared/package.json': pj('@test/shared'),
+        'packages/shared/dist/index.js': `export const shared = 'shared';`,
+        'packages/test-util/package.json': pj('@test/test-util'),
+        'packages/test-util/dist/index.js': `export const testUtil = 'test';`,
+      })
+
+      initGitRepo(monorepoRoot)
+
+      const mirrorDir = createTempDir('mirror-')
+
+      await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        publish: false,
+        bump: '1.0.0',
+        mirrorTo: mirrorDir,
+      })
+
+      const mirrored = unfolderify(mirrorDir)
+
+      // All 5 packages should be mirrored
+      expect(Object.keys(mirrored).filter((k) => k.endsWith('package.json')).sort()).toEqual([
+        'packages/app/package.json',
+        'packages/build-tool/package.json',
+        'packages/lib/package.json',
+        'packages/shared/package.json',
+        'packages/test-util/package.json',
+      ])
     })
 
     it('does not mirror when mirrorTo is not specified', async () => {

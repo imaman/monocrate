@@ -35,40 +35,49 @@ function formatConflictError(conflicts: Partial<Record<string, string[]>>): stri
 export function computePackageClosure(pkgName: string, repoExplorer: RepoExplorer): PackageClosure {
   const subjectPackage = repoExplorer.getPackage(pkgName)
 
-  const versionsByDep = new Map<string, VersionInfo[]>()
-  const visited = new Map<string, MonorepoPackage>()
+  function traverse(
+    root: MonorepoPackage,
+    includeDevDeps: boolean,
+    thirdPartyVersions?: Map<string, VersionInfo[]>
+  ): Map<string, MonorepoPackage> {
+    const visited = new Map<string, MonorepoPackage>()
 
-  function collectDeps(pkg: MonorepoPackage): void {
-    if (visited.has(pkg.name)) {
-      return
-    }
-    visited.set(pkg.name, pkg)
+    function visit(pkg: MonorepoPackage): void {
+      if (visited.has(pkg.name)) {
+        return
+      }
+      visited.set(pkg.name, pkg)
 
-    for (const [depName, depVersion] of Object.entries(pkg.packageJson.dependencies ?? {})) {
-      if (!depVersion) {
-        throw new Error(`no version for dep ${depName} in ${pkg.name}`)
-      }
-      const depPackage = repoExplorer.lookupPackage(depName)
-      if (depPackage) {
-        // Is an in-repo dep
-        collectDeps(depPackage)
-      } else {
-        const existing = versionsByDep.get(depName) ?? []
-        existing.push({ version: depVersion, requiredBy: pkg.name })
-        versionsByDep.set(depName, existing)
+      const deps = includeDevDeps
+        ? { ...pkg.packageJson.dependencies, ...pkg.packageJson.devDependencies }
+        : pkg.packageJson.dependencies ?? {}
+
+      for (const [depName, depVersion] of Object.entries(deps)) {
+        const depPackage = repoExplorer.lookupPackage(depName)
+        if (depPackage) {
+          visit(depPackage)
+        } else if (thirdPartyVersions && depVersion) {
+          const existing = thirdPartyVersions.get(depName) ?? []
+          existing.push({ version: depVersion, requiredBy: pkg.name })
+          thirdPartyVersions.set(depName, existing)
+        }
       }
     }
+
+    visit(root)
+    return visited
   }
 
-  collectDeps(subjectPackage)
+  const thirdPartyVersions = new Map<string, VersionInfo[]>()
+  const runtimeVisited = traverse(subjectPackage, false, thirdPartyVersions)
 
-  const conflicts = detectVersionConflicts(versionsByDep)
+  const conflicts = detectVersionConflicts(thirdPartyVersions)
   if (Object.keys(conflicts).length > 0) {
     throw new Error(formatConflictError(conflicts))
   }
 
   const allThirdPartyDeps: Partial<Record<string, string>> = {}
-  for (const [depName, versionInfos] of versionsByDep.entries()) {
+  for (const [depName, versionInfos] of thirdPartyVersions.entries()) {
     const first = versionInfos[0]
     if (!first) {
       throw new Error(`Internal error: no version info for ${depName}`)
@@ -76,9 +85,12 @@ export function computePackageClosure(pkgName: string, repoExplorer: RepoExplore
     allThirdPartyDeps[depName] = first.version
   }
 
+  const compiletimeVisited = traverse(subjectPackage, true)
+
   return {
     subjectPackageName: subjectPackage.name,
-    members: [...visited.values()],
+    runtimeMembers: [...runtimeVisited.values()],
+    compiletimeMembers: [...compiletimeVisited.values()],
     allThirdPartyDeps,
   }
 }
