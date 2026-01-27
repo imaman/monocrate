@@ -27,14 +27,11 @@ That's it. Your monorepo's internal dependencies are automatically resolved and 
 
 ## What is Monocrate?
 
-Monocrate solves a specific problem: **publishing a package from a monorepo when it depends on other packages in the same monorepo**.
+You have a monorepo. You've got a package you want to publish to npm. That package probably depends on other packages in the same monorepo—otherwise, why put it there in the first place? Now you're stuck: how do you publish it without publishing every internal dependency separately, and without broken imports when someone installs your package?
 
-Without Monocrate, you'd have to:
-- Publish every internal dependency separately (slow and messy)
-- Manually copy and merge files (error-prone)
-- Bundle everything into one file (loses module structure and types)
+You run one command. Monocrate builds a self-contained, publishable package in your output directory. You can inspect it, test it, then publish. Takes a few seconds. Your package structure stays intact—if you had 20 files, you still have 20 files. Just now it works standalone, with all internal dependencies bundled in a way that doesn't mangle your module structure or type declarations.
 
-Monocrate does this automatically: it finds your package's internal dependencies, copies their compiled files into your output, rewrites imports to point to relative paths, and merges third-party dependencies. Your published package is completely self-contained.
+Under the hood, Monocrate copies your internal dependencies into the output and rewrites imports from package names to relative paths. It's not a bundler (it doesn't flatten your code), and it's not a registry (you don't publish internal dependencies separately). It just makes your one package publishable. See [How It Works](#how-it-works-high-level) for the technical details.
 
 ---
 
