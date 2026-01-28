@@ -101,6 +101,6 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   return {
     outputDir: a0.getOutputDir(),
     resolvedVersion,
-    summaries: assemblers.map((at) => ({ outputDir: at.getOutputDir(), packageName: at.pkgName })),
+    summaries: assemblers.map((at) => ({ outputDir: at.getOutputDir(), packageName: at.publishName })),
   }
 }

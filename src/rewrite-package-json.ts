@@ -4,16 +4,22 @@ import type { PackageJson } from './package-json.js'
 import type { PackageClosure } from './package-closure.js'
 import type { AbsolutePath } from './paths.js'
 
-export function rewritePackageJson(closure: PackageClosure, version: string | undefined, outputDir: AbsolutePath) {
+export function rewritePackageJson(
+  closure: PackageClosure,
+  version: string | undefined,
+  outputDir: AbsolutePath,
+  publishName: string
+) {
   const subject = closure.runtimeMembers.find((at) => at.name === closure.subjectPackageName)
   if (!subject) {
     throw new Error(`Incosistency in subject package name: "${closure.subjectPackageName}"`)
   }
 
-  const { dependencies: _1, devDependencies: _2, ...rest } = subject.packageJson
+  const { dependencies: _1, devDependencies: _2, monocrate: _3, ...rest } = subject.packageJson
 
   const rewritten: PackageJson = {
     ...rest,
+    name: publishName,
   }
 
   if (version) {

@@ -249,6 +249,129 @@ describe('monocrate', () => {
     })
   })
 
+  describe('monocrate.publishAs', () => {
+    it('uses publishAs name in output package.json', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': {
+          name: 'db-admin',
+          version: '1.0.0',
+          main: 'dist/index.js',
+          monocrate: { publishAs: 'db-monster' },
+        },
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      const { outputDir } = await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        publish: false,
+        bump: '2.8.512',
+      })
+
+      const output = unfolderify(outputDir)
+      const pkgJson = output['package.json'] as Record<string, unknown>
+
+      expect(pkgJson.name).toBe('db-monster')
+      expect(pkgJson.version).toBe('2.8.512')
+    })
+
+    it('does not include monocrate config in output package.json', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': {
+          name: 'db-admin',
+          version: '1.0.0',
+          main: 'dist/index.js',
+          monocrate: { publishAs: 'db-monster' },
+        },
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      const { outputDir } = await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        publish: false,
+        bump: '2.8.512',
+      })
+
+      const output = unfolderify(outputDir)
+      const pkgJson = output['package.json'] as Record<string, unknown>
+
+      expect(pkgJson).not.toHaveProperty('monocrate')
+    })
+
+    it('keeps original name when publishAs is not provided', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': pj('@test/app'),
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      const { outputDir } = await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        publish: false,
+        bump: '2.8.512',
+      })
+
+      const output = unfolderify(outputDir)
+      const pkgJson = output['package.json'] as Record<string, unknown>
+
+      expect(pkgJson.name).toBe('@test/app')
+    })
+
+    it('import rewrites are unaffected by publishAs', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': {
+          name: 'db-admin',
+          version: '1.0.0',
+          main: 'dist/index.js',
+          monocrate: { publishAs: 'db-monster' },
+          dependencies: { 'db-lib': 'workspace:*' },
+        },
+        'packages/app/dist/index.js': `import { greet } from 'db-lib'; console.log(greet());`,
+        'packages/lib/package.json': {
+          name: 'db-lib',
+          version: '1.0.0',
+          main: 'dist/index.js',
+        },
+        'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
+      })
+
+      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
+
+      // Import should be rewritten correctly using internal package structure
+      expect(output['dist/index.js']).toContain('../deps/packages/lib/dist/index.js')
+
+      // Execution should work
+      expect(stdout.trim()).toBe('Hello!')
+    })
+
+    it('returns publishName in result summaries', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': {
+          name: 'db-admin',
+          version: '1.0.0',
+          main: 'dist/index.js',
+          monocrate: { publishAs: 'db-monster' },
+        },
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      const result = await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        publish: false,
+        bump: '2.8.512',
+      })
+
+      expect(result.summaries[0]?.packageName).toBe('db-monster')
+    })
+  })
+
   describe('package.json transformation', () => {
     it('preserves exports field in package.json', async () => {
       const monorepoRoot = folderify({
@@ -1567,7 +1690,12 @@ console.log('Hello from bin');
       const mirrored = unfolderify(mirrorDir)
 
       expect(mirrored).toEqual({
-        'packages/app/package.json': { name: '@test/app', version: '0.9.9', main: 'dist/index.js', devDependencies: { '@test/build-tool': 'workspace:*' } },
+        'packages/app/package.json': {
+          name: '@test/app',
+          version: '0.9.9',
+          main: 'dist/index.js',
+          devDependencies: { '@test/build-tool': 'workspace:*' },
+        },
         'packages/app/dist/index.js': `export const foo = 'foo';`,
         'packages/build-tool/package.json': { name: '@test/build-tool', version: '0.9.9', main: 'dist/index.js' },
         'packages/build-tool/dist/index.js': `export function build() { return 'building'; }`,
@@ -1614,7 +1742,11 @@ console.log('Hello from bin');
       const mirrored = unfolderify(mirrorDir)
 
       // All 5 packages should be mirrored
-      expect(Object.keys(mirrored).filter((k) => k.endsWith('package.json')).sort()).toEqual([
+      expect(
+        Object.keys(mirrored)
+          .filter((k) => k.endsWith('package.json'))
+          .sort()
+      ).toEqual([
         'packages/app/package.json',
         'packages/build-tool/package.json',
         'packages/lib/package.json',

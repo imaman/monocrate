@@ -13,6 +13,7 @@ import type { NpmClient } from './npm-client.js'
 
 export class PackageAssembler {
   readonly pkgName
+  readonly publishName
   constructor(
     private readonly npmClient: NpmClient,
     private readonly explorer: RepoExplorer,
@@ -24,6 +25,7 @@ export class PackageAssembler {
       throw new Error(`Unrecognized package source dir: "${this.fromDir}"`)
     }
     this.pkgName = found.name
+    this.publishName = found.packageJson.monocrate?.publishAs ?? found.name
   }
 
   getOutputDir() {
@@ -32,7 +34,7 @@ export class PackageAssembler {
 
   async computeNewVersion(versionSpecifier: VersionSpecifier | undefined) {
     return versionSpecifier
-      ? await resolveVersion(this.npmClient, this.fromDir, this.pkgName, versionSpecifier)
+      ? await resolveVersion(this.npmClient, this.fromDir, this.publishName, versionSpecifier)
       : Promise.resolve(undefined)
   }
 
@@ -52,7 +54,7 @@ export class PackageAssembler {
     await new ImportRewriter(packageMap).rewriteAll(copiedFiles)
 
     // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
-    rewritePackageJson(closure, newVersion, outputDir)
+    rewritePackageJson(closure, newVersion, outputDir, this.publishName)
 
     return { compiletimeMembers: closure.compiletimeMembers }
   }
