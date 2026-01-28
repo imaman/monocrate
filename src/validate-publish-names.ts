@@ -1,7 +1,6 @@
 import type { MonorepoPackage } from './repo-explorer.js'
 
 export function validatePublishNames(packages: Map<string, MonorepoPackage>): void {
-  // const publishNames = new Map<string, string>()
   const names = new Map<string, string>()
 
   for (const pkg of packages.values()) {
