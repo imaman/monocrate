@@ -1,9 +1,9 @@
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { monocrate } from './monocrate.js'
 import { folderify } from './testing/folderify.js'
 import { pj } from './testing/monocrate-teskit.js'
+import { unfolderify } from './testing/unfolderify.js'
 
 describe('publishName feature', () => {
   test('uses publishName when specified in monocrate config', async () => {
@@ -22,13 +22,12 @@ describe('publishName feature', () => {
       publish: false,
     })
 
-    const outputPackageJson = JSON.parse(fs.readFileSync(path.join(outputDir, 'package.json'), 'utf-8')) as Record<
-      string,
-      unknown
-    >
+    const output = unfolderify(outputDir)
 
-    expect(outputPackageJson.name).toBe('@published/my-package')
-    expect(outputPackageJson.monocrate).toBeUndefined()
+    expect(output['package.json']).toMatchObject({
+      name: '@published/my-package',
+    })
+    expect(output['package.json']).not.toHaveProperty('monocrate')
   })
 
   test('uses original name when publishName is not specified', async () => {
@@ -45,12 +44,11 @@ describe('publishName feature', () => {
       publish: false,
     })
 
-    const outputPackageJson = JSON.parse(fs.readFileSync(path.join(outputDir, 'package.json'), 'utf-8')) as Record<
-      string,
-      unknown
-    >
+    const output = unfolderify(outputDir)
 
-    expect(outputPackageJson.name).toBe('@workspace/my-package')
+    expect(output['package.json']).toMatchObject({
+      name: '@workspace/my-package',
+    })
   })
 
   test('throws error when publishName conflicts with existing package name', async () => {
@@ -124,17 +122,15 @@ describe('publishName feature', () => {
       publish: false,
     })
 
-    const output1PackageJson = JSON.parse(fs.readFileSync(path.join(outputDir1, 'package.json'), 'utf-8')) as Record<
-      string,
-      unknown
-    >
-    const output2PackageJson = JSON.parse(fs.readFileSync(path.join(outputDir2, 'package.json'), 'utf-8')) as Record<
-      string,
-      unknown
-    >
+    const output1 = unfolderify(outputDir1)
+    const output2 = unfolderify(outputDir2)
 
-    expect(output1PackageJson.name).toBe('@published/package-a')
-    expect(output2PackageJson.name).toBe('@published/package-b')
+    expect(output1['package.json']).toMatchObject({
+      name: '@published/package-a',
+    })
+    expect(output2['package.json']).toMatchObject({
+      name: '@published/package-b',
+    })
   })
 
   test('monocrate field is stripped from output package.json', async () => {
@@ -154,12 +150,11 @@ describe('publishName feature', () => {
       publish: false,
     })
 
-    const outputPackageJson = JSON.parse(fs.readFileSync(path.join(outputDir, 'package.json'), 'utf-8')) as Record<
-      string,
-      unknown
-    >
+    const output = unfolderify(outputDir)
 
-    expect(outputPackageJson.monocrate).toBeUndefined()
-    expect(outputPackageJson.description).toBe('Test package')
+    expect(output['package.json']).toMatchObject({
+      description: 'Test package',
+    })
+    expect(output['package.json']).not.toHaveProperty('monocrate')
   })
 })
