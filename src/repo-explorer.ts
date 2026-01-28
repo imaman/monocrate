@@ -7,7 +7,7 @@ import { validatePublishNames } from './validate-publish-names.js'
 
 export interface MonorepoPackage {
   name: string
-  publishName?: string
+  publishAs: string
   fromDir: AbsolutePath
   pathInRepo: RelativePath
   packageJson: PackageJson
@@ -17,7 +17,9 @@ export class RepoExplorer {
   constructor(
     readonly repoRootDir: AbsolutePath,
     private readonly map: Map<string, MonorepoPackage>
-  ) {}
+  ) {
+    validatePublishNames(map)
+  }
 
   static async create(monorepoRoot: AbsolutePath) {
     const map = await this.discover(monorepoRoot)
@@ -33,8 +35,6 @@ export class RepoExplorer {
         )
       }
     }
-
-    validatePublishNames(map)
 
     return new RepoExplorer(monorepoRoot, map)
   }
@@ -139,7 +139,7 @@ export class RepoExplorer {
         if (packageJson.name) {
           packages.set(packageJson.name, {
             name: packageJson.name,
-            publishName: packageJson.monocrate?.publishName,
+            publishAs: packageJson.monocrate?.publishName ?? packageJson.name,
             fromDir: packageDir,
             pathInRepo: RelativePath(path.relative(monorepoRoot, packageDir)),
             packageJson,
