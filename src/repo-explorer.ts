@@ -3,9 +3,11 @@ import * as path from 'node:path'
 import { glob } from 'glob'
 import { PackageJson } from './package-json.js'
 import { AbsolutePath, RelativePath } from './paths.js'
+import { validatePublishNames } from './validate-publish-names.js'
 
 export interface MonorepoPackage {
   name: string
+  publishName?: string
   fromDir: AbsolutePath
   pathInRepo: RelativePath
   packageJson: PackageJson
@@ -31,6 +33,8 @@ export class RepoExplorer {
         )
       }
     }
+
+    validatePublishNames(map)
 
     return new RepoExplorer(monorepoRoot, map)
   }
@@ -135,6 +139,7 @@ export class RepoExplorer {
         if (packageJson.name) {
           packages.set(packageJson.name, {
             name: packageJson.name,
+            publishName: packageJson.monocrate?.publishName,
             fromDir: packageDir,
             pathInRepo: RelativePath(path.relative(monorepoRoot, packageDir)),
             packageJson,
