@@ -7,7 +7,9 @@ export function validatePublishNames(packages: Map<string, MonorepoPackage>): vo
   for (const pkg of packages.values()) {
     const other = names.get(pkg.publishAs)
     if (other) {
-      throw new Error(`Publish name conflict between "${pkg.name}" and "${other}`)
+      throw new Error(
+        `Publish name collision: both "${pkg.name}" and "${other}" would both be published as "${pkg.publishAs}"`
+      )
     }
     names.set(pkg.publishAs, pkg.name)
   }
