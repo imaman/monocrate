@@ -70,7 +70,7 @@ describe('publishName feature', () => {
         monorepoRoot: repoDir,
         publish: false,
       })
-    ).rejects.toThrow('has publishName "package-a" which conflicts with an existing package name')
+    ).rejects.toThrow('Publish name collision: both "package-a" and "package-b" would both be published as "package-a"')
   })
 
   test('throws error when two packages have the same publishName', async () => {
@@ -93,7 +93,9 @@ describe('publishName feature', () => {
         monorepoRoot: repoDir,
         publish: false,
       })
-    ).rejects.toThrow('both have publishName "@published/shared-name"')
+    ).rejects.toThrow(
+      'Publish name collision: both "package-a" and "package-b" would both be published as "@published/shared-name"'
+    )
   })
 
   test('works with multiple packages having different publishNames', async () => {
