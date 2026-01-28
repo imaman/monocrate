@@ -139,7 +139,6 @@ export class RepoExplorer {
         if (packageJson.name) {
           packages.set(packageJson.name, {
             name: packageJson.name,
-            // publishName: packageJson.monocrate?.publishName,
             publishAs: packageJson.monocrate?.publishName ?? packageJson.name,
             fromDir: packageDir,
             pathInRepo: RelativePath(path.relative(monorepoRoot, packageDir)),
