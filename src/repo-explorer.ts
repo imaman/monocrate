@@ -17,7 +17,9 @@ export class RepoExplorer {
   constructor(
     readonly repoRootDir: AbsolutePath,
     private readonly map: Map<string, MonorepoPackage>
-  ) {}
+  ) {
+    validatePublishNames(map)
+  }
 
   static async create(monorepoRoot: AbsolutePath) {
     const map = await this.discover(monorepoRoot)
@@ -33,8 +35,6 @@ export class RepoExplorer {
         )
       }
     }
-
-    validatePublishNames(map)
 
     return new RepoExplorer(monorepoRoot, map)
   }
