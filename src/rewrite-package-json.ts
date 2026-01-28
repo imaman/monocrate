@@ -14,7 +14,7 @@ export function rewritePackageJson(closure: PackageClosure, version: string | un
 
   const rewritten: PackageJson = {
     ...rest,
-    name: subject.publishName ?? subject.name,
+    name: subject.publishAs,
   }
 
   if (version) {

@@ -7,7 +7,6 @@ import { validatePublishNames } from './validate-publish-names.js'
 
 export interface MonorepoPackage {
   name: string
-  publishName?: string
   publishAs: string
   fromDir: AbsolutePath
   pathInRepo: RelativePath
