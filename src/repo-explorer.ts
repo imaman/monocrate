@@ -8,6 +8,7 @@ import { validatePublishNames } from './validate-publish-names.js'
 export interface MonorepoPackage {
   name: string
   publishName?: string
+  publishAs: string
   fromDir: AbsolutePath
   pathInRepo: RelativePath
   packageJson: PackageJson
@@ -139,7 +140,8 @@ export class RepoExplorer {
         if (packageJson.name) {
           packages.set(packageJson.name, {
             name: packageJson.name,
-            publishName: packageJson.monocrate?.publishName,
+            // publishName: packageJson.monocrate?.publishName,
+            publishAs: packageJson.monocrate?.publishName ?? packageJson.name,
             fromDir: packageDir,
             pathInRepo: RelativePath(path.relative(monorepoRoot, packageDir)),
             packageJson,
