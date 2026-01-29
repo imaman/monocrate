@@ -14,8 +14,9 @@ const NpmErrorResponse = z.object({
 export class NpmClient {
   constructor(private readonly npmOptions?: NpmOptionsBase) {}
 
-  async publish(dir: AbsolutePath, tag: string): Promise<void> {
-    await runNpm('publish', ['--tag', tag], dir, { ...this.npmOptions, stdio: 'inherit' })
+  async publish(dir: AbsolutePath, tag?: string): Promise<void> {
+    const args = tag ? ['--tag', tag] : []
+    await runNpm('publish', args, dir, { ...this.npmOptions, stdio: 'inherit' })
   }
 
   async distTagAdd(packageNameAtVersion: string, tag: string, cwd: AbsolutePath): Promise<void> {
