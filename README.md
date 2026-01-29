@@ -38,7 +38,14 @@ Now publish it:
 npx monocrate publish packages/my-app
 ```
 
-That's it. Your package is live on npm. Users can `npm install @myorg/my-app` and it just works—all entry points kept, sourcemaps and TypeScript types correctly resolve, and if you ever want to bundle it into an application it will be very tree-shaking friendly. By default this publishes with a `minor` increment; you can pick your own via `--bump`.
+That's it. Your package is live on npm. Users can `npm install @myorg/my-app` and it just works—all entry points kept, sourcemaps and TypeScript types correctly resolve, and if you ever want to bundle it into an application it will be very tree-shaking friendly. By default this publishes with a `minor` increment.
+
+**Need a different version bump?**
+
+```bash
+npx monocrate publish packages/my-app --bump patch   # 1.2.3 → 1.2.4
+npx monocrate publish packages/my-app --bump 2.0.0   # Exact version
+```
 
 **Want to inspect before publishing?** Use `prepare` instead:
 
