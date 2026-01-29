@@ -304,29 +304,38 @@ describe('npm publishing with Verdaccio', () => {
     })
   }, 60000)
 
-  it('multi-package publish sets latest only after all packages are published with pending tag', async () => {
+  it('does not move latest tag when second package fails to publish', async () => {
+    // Pre-publish both packages so they have existing latest tags
+    verdaccio.publishPackage('atomic-a', '1.0.0', `export const a = 'v1'`)
+    verdaccio.publishPackage('atomic-b', '8.7.6', `export const b = 'pre-published'`)
+
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
-      'packages/multi-a/package.json': pj('multi-a', '1.0.0'),
-      'packages/multi-a/dist/index.js': `export const a = 'A'`,
-      'packages/multi-b/package.json': pj('multi-b', '1.0.0'),
-      'packages/multi-b/dist/index.js': `export const b = 'B'`,
+      'packages/atomic-a/package.json': pj('atomic-a', '1.0.0'),
+      'packages/atomic-a/dist/index.js': `export const a = 'A'`,
+      'packages/atomic-b/package.json': pj('atomic-b', '1.0.0'),
+      'packages/atomic-b/dist/index.js': `export const b = 'B'`,
     })
 
-    await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackages: ['packages/multi-a', 'packages/multi-b'],
-      monorepoRoot,
-      bump: '2.0.0',
-      publish: true,
-      npmrcPath: verdaccio.npmrcPath(),
-    })
+    // Try to publish both packages - atomic-b should fail because 8.7.6 already exists
+    await expect(
+      monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: ['packages/atomic-a', 'packages/atomic-b'],
+        monorepoRoot,
+        bump: '8.7.6',
+        publish: true,
+        npmrcPath: verdaccio.npmrcPath(),
+      })
+    ).rejects.toThrow()
 
-    const viewA = verdaccio.runView('multi-a') as { 'dist-tags': Record<string, string> }
-    const viewB = verdaccio.runView('multi-b') as { 'dist-tags': Record<string, string> }
+    // atomic-a was published with pending tag but latest should NOT have been moved (still 1.0.0)
+    const viewA = verdaccio.runView('atomic-a') as { 'dist-tags': { pending?: string; latest?: string } }
+    expect(viewA['dist-tags'].pending).toBe('8.7.6')
+    expect(viewA['dist-tags'].latest).toBe('1.0.0')
 
-    // Both packages should have both tags pointing to 2.0.0
-    expect(viewA['dist-tags']).toMatchObject({ pending: '2.0.0', latest: '2.0.0' })
-    expect(viewB['dist-tags']).toMatchObject({ pending: '2.0.0', latest: '2.0.0' })
+    // atomic-b should still have its pre-published version as latest
+    const viewB = verdaccio.runView('atomic-b') as { 'dist-tags': { latest?: string } }
+    expect(viewB['dist-tags'].latest).toBe('8.7.6')
   }, 90000)
 })

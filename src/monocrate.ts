@@ -74,7 +74,6 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v)
 
   const allPackagesForMirror = new Map<string, MonorepoPackage>()
-  const publishedPackages: { name: string; outputDir: AbsolutePath }[] = []
 
   // Phase 1: Assemble all packages and publish with --tag pending
   for (const assembler of assemblers) {
@@ -84,14 +83,15 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     }
 
     if (options.publish) {
-      await publish(npmClient, assembler.getOutputDir(), { tag: 'pending' })
-      publishedPackages.push({ name: assembler.publishAs, outputDir: assembler.getOutputDir() })
+      await publish(npmClient, assembler.getOutputDir(), 'pending')
     }
   }
 
   // Phase 2: Move 'latest' tag to all published packages (only if all publishes succeeded)
-  for (const { name, outputDir } of publishedPackages) {
-    await npmClient.distTagAdd(`${name}@${resolvedVersion}`, 'latest', outputDir)
+  if (options.publish) {
+    for (const assembler of assemblers) {
+      await npmClient.distTagAdd(`${assembler.publishAs}@${resolvedVersion}`, 'latest', assembler.getOutputDir())
+    }
   }
 
   // Mirror source files if mirrorTo is specified
