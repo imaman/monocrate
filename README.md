@@ -32,26 +32,29 @@ You have a package you want to publish. First, build it:
 npm run build  # or tsc, or whatever compiles your TypeScript
 ```
 
-Now extract it with its dependencies:
+Now publish it:
 
 ```bash
 npx monocrate publish packages/my-app
 ```
 
-This creates an `output/` directory. Inside, you'll find:
-- Your app's compiled code at the root
-- Internal dependencies copied under `deps/packages/utils/` and `deps/packages/api-client/`
-- All imports rewritten: `import { foo } from '@myorg/utils'` becomes `import { foo } from './deps/packages/utils/dist/index.js'`
-- A merged `package.json` with third-party dependencies from the entire dependency tree
+Done. This command:
+1. Extracts your package and its internal dependencies to a temp directory
+2. Copies `@myorg/utils` and `@myorg/api-client` under `deps/`
+3. Rewrites all imports: `import { foo } from '@myorg/utils'` → `import { foo } from './deps/packages/utils/dist/index.js'`
+4. Merges third-party dependencies into a single `package.json`
+5. Bumps the version (defaults to `minor`)
+6. Publishes to npm with `npm publish`
 
-Publish it:
+Your users can now `npm install @myorg/my-app`. It works like any npm package—tree-shaking works, TypeScript types resolve, no special runtime needed.
+
+**Want to inspect before publishing?** Use `prepare` instead:
 
 ```bash
-cd output
+npx monocrate prepare packages/my-app --output-dir ./dist
+cd dist
 npm publish
 ```
-
-Done. Your users can now `npm install @myorg/my-app`. It works like any npm package—tree-shaking works, TypeScript types resolve, no special runtime needed.
 
 ## How It Works
 
