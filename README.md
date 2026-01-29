@@ -50,11 +50,13 @@ npm publish
 
 ## How It Works
 
-Monocrate treats publishing from a monorepo as a graph problem. When you point it at a package, it recursively walks `dependencies` (not `devDependencies`—those are build tools, not runtime requirements) to identify every internal package in the dependency closure. It determines which files each package would publish by delegating to `npm pack`, the same logic npm uses. These files get copied into an output directory under `deps/`, preserving each package's structure.
+**Graph traversal**: Walks your package's `dependencies` (not `devDependencies`) to find every internal package in the closure.
 
-The hard part is import rewriting. Your code contains statements like `import { foo } from '@myorg/utils'`. After extraction, that import needs to point to the copied files: `import { foo } from './deps/packages/utils/dist/index.js'`. Regex fails here—you need to understand TypeScript's module resolution, handle package.json `exports` maps, resolve subpath imports like `@myorg/utils/async`, and process both `.js` and `.d.ts` files identically. Monocrate uses `ts-morph` to parse each file as an AST, locate import/export declarations, check if they reference internal packages, resolve the target path using the same algorithm TypeScript uses, compute the relative path from the importing file to the resolved target, and rewrite the import specifier.
+**File extraction**: Uses `npm pack` to determine publishable files (respects `.npmignore`, `files` field). Copies them to `deps/` preserving each package's structure.
 
-The output is publishable using standard `npm publish`. No custom runtime, no special install steps, no lock-in. Users who install your package get a normal npm dependency with working module boundaries. If they run a bundler, tree-shaking eliminates unused code because modules aren't concatenated. If they use TypeScript, declaration files resolve correctly because paths weren't flattened. If they debug, stack traces point to real file locations because source structure is preserved.
+**Import rewriting**: The critical piece. Your code has `import { foo } from '@myorg/utils'`. After extraction, that needs to become `import { foo } from './deps/packages/utils/dist/index.js'`. Regex can't handle this—you need TypeScript's module resolution, `exports` maps, subpath imports. Monocrate uses `ts-morph` to parse files as ASTs, resolve imports using the same algorithm TypeScript uses, and rewrite specifiers in both `.js` and `.d.ts` files.
+
+**Standard output**: The result is a normal npm package. No custom runtime, no special install steps. Tree-shaking works because modules aren't concatenated. TypeScript types resolve because paths aren't flattened. Stack traces point to real files because structure is preserved.
 
 ## When NOT to Use This
 
