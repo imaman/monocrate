@@ -2,32 +2,38 @@
 
 ## Why?
 
-You have a package in your monorepo that imports from other internal packages:
+You built something useful in your monorepo. Maybe it's a data validation library that elegantly handles edge cases, or an API client that gracefully retries and caches. You want to share it—open-source it, let others benefit from the work you put in.
+
+But it depends on other packages in your monorepo:
 
 ```typescript
-// packages/my-app/src/index.ts
-import { validateEmail, parseDate } from '@myorg/utils'
-import { ApiClient } from '@myorg/api-client'
+// packages/data-validator/src/index.ts
+import { parseSchema, SchemaType } from '@myorg/schema-parser'
+import { formatError } from '@myorg/error-formatter'
+import { memoize } from '@myorg/utils'
 
-export function processUser(email: string) {
-  if (!validateEmail(email)) throw new Error('invalid email')
-  return new ApiClient().createUser(email)
+export function validate(data: unknown, schema: SchemaType) {
+  const parsed = parseSchema(schema)
+  const validator = memoize((d) => parsed.check(d))
+  if (!validator(data)) {
+    throw formatError(parsed.errors)
+  }
 }
 ```
 
-When you try `npm publish`, it fails—the `workspace:*` protocol only works inside your monorepo. Consumers can't install it because `@myorg/utils` and `@myorg/api-client` don't exist on npm.
+When you try `npm publish`, it fails—the `workspace:*` protocol only works inside your monorepo. Consumers can't install it because `@myorg/schema-parser`, `@myorg/error-formatter`, and `@myorg/utils` don't exist on npm.
 
-Your options:
+So now what? Your options aren't great:
 
-- 😵 Publish all six internal packages separately and maintain them forever as public API
-- 🪦 Bundle everything into one file and break tree-shaking and `.d.ts` files
-- 🤯 Manually copy files and rewrite imports until you miss one and ship broken types
+- 😵 Publish all the internal packages separately—now you're maintaining six npm packages forever, and your internal implementation details became public API
+- 🤦 Bundle everything into one file with esbuild—breaks tree-shaking, mangles TypeScript types, flattens your carefully structured modules
+- 🤕 Manually copy files and rewrite imports yourself—works once, breaks on the second PR when someone forgets a step
 
-Monocrate solves this: extract one package with all its internal dependencies, rewrite the imports, publish as a single npm package.
+**Monocrate solves this.** It extracts your package with all its internal dependencies, rewrites the imports automatically, and gives you a single publishable npm package. One command, preserves structure, just works.
 
 ## Quickstart
 
-You have a package you want to publish. First, build it:
+First, build your package:
 
 ```bash
 npm run build  # or tsc, or whatever compiles your TypeScript
@@ -36,22 +42,22 @@ npm run build  # or tsc, or whatever compiles your TypeScript
 Now publish it:
 
 ```bash
-npx monocrate publish packages/my-app
+npx monocrate publish packages/data-validator
 ```
 
-That's it. Your package is live on npm. Users can `npm install @myorg/my-app` and it just works—all entry points kept, sourcemaps and TypeScript types correctly resolve, and if you ever want to bundle it into an application it will be very tree-shaking friendly. By default this publishes with a `minor` increment.
+That's it. Your package is live on npm. Users can `npm install @myorg/data-validator` and it just works—all entry points kept, sourcemaps and TypeScript types correctly resolve, and if you ever want to bundle it into an application it will be very tree-shaking friendly. By default this publishes with a `minor` increment.
 
 **Need a different version bump?** Use the `--bump` option:
 
 ```bash
-npx monocrate publish packages/my-app --bump patch   # 1.2.3 → 1.2.4
-npx monocrate publish packages/my-app --bump 2.0.0   # Exact version
+npx monocrate publish packages/data-validator --bump patch   # 1.2.3 → 1.2.4
+npx monocrate publish packages/data-validator --bump 2.0.0   # Exact version
 ```
 
 **Want to inspect before publishing?** Use `prepare` instead:
 
 ```bash
-npx monocrate prepare packages/my-app --output-dir ./dist
+npx monocrate prepare packages/data-validator --output-dir ./dist
 cd dist
 npm publish
 ```
