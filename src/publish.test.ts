@@ -40,7 +40,7 @@ describe('npm publishing with Verdaccio', () => {
       publish: true,
       npmrcPath: verdaccio.npmrcPath(),
     })
-    expect(await verdaccio.runView('@test/mylib')).toMatchObject({ name: '@test/mylib', version: '99.99.99' })
+    expect(verdaccio.runView('@test/mylib')).toMatchObject({ name: '@test/mylib', version: '99.99.99' })
     expect(
       verdaccio.runConumser(`@test/mylib@99.99.99`, `import { hello } from '@test/mylib'; console.log(hello())`)
     ).toBe('Hello from mylib!')
@@ -61,7 +61,7 @@ describe('npm publishing with Verdaccio', () => {
       publish: true,
       npmrcPath: verdaccio.npmrcPath(),
     })
-    expect(await verdaccio.runView('mylib')).toMatchObject({ name: 'mylib', version: '99.99.99' })
+    expect(verdaccio.runView('mylib')).toMatchObject({ name: 'mylib', version: '99.99.99' })
     expect(verdaccio.runConumser(`mylib@99.99.99`, `import { hello } from 'mylib'; console.log(hello())`)).toBe(
       'Hello from mylib!'
     )
@@ -295,7 +295,7 @@ describe('npm publishing with Verdaccio', () => {
       npmrcPath: verdaccio.npmrcPath(),
     })
 
-    const viewResult = verdaccio.runView('twophase') as { 'dist-tags': Record<string, string> }
+    const viewResult = verdaccio.runView('twophase')
 
     // Both 'pending' and 'latest' tags should point to the published version
     expect(viewResult['dist-tags']).toMatchObject({
@@ -330,12 +330,12 @@ describe('npm publishing with Verdaccio', () => {
     ).rejects.toThrow()
 
     // atomic-a was published with pending tag but latest should NOT have been moved (still 1.0.0)
-    const viewA = verdaccio.runView('atomic-a') as { 'dist-tags': { pending?: string; latest?: string } }
+    const viewA = verdaccio.runView('atomic-a')
     expect(viewA['dist-tags'].pending).toBe('8.7.6')
     expect(viewA['dist-tags'].latest).toBe('1.0.0')
 
     // atomic-b should still have its pre-published version as latest
-    const viewB = verdaccio.runView('atomic-b') as { 'dist-tags': { latest?: string } }
+    const viewB = verdaccio.runView('atomic-b')
     expect(viewB['dist-tags'].latest).toBe('8.7.6')
   }, 90000)
 })

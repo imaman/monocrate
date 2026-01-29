@@ -13,6 +13,14 @@ interface VerdaccioServer {
   npmrcPath: string
 }
 
+interface NpmViewResult {
+  name: string
+  version: string
+  versions?: string[]
+  dependencies?: Partial<Record<string, string>>
+  'dist-tags': Partial<Record<string, string>>
+}
+
 export class VerdaccioTestkit {
   private server: VerdaccioServer | undefined = undefined
 
@@ -36,13 +44,13 @@ export class VerdaccioTestkit {
     await stopVerdaccio(this.get())
   }
 
-  runView(packageName: string): unknown {
+  runView(packageName: string): NpmViewResult {
     // Verify the package was published by checking npm view
     const viewResult = execSync(`npm view ${packageName} --registry=${this.get().url} --json`, {
       encoding: 'utf-8',
     })
 
-    return JSON.parse(viewResult)
+    return JSON.parse(viewResult) as NpmViewResult
   }
 
   runInstall(dir: string, packageName: string) {

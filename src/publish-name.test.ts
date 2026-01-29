@@ -199,15 +199,13 @@ describe('publishName integration with npm registry', () => {
     })
 
     // Verify the package was published under the publish name (not the internal name)
-    expect(await verdaccio.runView('@published/mylib')).toMatchObject({
+    expect(verdaccio.runView('@published/mylib')).toMatchObject({
       name: '@published/mylib',
       version: '99.99.99',
     })
 
     // Verify the internal name was NOT published
-    await expect(async () => {
-      await verdaccio.runView('@workspace/mylib')
-    }).rejects.toThrow('404')
+    expect(() => verdaccio.runView('@workspace/mylib')).toThrow('404')
 
     // Verify the package can be installed and has correct functionality
     expect(
@@ -254,12 +252,12 @@ describe('publishName integration with npm registry', () => {
     })
 
     // Verify both packages were published under their respective custom names
-    expect(await verdaccio.runView('@public/lib-a')).toMatchObject({
+    expect(verdaccio.runView('@public/lib-a')).toMatchObject({
       name: '@public/lib-a',
       version: '1.0.0',
     })
 
-    expect(await verdaccio.runView('@public/lib-b')).toMatchObject({
+    expect(verdaccio.runView('@public/lib-b')).toMatchObject({
       name: '@public/lib-b',
       version: '2.0.0',
     })
@@ -299,12 +297,12 @@ describe('publishName integration with npm registry', () => {
     })
 
     // Verify both packages were published under their custom names
-    expect(await verdaccio.runView('@public/shared')).toMatchObject({
+    expect(verdaccio.runView('@public/shared')).toMatchObject({
       name: '@public/shared',
       version: '1.0.0',
     })
 
-    expect(await verdaccio.runView('@public/app')).toMatchObject({
+    expect(verdaccio.runView('@public/app')).toMatchObject({
       name: '@public/app',
       version: '1.0.0',
     })
