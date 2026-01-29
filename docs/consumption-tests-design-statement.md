@@ -2,11 +2,11 @@
 
 ## Overview
 
-Consumption tests are lightweight, artifact-level verification scripts that run immediately after `monocrate prepare` to confirm a packaged output would actually work when installed from a registry. They are not end-to-end integration tests—they are targeted smoke tests that detect real packaging failures before they reach npm: missing files in the exports field, incorrect entry points, broken import rewrites, and third-party dependency version conflicts.
+Consumption tests are lightweight, artifact-level verification scripts that run immediately after `monocrate prepare` to confirm a packaged output would actually work when installed from a registry. They are not end-to-end integration tests—they are targeted smoke tests that detect real packaging failures before they reach npm: missing files from the `files` field, incorrect `exports` configuration, missing type definitions that should have been built and included, and third-party dependency version conflicts.
 
-Today, monocrate's unit tests verify that assembly logic *works*—imports get rewritten, files get copied, package.json merges correctly. What they don't verify is that the *published artifact* actually functions when a consumer installs it. The existing integration tests in `publish.test.ts` exercise the entire publish flow with verdaccio, but they're coarse-grained and can't scale to cover every scenario developers will hit. The gap is that after running `monocrate prepare` to inspect output, developers have no automated way to verify their package is actually functional. They're relying on manual inspection or discovering breakage after publishing to npm, at which point the cost of fixing it is high: republish under a new version, pollute version history, erode user trust.
+Today, monocrate's unit tests verify that assembly logic *works*—imports get rewritten, files get copied, package.json merges correctly. What they don't verify is that the *published artifact* actually functions when a consumer installs it—specifically, whether the package.json configuration the user wrote is correct. The existing integration tests in `publish.test.ts` exercise the entire publish flow with verdaccio, but they're coarse-grained and can't scale to cover every scenario developers will hit. The gap is that after running `monocrate prepare` to inspect output, developers have no automated way to verify they configured their package correctly for publication. They're relying on manual inspection or discovering breakage after publishing to npm, at which point the cost of fixing it is high: republish under a new version, pollute version history, erode user trust.
 
-Consumption tests plug this gap. They live in the package alongside the source code, they're written in plain JavaScript/TypeScript, they run in seconds, and they can be executed before `monocrate publish` runs. They're a built-in safeguard against the three failure modes that unit tests can't catch: unreachable exports, corrupted entry points, and misaligned import rewrites between `.js` and `.d.ts` files.
+Consumption tests plug this gap. They live in the package alongside the source code, they're written in plain JavaScript/TypeScript, they run in seconds, and they can be executed before `monocrate publish` runs. They're a built-in safeguard against user configuration mistakes that unit tests can't catch: exports pointing to non-existent files, incorrect entry points in package.json, and missing type definitions because the `files` field didn't include all built artifacts.
 
 ## Key Design Decisions
 
@@ -55,7 +55,7 @@ If the field is missing, monocrate auto-detects and defaults to checking if a `c
 
 **Decision:** When a consumption test fails, the error message must identify: (a) which import statement failed, (b) which file was missing or unreachable, and (c) which package in the dependency closure is responsible.
 
-**Rationale:** Monocrate's philosophy is "fail early and loud." Developers need to fix the root cause, not debug the test harness. If a consumption test throws `Error: Cannot find module './deps/packages/utils/dist/api.js'`, that tells the developer exactly which file is missing and which import path triggered it. They can then check if `api.js` was supposed to be in the `exports` field, if npm pack actually included it, or if the import rewrite was incorrect. Vague errors ("test failed") or stack traces that require reading test internals force developers to instrument the code or add logging—wasting time that could be spent fixing the actual issue.
+**Rationale:** Monocrate's philosophy is "fail early and loud." Developers need to fix the root cause, not debug the test harness. If a consumption test throws `Error: Cannot find module './deps/packages/utils/dist/api.js'`, that tells the developer exactly which file is missing and which import path triggered it. They can then check if `api.js` was supposed to be in the `exports` field, if they forgot to list it in the `files` field, or if their package.json export paths are incorrect. Vague errors ("test failed") or stack traces that require reading test internals force developers to instrument the code or add logging—wasting time that could be spent fixing the actual issue.
 
 ## How It Works
 
@@ -127,11 +127,11 @@ When monocrate prepares the package, it discovers these test files. During CI or
 4. Type-checks the `.ts` file (if TypeScript is present)
 5. If any test fails (non-zero exit code or thrown error), monocrate stops and reports the failure with the original error message
 
-If the imports in the `.js` files don't match the `.d.ts` files—say, `.d.ts` imports a type from a path that doesn't exist in the `.js` rewrite—the type checking step catches it. If the `exports` field points to a file that npm pack didn't include, the import in the consumption test will fail with "Cannot find module". If a dependency version conflict slipped through the merge, and the code path exercised by the test uses that dependency incorrectly, the runtime test will fail.
+If the imports in the `.js` files don't match the `.d.ts` files—say, you configured `.d.ts` to export from a path that doesn't exist in the assembled output—the type checking step catches it. If the `exports` field points to a file you forgot to include in the `files` field, the import in the consumption test will fail with "Cannot find module". If a dependency version conflict slipped through and you wrote test code that exercises it, the runtime test will fail.
 
 ## Success Criteria
 
-1. **Catch real export config issues before publishing.** Consumption tests must detect when a package's `exports` field points to non-existent files after assembly. Success means if monocrate's import rewriter generates `import './deps/packages/utils/dist/api.js'` but npm pack didn't include `api.js`, the consumption test fails with a clear error message identifying the missing file and which import triggered it.
+1. **Catch real export config issues before publishing.** Consumption tests must detect when a package's `exports` field points to non-existent files after assembly. Success means if you configured `exports` to point to `'./dist/api.js'` but forgot to include it in the `files` field, the consumption test fails with a clear error message identifying the missing file and which import triggered it.
 
 2. **Verify the published artifact is installable and executable.** Consumption tests must install the prepared package from verdaccio, import its entry points, and execute basic functionality. Success means if a package exports a function `foo()`, the consumption test can `import { foo } from 'package-name'` and call it. Failure to import or execute indicates broken package.json entry points, missing files, or runtime import errors.
 
@@ -139,7 +139,7 @@ If the imports in the `.js` files don't match the `.d.ts` files—say, `.d.ts` i
 
 4. **Detect third-party dependency mismatches.** When monocrate merges dependencies from multiple internal packages, consumption tests must catch version conflicts that slip through (e.g., package A needs `lodash@4.17.0`, package B needs `lodash@4.17.21`, monocrate picks one, and the other breaks). Success means the consumption test installs all third-party deps and exercises code paths that use them, catching runtime failures that static analysis misses.
 
-5. **Fail with actionable error messages.** When a consumption test fails, the output must identify which import failed, which file was missing, and which package in the dependency closure caused the issue. Success means developers can fix the root cause (missing export, incorrect `files` field in package.json, broken import rewrite) without debugging the test harness itself.
+5. **Fail with actionable error messages.** When a consumption test fails, the output must identify which import failed, which file was missing, and which package in the dependency closure caused the issue. Success means developers can fix the root cause (missing export configuration, incorrect `files` field in package.json, wrong paths in the `exports` field) without debugging the test harness itself.
 
 ## Open Questions for the Spec
 
