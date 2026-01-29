@@ -24,29 +24,34 @@ export function processUser(email: string) {
 
 The `workspace:*` protocol only works inside your monorepo. When you publish to npm, consumers can't install it because `@myorg/utils` and `@myorg/api-client` don't exist on npm. You have three bad options: (1) publish all six internal packages separately and maintain them forever as public API, (2) bundle everything into one file and break tree-shaking and `.d.ts` files, or (3) manually copy files and rewrite imports until you miss one and ship broken types.
 
-## The Solution
+## Quickstart
+
+You have a package you want to publish. First, build it:
+
+```bash
+npm run build  # or tsc, or whatever compiles your TypeScript
+```
+
+Now extract it with its dependencies:
 
 ```bash
 npx monocrate publish packages/my-app
 ```
 
-What happens:
+This creates an `output/` directory. Inside, you'll find:
+- Your app's compiled code at the root
+- Internal dependencies copied under `deps/packages/utils/` and `deps/packages/api-client/`
+- All imports rewritten: `import { foo } from '@myorg/utils'` becomes `import { foo } from './deps/packages/utils/dist/index.js'`
+- A merged `package.json` with third-party dependencies from the entire dependency tree
 
-1. **Graph traversal**: Walks the dependency graph starting from `my-app`, finds `@myorg/utils` and `@myorg/api-client` in your monorepo
-2. **File extraction**: Runs `npm pack` on each package to determine publishable files (respects `.npmignore`, `files` field), copies them to `output/deps/packages/utils/` and `output/deps/packages/api-client/`
-3. **Import rewriting**: Uses `ts-morph` to parse every `.js` and `.d.ts` file as a TypeScript AST, finds `import { ... } from '@myorg/utils'`, resolves the target using package.json `exports` field, rewrites to `import { ... } from './deps/packages/utils/dist/index.js'`
-4. **Dependency merging**: Collects all third-party dependencies from the closure, detects version conflicts, writes merged `package.json` with combined dependencies
-5. **Output**: `output/` directory contains a standard npm package ready to publish
-
-The published package preserves module structure (tree-shaking works), includes correct `.d.ts` files (TypeScript users get full types), and installs cleanly (`npm install @myorg/my-app` just works).
-
-## Installation
+Publish it:
 
 ```bash
-npx monocrate publish packages/my-app
+cd output
+npm publish
 ```
 
-No installation needed. Or install globally: `npm install -g monocrate`
+Done. Your users can now `npm install @myorg/my-app`. It works like any npm package—tree-shaking works, TypeScript types resolve, no special runtime needed.
 
 ## How It Works
 
