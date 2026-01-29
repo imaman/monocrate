@@ -38,11 +38,7 @@ The philosophy: do one thing, do it well, integrate with the ecosystem. Monocrat
 
 ## Guiding Principles
 
-**Single command, single purpose.** You shouldn't need to orchestrate five tools to publish a package. `monocrate publish packages/my-app` handles the closure computation, file copying, import rewriting, and npm publishing. If you want to inspect before publishing, `monocrate prepare` gives you that. But the common case is one command.
-
-**Preserve module structure.** Flattening to a bundle is a lossy transformation. You lose tree-shaking, readable stack traces, and incremental compilation. Monocrate's output looks like source code because it is source code—just with imports rewritten. Entry points work, `package.json` references resolve, and bundlers see a normal package.
-
-**TypeScript is first-class.** `.d.ts` files get the same import rewriting as `.js` files. If you forget this, you ship broken types and users spend an hour debugging why `import { foo } from 'your-package'` compiles but doesn't autocomplete. We learned this the hard way.
+**Monorepo to npm should take seconds, not days.** Just run `npx monocrate publish packages/my-app`. It just works. Easy to remember, nothing to configure. Ergonomics FTW.
 
 **Don't be clever.** We use `npm pack` to determine publishable files instead of reimplementing the logic. We use `ts-morph` for parsing instead of regex. We delegate to existing, battle-tested tools rather than rolling our own. The tool should be boring and reliable.
 
