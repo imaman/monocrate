@@ -38,15 +38,7 @@ Now publish it:
 npx monocrate publish packages/my-app
 ```
 
-Done. This command:
-1. Extracts your package and its internal dependencies to a temp directory
-2. Copies `@myorg/utils` and `@myorg/api-client` under `deps/`
-3. Rewrites all imports: `import { foo } from '@myorg/utils'` → `import { foo } from './deps/packages/utils/dist/index.js'`
-4. Merges third-party dependencies into a single `package.json`
-5. Bumps the version (defaults to `minor`)
-6. Publishes to npm with `npm publish`
-
-Your users can now `npm install @myorg/my-app`. It works like any npm package—tree-shaking works, TypeScript types resolve, no special runtime needed.
+That's it. Your package is live on npm. Users can `npm install @myorg/my-app` and it just works—tree-shaking intact, TypeScript types resolve, no special runtime needed. The `workspace:*` imports are gone, replaced with relative paths to bundled dependencies.
 
 **Want to inspect before publishing?** Use `prepare` instead:
 
