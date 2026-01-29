@@ -29,7 +29,7 @@ So now what? Your options aren't great:
 - 🤦 Bundle everything into one file with esbuild—breaks tree-shaking, mangles TypeScript types, flattens your carefully structured modules
 - 🤕 Manually copy files and rewrite imports yourself—works once, breaks on the second PR when someone forgets a step
 
-**Monocrate solves this.** It extracts your package with all its internal dependencies, rewrites the imports automatically, and gives you a single publishable npm package. One command, preserves structure, just works.
+**Monocrate solves this.** One command, super simple, and you'll have your package on npm in no time.
 
 ## Quickstart
 
