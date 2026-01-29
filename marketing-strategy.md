@@ -1,28 +1,68 @@
 # Marketing Strategy for Monocrate
 
-## WHO Has This Problem
+## THE PROBLEM
 
-**Developers at companies with 50+ package monorepos trying to open-source individual utilities**
+**You want to publish a package from your monorepo to npm. That package depends on other packages in the same monorepo. When you try `npm publish`, it fails because npm doesn't understand workspace protocol references or your internal package names.**
 
-Not "monorepo users." The specific person who:
-- Spent Friday afternoon trying to extract one package
-- Hit workspace dependency errors on `npm publish`
-- Tried bundling, hated losing .d.ts quality and tree-shaking
-- Gave up and never tried again
+This isn't about "who" has the problem—it's about the problem itself. Just like Jest doesn't target "enterprise JavaScript developers," monocrate targets anyone hitting this specific publishing wall. Could be:
+- A team wanting to open-source something valuable they built
+- An indie dev who organized their projects as a monorepo
+- An OSS maintainer who adopted monorepos and regrets the publishing complexity
+- A company with internal packages that should be public
 
-**Also:** Open-source maintainers who adopted monorepos and now regret publishing complexity. DevTools engineers evaluating what to open-source (they're the gatekeepers who need friction removed).
+The common thread: they have something worth publishing, workspace dependencies are blocking them, and current solutions all suck.
 
-## WHERE They Are When They Hit This
+## WHERE The Problem Surfaces
 
-**Four critical moments:**
+**Real places developers hit this wall:**
 
-1. **First `npm publish` failure** - They search "npm publish workspace dependencies error" and land on Stack Overflow/GitHub issues showing bundle-or-publish-everything solutions
+### GitHub Issues (Package Manager Teams)
 
-2. **Evaluating whether to open-source** - Slack/GitHub discussions die at "but we'd have to publish 5 packages." No searches happen—the problem is invisible because they don't try
+**pnpm:**
+- [#6269](https://github.com/pnpm/pnpm/issues/6269) - `pnpm deploy` doesn't rewrite `workspace:*` dependencies (breaks Docker deployments)
+- [#9495](https://github.com/pnpm/pnpm/issues/9495) - Publishing from `/dist` directories with workspace protocol fails
+- [#4624](https://github.com/pnpm/pnpm/issues/4624) - `pnpm publish` doesn't replace `workspace:*` versions
+- [#8565](https://github.com/orgs/pnpm/discussions/8565) - "How to bundle workspace dependencies into pnpm publish packed packages"
 
-3. **Maintaining a bad solution** - Manual copy-paste processes, broken scripts, bundler complaints about tree-shaking
+**npm:**
+- [#7137](https://github.com/npm/cli/issues/7137) - `bundledDependencies` doesn't bundle dependencies in monorepo
 
-4. **Community discussions** - Reddit r/typescript, Hacker News monorepo threads, Twitter vents, Turborepo/Nx Discord when publishing comes up
+**Yarn:**
+- [#5477](https://github.com/yarnpkg/berry/issues/5477) - `yarn npm publish` doesn't work from dist directories
+
+**Bun:**
+- [#15246](https://github.com/oven-sh/bun/issues/15246) - Missing publishing features for monorepo workspaces
+
+**Nx:**
+- [#22776](https://github.com/nrwl/nx/issues/22776) - `nx release` doesn't update peerDependencies
+
+**Turborepo:**
+- [#910](https://github.com/vercel/turborepo/discussions/910) - "How can I publish my packages to npm?"
+
+**semantic-release:**
+- [#1688](https://github.com/semantic-release/semantic-release/issues/1688) - No native monorepo support (4 years of discussion, still low priority)
+
+### Blog Posts (Developers Documenting Pain)
+
+- [Highlight.io](https://www.highlight.io/blog/publishing-private-pnpm-monorepo) - "our `highlight.run` library uses our internal `client` typescript package that isn't public... we **don't** want to publish the `client` library"
+- [Bret.io](https://bret.io/blog/2025/i-love-monorepos/) - "Packages published from monorepos have more defects... You can't simply publish packages from a monorepo without a mountain of scripts and tooling"
+- [James Burnside](https://jamesburnside.github.io/blog/npm-metapackage) - Documents complex workaround using ttypescript and ts-transform-paths to rewrite import paths
+- [DEV Community](https://dev.to/tresorama/publish-a-typescript-react-library-to-npm-in-a-monorepo-1ah1) - "Friction between local development and publishing workflows"
+
+### Deployment Failures
+
+- [Vercel #5132](https://github.com/vercel/vercel/discussions/5132) - "Monorepo with Yarn workspaces fails to find modules"
+- [Cloudflare Pages](https://community.cloudflare.com/t/dependencies-between-pnpm-monorepo-cannot-be-resolved/690458) - "Dependencies between pnpm monorepo cannot be resolved"
+
+### Search Queries That Lead Nowhere
+
+When developers search:
+- "npm publish workspace dependencies error"
+- "publish one package from monorepo"
+- "how to bundle workspace dependencies"
+- "workspace protocol npm publish"
+
+They find partial solutions, workarounds, or "use Lerna/Changesets" (which solve different problems).
 
 ## WHAT The Message Is
 
