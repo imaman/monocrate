@@ -18,6 +18,50 @@ Monocrate gives you:
 - **Type declarations included** — `.d.ts` files just work
 - **Open-source mirroring** — `--mirror-to` copies sources to a public repo alongside publishing
 
+## What Monocrate Does
+
+**Before** (won't publish):
+```typescript
+// packages/cli/dist/index.js
+import { helper } from '@myorg/utils'
+```
+```bash
+$ npm publish
+ERROR: Cannot find module '@myorg/utils'
+```
+
+**After** (ready to publish):
+```typescript
+// output/dist/index.js
+import { helper } from '../deps/packages/utils/dist/index.js'
+```
+```bash
+$ monocrate publish packages/cli --bump patch
+✓ Published @myorg/cli@1.0.1
+```
+
+Monocrate copies `@myorg/utils` into the output and updates the import. That's it.
+
+> **Not a bundler:** Unlike webpack or esbuild, monocrate doesn't flatten your code into one file.
+> Your 50 files stay 50 files. Tree-shaking works. Debugging shows actual file:line numbers.
+>
+> **Use bundlers for:** Browser apps that need optimization
+> **Use monocrate for:** Node.js libraries that should preserve module structure
+
+## When to Use Monocrate
+
+- ✅ You have a monorepo with internal dependencies
+- ✅ You want to publish ONE package, not all of them
+- ✅ You're publishing a Node.js library (not a browser app)
+- ✅ You want to preserve module structure for tree-shaking
+- ✅ You want easy debugging (not minified bundles)
+
+## When NOT to Use Monocrate
+
+- ❌ Browser applications (use webpack/vite instead)
+- ❌ You want aggressive minification/optimization
+- ❌ All your packages are already public on npm
+
 ## Install
 
 ```bash
@@ -76,20 +120,29 @@ monocrate publish packages/sdk --mirror-to ../public-repo/packages
 
 ### Output Structure
 
+**Your monorepo:**
 ```
 monorepo/
   packages/
     app/          ← you want to publish this
     utils/        ← app depends on this
     core/         ← utils depends on this
+```
 
+**After `monocrate prepare packages/app`:**
+```
 output/
-  package.json    ← merged deps, in-repo refs removed
-  <app files>     ← app's publishable files
+  package.json    ← merged deps, @myorg refs removed
+  dist/           ← app's files
+  src/
   deps/
     packages/
-      utils/      ← utils' publishable files (imports rewritten)
-      core/       ← core's publishable files (imports rewritten)
+      utils/      ← utils' files (imports rewritten)
+        dist/
+        src/
+      core/       ← core's files (imports rewritten)
+        dist/
+        src/
 ```
 
 Entry points (`main`, `types`, `exports`) work unchanged because each package's file structure stays in the same relative position.
@@ -115,6 +168,18 @@ const result = await monocrate({
 console.log(result.resolvedVersion);  // "1.3.0"
 console.log(result.outputDir);        // "/tmp/monocrate-xyz/my-app"
 ```
+
+## Documentation
+
+- **[Quickstart Guide](./docs/quickstart.md)** — Your first publish in 10 minutes
+- **[How It Works](./docs/how-it-works.md)** — Detailed explanation of the process
+- **[CLI Reference](./docs/cli-reference.md)** — Complete command documentation
+- **[Troubleshooting](./docs/troubleshooting.md)** — Common issues and solutions
+- **[Advanced Guide](./docs/advanced.md)** — Multi-package publishing, mirroring, CI/CD
+- **[API Documentation](./docs/api.md)** — Programmatic usage
+- **[CI/CD Integration](./docs/ci-cd.md)** — GitHub Actions and GitLab examples
+
+[View all documentation →](./docs/README.md)
 
 ## License
 
