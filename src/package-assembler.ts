@@ -13,6 +13,7 @@ import type { NpmClient } from './npm-client.js'
 
 export class PackageAssembler {
   readonly pkgName
+  private readonly pkg: MonorepoPackage
   constructor(
     private readonly npmClient: NpmClient,
     private readonly explorer: RepoExplorer,
@@ -23,7 +24,12 @@ export class PackageAssembler {
     if (!found) {
       throw new Error(`Unrecognized package source dir: "${this.fromDir}"`)
     }
+    this.pkg = found
     this.pkgName = found.name
+  }
+
+  get publishAs() {
+    return this.pkg.publishAs
   }
 
   getOutputDir() {

@@ -278,4 +278,55 @@ describe('npm publishing with Verdaccio', () => {
       verdaccio.runConumser('calculator@3.0.0', `import { compute } from 'calculator'; console.log(compute(3, 4))`)
     ).toBe('81')
   }, 120000)
+
+  it('uses two-phase publishing: publishes with pending tag first, then moves latest tag', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/twophase/package.json': pj('twophase', '1.0.0'),
+      'packages/twophase/dist/index.js': `export const value = 'v1'`,
+    })
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: 'packages/twophase',
+      monorepoRoot,
+      bump: '1.0.0',
+      publish: true,
+      npmrcPath: verdaccio.npmrcPath(),
+    })
+
+    const viewResult = verdaccio.runView('twophase') as { 'dist-tags': Record<string, string> }
+
+    // Both 'pending' and 'latest' tags should point to the published version
+    expect(viewResult['dist-tags']).toMatchObject({
+      pending: '1.0.0',
+      latest: '1.0.0',
+    })
+  }, 60000)
+
+  it('multi-package publish sets latest only after all packages are published with pending tag', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/multi-a/package.json': pj('multi-a', '1.0.0'),
+      'packages/multi-a/dist/index.js': `export const a = 'A'`,
+      'packages/multi-b/package.json': pj('multi-b', '1.0.0'),
+      'packages/multi-b/dist/index.js': `export const b = 'B'`,
+    })
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: ['packages/multi-a', 'packages/multi-b'],
+      monorepoRoot,
+      bump: '2.0.0',
+      publish: true,
+      npmrcPath: verdaccio.npmrcPath(),
+    })
+
+    const viewA = verdaccio.runView('multi-a') as { 'dist-tags': Record<string, string> }
+    const viewB = verdaccio.runView('multi-b') as { 'dist-tags': Record<string, string> }
+
+    // Both packages should have both tags pointing to 2.0.0
+    expect(viewA['dist-tags']).toMatchObject({ pending: '2.0.0', latest: '2.0.0' })
+    expect(viewB['dist-tags']).toMatchObject({ pending: '2.0.0', latest: '2.0.0' })
+  }, 90000)
 })
