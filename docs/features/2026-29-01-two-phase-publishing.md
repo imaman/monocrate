@@ -2,7 +2,9 @@
 
 ## Intent
 
-When publishing multiple packages from a monorepo, a failure partway through can leave packages at inconsistent versions. Since monocrate packages are self-contained (each includes its in-repo dependencies), this isn't a compatibility problem—but it creates confusion when "the current version" differs across packages. Two phase publishing keeps all packages aligned: either they all move to the new version, or none do.
+When publishing multiple packages from a monorepo, a failure partway through can leave packages at misaligned versions. Since monocrate packages are self-contained (each includes its in-repo dependencies), this isn't a compatibility problem—but it creates confusion when "the current version" differs across packages. Two phase publishing keeps all packages aligned: either they all move to the new version, or none do.
+
+Note: This approach reduces the risk of misalignment but does not provide true atomicity. Failures during Phase 2 can still leave packages in a partially-updated state.
 
 ## How It Works
 
@@ -38,9 +40,8 @@ npm dist-tag add pkg-c@2.0.0 latest
 
 **If Phase 2 fails:**
 - All packages are published under `pending`
-- Some packages may have `latest` updated
-- This is a smaller window of inconsistency than before
-- Retry the publish to complete the tag updates
+- Some packages may have `latest` updated, others not
+- This is a smaller window of opportunity for misalignment than before, but misalignment is still possible
 
 ## Implementation
 
