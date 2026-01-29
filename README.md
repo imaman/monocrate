@@ -38,7 +38,7 @@ Now publish it:
 npx monocrate publish packages/my-app
 ```
 
-That's it. Your package is live on npm. Users can `npm install @myorg/my-app` and it just works—tree-shaking intact, TypeScript types resolve, no special runtime needed. The `workspace:*` imports are gone, replaced with relative paths to bundled dependencies.
+That's it. Your package is live on npm. Users can `npm install @myorg/my-app` and it just works—all entry points kept, sourcemaps and TypeScript types correctly resolve, and if you ever want to bundle it into an application it will be very tree-shaking friendly. By default this publishes with a `minor` increment; you can pick your own via `--bump`.
 
 **Want to inspect before publishing?** Use `prepare` instead:
 
