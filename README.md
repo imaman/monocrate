@@ -1,186 +1,87 @@
-# Monocrate
+# monocrate
 
-[![npm version](https://img.shields.io/npm/v/monocrate.svg)](https://www.npmjs.com/package/monocrate)
-[![CI](https://github.com/imaman/monocrate/actions/workflows/ci.yml/badge.svg)](https://github.com/imaman/monocrate/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+## The Problem
 
-From monorepo to npm in one command.
+You try to publish a package from your monorepo:
 
-## Why
+```
+npm ERR! code EUNSUPPORTEDPROTOCOL
+npm ERR! Unsupported URL Type "workspace:": workspace:*
+```
 
-Publishing from a monorepo breaks when your package depends on internal packages. npm doesn't understand workspace references like `@myorg/utils`. You're forced to either publish every internal package separately, manually copy and merge files, or bundle everything into a single file (losing module structure and type declarations).
+Your code imports from other packages in the same monorepo:
 
-Monocrate gives you:
-
-- **One command** — point at your package, done
-- **Self-contained output** — internal dependencies are included, nothing else to publish
-- **Preserved module structure** — no flattening into a single file, tree-shaking works
-- **Type declarations included** — `.d.ts` files just work
-- **Open-source mirroring** — `--mirror-to` copies sources to a public repo alongside publishing
-
-## What Monocrate Does
-
-**Before** (won't publish):
 ```typescript
-// packages/cli/dist/index.js
-import { helper } from '@myorg/utils'
-```
-```bash
-$ npm publish
-ERROR: Cannot find module '@myorg/utils'
-```
+// packages/my-app/src/index.ts
+import { validateEmail, parseDate } from '@myorg/utils'
+import { ApiClient } from '@myorg/api-client'
 
-**After** (ready to publish):
-```typescript
-// output/dist/index.js
-import { helper } from '../deps/packages/utils/dist/index.js'
-```
-```bash
-$ monocrate publish packages/cli --bump patch
-✓ Published @myorg/cli@1.0.1
+export function processUser(email: string) {
+  if (!validateEmail(email)) throw new Error('invalid email')
+  return new ApiClient().createUser(email)
+}
 ```
 
-Monocrate copies `@myorg/utils` into the output and updates the import. That's it.
+The `workspace:*` protocol only works inside your monorepo. When you publish to npm, consumers can't install it because `@myorg/utils` and `@myorg/api-client` don't exist on npm. You have three bad options: (1) publish all six internal packages separately and maintain them forever as public API, (2) bundle everything into one file and break tree-shaking and `.d.ts` files, or (3) manually copy files and rewrite imports until you miss one and ship broken types.
 
-> **Not a bundler:** Unlike webpack or esbuild, monocrate doesn't flatten your code into one file.
-> Your 50 files stay 50 files. Tree-shaking works. Debugging shows actual file:line numbers.
->
-> **Use bundlers for:** Browser apps that need optimization
-> **Use monocrate for:** Node.js libraries that should preserve module structure
-
-## When to Use Monocrate
-
-- ✅ You have a monorepo with internal dependencies
-- ✅ You want to publish ONE package, not all of them
-- ✅ You're publishing a Node.js library (not a browser app)
-- ✅ You want to preserve module structure for tree-shaking
-- ✅ You want easy debugging (not minified bundles)
-
-## When NOT to Use Monocrate
-
-- ❌ Browser applications (use webpack/vite instead)
-- ❌ You want aggressive minification/optimization
-- ❌ All your packages are already public on npm
-
-## Install
+## The Solution
 
 ```bash
-npm install -g monocrate
+npx monocrate publish packages/my-app
 ```
 
-## Usage
+What happens:
+
+1. **Graph traversal**: Walks the dependency graph starting from `my-app`, finds `@myorg/utils` and `@myorg/api-client` in your monorepo
+2. **File extraction**: Runs `npm pack` on each package to determine publishable files (respects `.npmignore`, `files` field), copies them to `output/deps/packages/utils/` and `output/deps/packages/api-client/`
+3. **Import rewriting**: Uses `ts-morph` to parse every `.js` and `.d.ts` file as a TypeScript AST, finds `import { ... } from '@myorg/utils'`, resolves the target using package.json `exports` field, rewrites to `import { ... } from './deps/packages/utils/dist/index.js'`
+4. **Dependency merging**: Collects all third-party dependencies from the closure, detects version conflicts, writes merged `package.json` with combined dependencies
+5. **Output**: `output/` directory contains a standard npm package ready to publish
+
+The published package preserves module structure (tree-shaking works), includes correct `.d.ts` files (TypeScript users get full types), and installs cleanly (`npm install @myorg/my-app` just works).
+
+## Installation
 
 ```bash
-# Prepare for inspection without publishing
-monocrate prepare packages/my-app
-
-# Publish directly to npm
-monocrate publish packages/my-app --bump patch
+npx monocrate publish packages/my-app
 ```
 
-### Commands
-
-**`prepare <packages...>`** — Assemble packages but don't publish. Useful for inspecting output or manual publishing.
-
-**`publish <packages...>`** — Assemble and publish to npm.
-
-### Options
-
-| Flag | Description |
-|------|-------------|
-| `-b, --bump` | Version bump: `patch`, `minor`, `major`, or explicit version like `1.2.3`. Defaults to `minor`. |
-| `-o, --output-dir` | Output directory. Defaults to a temp directory. |
-| `-r, --root` | Monorepo root. Auto-detected if omitted. |
-| `-m, --mirror-to` | Mirror source files to another directory (for open-source mirrors). |
-| `--report` | Write the resolved version to a file instead of stdout. |
-
-### Examples
-
-```bash
-# Bump patch version and publish
-monocrate publish packages/cli --bump patch
-
-# Publish multiple packages with synchronized versions
-monocrate publish packages/core packages/cli
-
-# Prepare to a specific directory for inspection
-monocrate prepare packages/app --output-dir ./publish-staging
-
-# Mirror sources to a public repo after publishing
-monocrate publish packages/sdk --mirror-to ../public-repo/packages
-```
+No installation needed. Or install globally: `npm install -g monocrate`
 
 ## How It Works
 
-1. Discovers all packages in the monorepo via workspace configuration
-2. Builds a dependency graph starting from your target package
-3. Copies each package's publishable files (determined by `npm pack`) to the output
-4. Rewrites import statements from package names to relative paths (using `exports` or `main` fields)
-5. Generates a `package.json` with merged third-party dependencies
+Monocrate treats publishing from a monorepo as a graph problem. When you point it at a package, it recursively walks `dependencies` (not `devDependencies`—those are build tools, not runtime requirements) to identify every internal package in the dependency closure. It determines which files each package would publish by delegating to `npm pack`, the same logic npm uses. These files get copied into an output directory under `deps/`, preserving each package's structure.
 
-### Output Structure
+The hard part is import rewriting. Your code contains statements like `import { foo } from '@myorg/utils'`. After extraction, that import needs to point to the copied files: `import { foo } from './deps/packages/utils/dist/index.js'`. Regex fails here—you need to understand TypeScript's module resolution, handle package.json `exports` maps, resolve subpath imports like `@myorg/utils/async`, and process both `.js` and `.d.ts` files identically. Monocrate uses `ts-morph` to parse each file as an AST, locate import/export declarations, check if they reference internal packages, resolve the target path using the same algorithm TypeScript uses, compute the relative path from the importing file to the resolved target, and rewrite the import specifier.
 
-**Your monorepo:**
-```
-monorepo/
-  packages/
-    app/          ← you want to publish this
-    utils/        ← app depends on this
-    core/         ← utils depends on this
-```
+The output is publishable using standard `npm publish`. No custom runtime, no special install steps, no lock-in. Users who install your package get a normal npm dependency with working module boundaries. If they run a bundler, tree-shaking eliminates unused code because modules aren't concatenated. If they use TypeScript, declaration files resolve correctly because paths weren't flattened. If they debug, stack traces point to real file locations because source structure is preserved.
 
-**After `monocrate prepare packages/app`:**
-```
-output/
-  package.json    ← merged deps, @myorg refs removed
-  dist/           ← app's files
-  src/
-  deps/
-    packages/
-      utils/      ← utils' files (imports rewritten)
-        dist/
-        src/
-      core/       ← core's files (imports rewritten)
-        dist/
-        src/
-```
+## When NOT to Use This
 
-Entry points (`main`, `types`, `exports`) work unchanged because each package's file structure stays in the same relative position.
+**Don't use monocrate if:**
 
-## Requirements
+- You want to publish every package in your monorepo separately (use Changesets or Lerna—they manage multi-package versioning and changelogs)
+- Your packages have circular dependencies (no tool can extract that—refactor your dependency graph first)
+- You need a single bundled output file (use esbuild or Rollup—monocrate preserves module structure, doesn't bundle)
+- You're deploying to a runtime that supports workspace protocol natively (just deploy—no extraction needed)
+- Your internal packages have different license terms (publishing them together as one package is legally unclear—consult a lawyer)
+- You expect zero configuration (monocrate needs your packages built—run `tsc` or `esbuild` first, it won't compile for you)
 
-- Node.js 20+
-- Packages must have valid entry points (`exports` or `main` field in package.json)
-- Monorepo must use npm, yarn, or pnpm workspaces
+**Wrong fit examples:**
 
-## Programmatic API
+- "I want semantic-release to version all my packages" → You want changesets + semantic-release, not monocrate
+- "I need one minified bundle.js for browsers" → You want esbuild bundle, not monocrate
+- "My package imports from `../../other-package/src/utils.ts`" → Your imports bypass package boundaries, monocrate can't rewrite raw path imports (use proper package references)
+- "I want to publish to npm without running my build step" → Monocrate expects compiled output in `dist/`, not source in `src/`
 
-```typescript
-import { monocrate } from 'monocrate';
+## Built Because
 
-const result = await monocrate({
-  pathToSubjectPackages: ['packages/my-app'],
-  cwd: process.cwd(),
-  publish: false,
-  bump: 'minor',
-});
+We maintain a 110+ package monorepo. When we wanted to open-source one package, we faced publishing six dependencies or giving up. Bundling broke types. Manual copying broke on the second PR. We built monocrate to extract what we wanted to share without publishing our entire internal structure.
 
-console.log(result.resolvedVersion);  // "1.3.0"
-console.log(result.outputDir);        // "/tmp/monocrate-xyz/my-app"
-```
+Read the full story: [docs/mission-statement.md](docs/mission-statement.md)
 
-## Documentation
+---
 
-- **[Quickstart Guide](./docs/quickstart.md)** — Your first publish in 10 minutes
-- **[How It Works](./docs/how-it-works.md)** — Detailed explanation of the process
-- **[CLI Reference](./docs/cli-reference.md)** — Complete command documentation
-- **[Troubleshooting](./docs/troubleshooting.md)** — Common issues and solutions
-- **[Advanced Guide](./docs/advanced.md)** — Multi-package publishing, mirroring, CI/CD
-- **[API Documentation](./docs/api.md)** — Programmatic usage
-- **[CI/CD Integration](./docs/ci-cd.md)** — GitHub Actions and GitLab examples
-
-[View all documentation →](./docs/README.md)
-
-## License
-
-MIT
+**License**: MIT
+**Repository**: [github.com/imaman/monocrate](https://github.com/imaman/monocrate)
+**Issues**: [github.com/imaman/monocrate/issues](https://github.com/imaman/monocrate/issues)
