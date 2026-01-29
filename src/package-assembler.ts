@@ -13,6 +13,7 @@ import type { NpmClient } from './npm-client.js'
 
 export class PackageAssembler {
   readonly pkgName
+  readonly publishAs
   constructor(
     private readonly npmClient: NpmClient,
     private readonly explorer: RepoExplorer,
@@ -24,6 +25,7 @@ export class PackageAssembler {
       throw new Error(`Unrecognized package source dir: "${this.fromDir}"`)
     }
     this.pkgName = found.name
+    this.publishAs = found.publishAs
   }
 
   getOutputDir() {
