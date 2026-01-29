@@ -1,15 +1,8 @@
 # monocrate
 
-## The Problem
+## Why?
 
-You try to publish a package from your monorepo:
-
-```
-npm ERR! code EUNSUPPORTEDPROTOCOL
-npm ERR! Unsupported URL Type "workspace:": workspace:*
-```
-
-Your code imports from other packages in the same monorepo:
+You have a package in your monorepo that imports from other internal packages:
 
 ```typescript
 // packages/my-app/src/index.ts
@@ -22,7 +15,11 @@ export function processUser(email: string) {
 }
 ```
 
-The `workspace:*` protocol only works inside your monorepo. When you publish to npm, consumers can't install it because `@myorg/utils` and `@myorg/api-client` don't exist on npm. You have three bad options: (1) publish all six internal packages separately and maintain them forever as public API, (2) bundle everything into one file and break tree-shaking and `.d.ts` files, or (3) manually copy files and rewrite imports until you miss one and ship broken types.
+When you try `npm publish`, it fails—the `workspace:*` protocol only works inside your monorepo. Consumers can't install it because `@myorg/utils` and `@myorg/api-client` don't exist on npm.
+
+You have three bad options: (1) publish all six internal packages separately and maintain them forever as public API, (2) bundle everything into one file and break tree-shaking and `.d.ts` files, or (3) manually copy files and rewrite imports until you miss one and ship broken types.
+
+Monocrate solves this: extract one package with all its internal dependencies, rewrite the imports, publish as a single npm package.
 
 ## Quickstart
 
