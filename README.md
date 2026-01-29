@@ -17,7 +17,11 @@ export function processUser(email: string) {
 
 When you try `npm publish`, it fails—the `workspace:*` protocol only works inside your monorepo. Consumers can't install it because `@myorg/utils` and `@myorg/api-client` don't exist on npm.
 
-You have three bad options: (1) publish all six internal packages separately and maintain them forever as public API, (2) bundle everything into one file and break tree-shaking and `.d.ts` files, or (3) manually copy files and rewrite imports until you miss one and ship broken types.
+Your options:
+
+- 😵 Publish all six internal packages separately and maintain them forever as public API
+- 🪦 Bundle everything into one file and break tree-shaking and `.d.ts` files
+- 🤯 Manually copy files and rewrite imports until you miss one and ship broken types
 
 Monocrate solves this: extract one package with all its internal dependencies, rewrite the imports, publish as a single npm package.
 
