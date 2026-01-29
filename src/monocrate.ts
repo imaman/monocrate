@@ -74,6 +74,8 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v)
 
   const allPackagesForMirror = new Map<string, MonorepoPackage>()
+
+  // Phase 1: Assemble all packages and publish with --tag pending
   for (const assembler of assemblers) {
     const { compiletimeMembers } = await assembler.assemble(resolvedVersion)
     for (const pkg of compiletimeMembers) {
@@ -81,7 +83,14 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     }
 
     if (options.publish) {
-      await publish(npmClient, assembler.getOutputDir())
+      await publish(npmClient, assembler.getOutputDir(), 'pending')
+    }
+  }
+
+  // Phase 2: Move 'latest' tag to all published packages (only if all publishes succeeded)
+  if (options.publish) {
+    for (const assembler of assemblers) {
+      await npmClient.distTagAdd(`${assembler.publishAs}@${resolvedVersion}`, 'latest', assembler.getOutputDir())
     }
   }
 

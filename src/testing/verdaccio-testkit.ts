@@ -5,6 +5,7 @@ import getPort from 'get-port'
 import path from 'node:path'
 import fs from 'node:fs'
 import { folderify } from './folderify.js'
+import { z } from 'zod'
 
 interface VerdaccioServer {
   process: ChildProcess
@@ -12,6 +13,15 @@ interface VerdaccioServer {
   configDir: string
   npmrcPath: string
 }
+
+const NpmViewResult = z.object({
+  name: z.string(),
+  version: z.string(),
+  versions: z.array(z.string()).optional(),
+  dependencies: z.record(z.string(), z.string()).optional(),
+  'dist-tags': z.record(z.string(), z.string()),
+})
+type NpmViewResult = z.infer<typeof NpmViewResult>
 
 export class VerdaccioTestkit {
   private server: VerdaccioServer | undefined = undefined
@@ -36,13 +46,17 @@ export class VerdaccioTestkit {
     await stopVerdaccio(this.get())
   }
 
-  runView(packageName: string): unknown {
+  runView(packageName: string): NpmViewResult {
     // Verify the package was published by checking npm view
     const viewResult = execSync(`npm view ${packageName} --registry=${this.get().url} --json`, {
       encoding: 'utf-8',
     })
 
-    return JSON.parse(viewResult)
+    const parsed = NpmViewResult.safeParse(JSON.parse(viewResult))
+    if (!parsed.success) {
+      throw new Error(`Failed to parse npm view result: ${parsed.error.message}`)
+    }
+    return parsed.data
   }
 
   runInstall(dir: string, packageName: string) {

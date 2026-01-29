@@ -40,7 +40,7 @@ describe('npm publishing with Verdaccio', () => {
       publish: true,
       npmrcPath: verdaccio.npmrcPath(),
     })
-    expect(await verdaccio.runView('@test/mylib')).toMatchObject({ name: '@test/mylib', version: '99.99.99' })
+    expect(verdaccio.runView('@test/mylib')).toMatchObject({ name: '@test/mylib', version: '99.99.99' })
     expect(
       verdaccio.runConumser(`@test/mylib@99.99.99`, `import { hello } from '@test/mylib'; console.log(hello())`)
     ).toBe('Hello from mylib!')
@@ -61,7 +61,7 @@ describe('npm publishing with Verdaccio', () => {
       publish: true,
       npmrcPath: verdaccio.npmrcPath(),
     })
-    expect(await verdaccio.runView('mylib')).toMatchObject({ name: 'mylib', version: '99.99.99' })
+    expect(verdaccio.runView('mylib')).toMatchObject({ name: 'mylib', version: '99.99.99' })
     expect(verdaccio.runConumser(`mylib@99.99.99`, `import { hello } from 'mylib'; console.log(hello())`)).toBe(
       'Hello from mylib!'
     )
@@ -278,4 +278,64 @@ describe('npm publishing with Verdaccio', () => {
       verdaccio.runConumser('calculator@3.0.0', `import { compute } from 'calculator'; console.log(compute(3, 4))`)
     ).toBe('81')
   }, 120000)
+
+  it('uses two-phase publishing: publishes with pending tag first, then moves latest tag', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/twophase/package.json': pj('twophase', '1.0.0'),
+      'packages/twophase/dist/index.js': `export const value = 'v1'`,
+    })
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: 'packages/twophase',
+      monorepoRoot,
+      bump: '1.0.0',
+      publish: true,
+      npmrcPath: verdaccio.npmrcPath(),
+    })
+
+    const viewResult = verdaccio.runView('twophase')
+
+    // Both 'pending' and 'latest' tags should point to the published version
+    expect(viewResult['dist-tags']).toMatchObject({
+      pending: '1.0.0',
+      latest: '1.0.0',
+    })
+  }, 60000)
+
+  it('does not move latest tag when second package fails to publish', async () => {
+    // Pre-publish both packages so they have existing latest tags
+    verdaccio.publishPackage('atomic-a', '1.0.0', `export const a = 'v1'`)
+    verdaccio.publishPackage('atomic-b', '8.7.6', `export const b = 'pre-published'`)
+
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/atomic-a/package.json': pj('atomic-a', '1.0.0'),
+      'packages/atomic-a/dist/index.js': `export const a = 'A'`,
+      'packages/atomic-b/package.json': pj('atomic-b', '1.0.0'),
+      'packages/atomic-b/dist/index.js': `export const b = 'B'`,
+    })
+
+    // Try to publish both packages - atomic-b should fail because 8.7.6 already exists
+    await expect(
+      monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: ['packages/atomic-a', 'packages/atomic-b'],
+        monorepoRoot,
+        bump: '8.7.6',
+        publish: true,
+        npmrcPath: verdaccio.npmrcPath(),
+      })
+    ).rejects.toThrow()
+
+    // atomic-a was published with pending tag but latest should NOT have been moved (still 1.0.0)
+    const viewA = verdaccio.runView('atomic-a')
+    expect(viewA['dist-tags'].pending).toBe('8.7.6')
+    expect(viewA['dist-tags'].latest).toBe('1.0.0')
+
+    // atomic-b should still have its pre-published version as latest
+    const viewB = verdaccio.runView('atomic-b')
+    expect(viewB['dist-tags'].latest).toBe('8.7.6')
+  }, 90000)
 })
