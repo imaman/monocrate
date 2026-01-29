@@ -158,6 +158,11 @@ npx monocrate publish packages/my-lib
 10. Make PRs genuinely helpful—include ALL approaches (bundling, publish-all, extraction), not just monocrate
 11. These take time to review/merge, so submit early
 
+**Examples of similar docs PRs:**
+- npm/cli: [#5875](https://github.com/npm/cli/pull/5875) - Added workspace directory example (external contributor)
+- npm/cli: [#8798](https://github.com/npm/cli/pull/8798) - Documented engines field priority behavior (external contributor)
+- Nx: [#28686](https://github.com/nrwl/nx/pull/28686) - Added nx import blog post (external contributor)
+
 **Why Week 3-4:** Docs PRs need maintainer review cycles. Submit when you have confidence the tool works (based on Week 1-2 feedback), but don't wait too long—these become evergreen discovery channels.
 
 ### Week 4-8: Let organic discovery happen (Patience period)
