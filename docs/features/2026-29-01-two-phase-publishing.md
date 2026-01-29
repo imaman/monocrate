@@ -2,12 +2,7 @@
 
 ## Intent
 
-Two phase publishing reduces the risk of partial failures when publishing multiple packages. It does not provide true atomicity, but significantly narrows the window where users could see inconsistent package versions.
-
-**Problem solved:**
-- Publishing multiple packages where one fails midway leaves users with mismatched versions
-- Consumers running `npm install` may get incompatible package combinations
-- No easy rollback when a publish fails partway through
+When publishing multiple packages from a monorepo, a failure partway through can leave packages at inconsistent versions. Since monocrate packages are self-contained (each includes its in-repo dependencies), this isn't a compatibility problem—but it creates confusion when "the current version" differs across packages. Two phase publishing keeps all packages aligned: either they all move to the new version, or none do.
 
 ## How It Works
 
@@ -39,108 +34,36 @@ npm dist-tag add pkg-c@2.0.0 latest
 - Some packages may be published under `pending` tag
 - `latest` remains unchanged for all packages
 - Users are unaffected; they continue getting the previous stable versions
-- The `pending` tag can be cleaned up or overwritten on retry
+- The `pending` tag will be overwritten on retry
 
 **If Phase 2 fails:**
 - All packages are published under `pending`
 - Some packages may have `latest` updated
-- This is a smaller window of inconsistency than before, but inconsistency is still possible
+- This is a smaller window of inconsistency than before
 - Retry the publish to complete the tag updates
 
-## Implementation Details
+## Implementation
 
-### Files Involved
-
-- `src/npm-client.ts` — `publish()` accepts `tag` parameter; `distTagAdd()` method
-- `src/publish.ts` — Passes tag to NpmClient
-- `src/monocrate.ts` — Orchestrates two-phase flow
-
-### NpmClient Methods
-
-```typescript
-// Publish with specified tag
-async publish(dir: AbsolutePath, tag: string): Promise<void>
-
-// Update dist-tag for an existing package version
-async distTagAdd(packageNameAtVersion: string, tag: string, cwd: AbsolutePath): Promise<void>
-```
-
-### Orchestration Flow
-
-```typescript
-// Phase 1: Publish all with pending tag
-for (const assembler of assemblers) {
-  await assembler.assemble(resolvedVersion)
-  if (options.publish) {
-    await publish(npmClient, outputDir, 'pending')
-  }
-}
-
-// Phase 2: Move latest tag (only runs if Phase 1 completes)
-if (options.publish) {
-  for (const assembler of assemblers) {
-    await npmClient.distTagAdd(`${assembler.publishAs}@${version}`, 'latest', outputDir)
-  }
-}
-```
+The `NpmClient` class has two methods: `publish(dir, tag)` publishes with a specified tag, and `distTagAdd(packageNameAtVersion, tag, cwd)` moves a tag to point to an existing version. The orchestration in `monocrate.ts` loops through assemblers twice—first to publish all packages with the `pending` tag, then (only if all succeed) to move `latest` to each package.
 
 ## Dist Tags After Publishing
 
-After a successful publish, packages have both tags:
-
-```json
-{
-  "dist-tags": {
-    "pending": "2.0.0",
-    "latest": "2.0.0"
-  }
-}
-```
-
-The `pending` tag remains as an artifact but causes no harm. It will be overwritten on the next publish.
-
-## Testing Approach
-
-1. **Single package test** — Verify both `pending` and `latest` tags are set
-2. **Failure test** — Pre-publish a package to cause collision, verify `latest` is not moved on the other package
-3. **Integration with publishName** — Ensure custom publish names work with two-phase flow
-
-Example test:
-
-```typescript
-it('does not move latest tag when second package fails', async () => {
-  // Pre-publish to cause collision
-  verdaccio.publishPackage('atomic-a', '1.0.0', `export const a = 'v1'`)
-  verdaccio.publishPackage('atomic-b', '8.7.6', `export const b = 'collision'`)
-
-  // Try to publish both at 8.7.6 - atomic-b will fail
-  await expect(monocrate({
-    pathToSubjectPackages: ['atomic-a', 'atomic-b'],
-    bump: '8.7.6',
-    publish: true,
-  })).rejects.toThrow()
-
-  // atomic-a has pending but latest unchanged
-  const viewA = npmView('atomic-a')
-  expect(viewA['dist-tags'].pending).toBe('8.7.6')
-  expect(viewA['dist-tags'].latest).toBe('1.0.0')  // NOT 8.7.6
-})
-```
+After a successful publish, packages have both tags pointing to the same version. The `pending` tag remains as an artifact but causes no harm—it will be overwritten on the next publish.
 
 ## Comparison: Before vs After
 
-**Before (risky):**
+**Before:**
 ```
 pkg-a: publish → latest ✓
 pkg-b: publish → latest ✓
 pkg-c: publish → FAILS!
-Result: pkg-a and pkg-b have new latest, pkg-c has old latest
+Result: pkg-a and pkg-b at 2.0.0, pkg-c at 1.0.0
 ```
 
-**After (two-phase):**
+**After:**
 ```
 pkg-a: publish → pending ✓
 pkg-b: publish → pending ✓
 pkg-c: publish → FAILS!
-Result: All packages keep their previous latest tag
+Result: All packages stay at 1.0.0
 ```
