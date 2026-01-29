@@ -40,11 +40,11 @@
 
 ## Deployment Packaging (For Platforms Like Firebase)
 
-**What they do:** Extract a package and its internal dependencies into a deployment directory that can be uploaded to platforms with specific deployment constraints.
+**What they do:** Create a ready-to-zip directory containing your code plus all dependencies (workspace dependencies + third-party dependencies) that can be uploaded directly to deployment platforms.
 
-- **[isolate-package](https://github.com/0x80/isolate-package)** - Extracts packages and internal dependencies to deployment directory with pruned lockfiles
+- **[isolate-package](https://github.com/0x80/isolate-package)** - Creates deployment directory with all dependencies included, ready for Firebase/Lambda
 
-**Use case:** Designed specifically for Firebase Cloud Functions deployment, where the platform needs a flattened directory structure but doesn't run npm install. Copies build output (dist/) from workspace packages into a single directory.
+**Use case:** Designed specifically for Firebase Cloud Functions, AWS Lambda, and similar platforms where you upload a directory/zip that contains everything needed to run. The platform executes your code directly without running npm install.
 
 **Critical limitation:** Only copies built files. Does NOT make the package work as a standalone npm package. The output is meant for deployment platforms (Firebase, AWS Lambda) that execute the code directly, NOT for publishing to npm where others will install it.
 
@@ -69,23 +69,23 @@
 
 ---
 
-## Standalone Package Publishing (With Import Resolution)
+## Standalone Package Publishing
 
-**What they do:** Extract a package and its internal dependencies, then modify all import statements in the code so the package works as a standalone npm package that others can install and use.
+**What they do:** Create a single npm package that contains your code plus internal dependencies, where the package works completely independently when others install it from npm.
 
-- **[monocrate](https://www.npmjs.com/package/monocrate)** - Extracts packages and makes imports work standalone
+- **[monocrate](https://www.npmjs.com/package/monocrate)** - Creates standalone npm packages from monorepo subtrees
 
-**Use case:** Publishing to npm so others can `npm install` your package. The package works independently without requiring your internal packages to be published separately.
+**Use case:** Publishing to npm so others can `npm install` your package. The package works independently without requiring your internal packages to be published separately. Users get one package that just works, not a chain of dependencies.
 
-**What "makes imports work standalone" means:**
-- Your code says `import { foo } from '@myorg/utils'`
-- After monocrate: code says `import { foo } from './deps/utils/index.js'`
-- Result: Package installs and runs without needing `@myorg/utils` published to npm
-- Both .js and .d.ts files are updated so JavaScript AND TypeScript types work
+**What "standalone" means:**
+- You have Package A that imports from internal Package B (`@myorg/utils`)
+- Without monocrate: To publish A, you'd need to also publish B to npm, so users install both
+- With monocrate: Publish just Package A to npm, B's code is included inside, users install one package
+- Works for both runtime code (.js) and TypeScript types (.d.ts)
 
 **Key difference from isolate-package:**
-- **isolate-package:** Copies files for deployment platforms → imports still reference workspace names → works on Firebase/Lambda (entire bundle deployed), fails on npm (package installed alone)
-- **monocrate:** Modifies imports to be relative paths → package is self-contained → works when published to npm and installed by others
+- **isolate-package:** Creates a directory for deployment (Firebase/Lambda) where all packages are present in the upload
+- **monocrate:** Creates a package for npm publishing where users install just one package and it works independently
 
 **Why this matters:** Preserves module structure (unlike bundlers), so consumers can import specific parts and get good tree-shaking. TypeScript types work correctly. Source maps point to the right files.
 
@@ -93,7 +93,7 @@
 
 ## Cross-Category Comparison
 
-| Tool | Version Mgmt | Build Orchestration | Workspace Mgmt | Extracts Deps | Makes Standalone for npm | Output Format |
+| Tool | Version Mgmt | Build Orchestration | Workspace Mgmt | Extracts Deps | Works as Standalone npm Package | Output Format |
 |------|--------------|---------------------|----------------|---------------|--------------------------|---------------|
 | **[Lerna](https://lerna.js.org/)** | ✓ | - | - | - | - | N packages |
 | **[Changesets](https://changesets-docs.vercel.app/)** | ✓ | - | - | - | - | N packages |
@@ -119,9 +119,9 @@
 - **monocrate does:** Preserve module boundaries, optimize for consumer-side tree-shaking
 
 ### isolate-package vs. monocrate
-- **isolate-package does:** Copy packages to deployment directory (for Firebase, Lambda)
-- **monocrate does:** Copy packages AND modify imports so it works as standalone npm package
-- **Key difference:** isolate-package output is meant for platforms that deploy entire directories; monocrate output is meant for npm where users install just your package
+- **isolate-package does:** Create deployment directory for platforms (Firebase, Lambda) where you upload everything
+- **monocrate does:** Create npm package that works independently when users install just your package
+- **Key difference:** isolate-package = deployment bundle (platform runs entire directory); monocrate = standalone package (users install one thing)
 
 ### Build Orchestrators vs. monocrate
 - **They do:** Execute tasks in dependency order
@@ -163,9 +163,9 @@
 
 **monocrate solves it:**
 - Extracts A+B+C into one package
-- Changes `import {x} from '@myorg/b'` to `import {x} from './deps/b/index.js'`
+- Makes the package work independently (no need to publish B and C separately)
 - Preserves file structure so tree-shaking works
-- Updates both .js and .d.ts files so types work
+- TypeScript types work correctly
 - Output can be published to npm and installed by anyone
 
 ---
