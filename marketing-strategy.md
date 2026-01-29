@@ -123,24 +123,60 @@ npx monocrate publish packages/my-lib
 [Link to mission statement]
 ```
 
-## Execution (First 90 Days)
+## Execution Timeline
 
-**Week 1-2:**
-1. Ship to npm
-2. Write GitHub README
+### Day 1: Foundation (Content creation: 1 day. Everything else needs to exist before launch.)
+
+1. Ship to npm as `monocrate`
+2. Write GitHub README (structure above)
 3. Publish mission statement as docs/why.md
-4. Post to Show HN
+4. Write "Monorepo Publishing Strategies" guide (the reference piece)
+5. Post to Show HN
 
-**Week 3-4:**
-5. Write "Monorepo Publishing Strategies" guide
-6. Answer top 5 Stack Overflow questions with context-specific guidance
+**Why Day 1:** Content is fast to create. All foundation assets should exist at launch so when HN readers click through, everything's there. Don't launch with a "coming soon" README.
 
-**Week 5-8:**
-7. Submit docs PRs to npm, Turborepo, Nx
-8. Monitor GitHub issues (every issue = data)
-9. Engage authentically on Twitter/Reddit when useful
+### Week 1: Let the initial signal spread (Observation period)
 
-**Ongoing:** Answer questions where they appear. No content calendar, no posting schedule, no vanity metrics.
+- Monitor HN discussion, GitHub issues, Twitter mentions
+- Respond to every comment/question—this is data about what resonates or confuses
+- Watch what objections come up, what comparisons people make
+- Note which aspects of the problem description land vs. which miss
+
+**Why Week 1:** Give the HN post time to percolate. See if it hits front page, what discussion emerges, whether anyone actually tries it. Don't spam more channels until you understand the initial response.
+
+### Week 2: Answer where the problem already exists (Targeted placement)
+
+6. Find top 5-10 Stack Overflow questions about workspace publishing
+7. Answer with context-specific guidance (show monocrate where it fits, bundling where that fits)
+8. Comment on relevant GitHub issues (pnpm #6269, npm #7137, etc.) with "here's another approach" if monocrate solves their specific case
+
+**Why Week 2:** By now you've learned from HN what messaging works. Use that to inform how you answer existing questions. These threads already have SEO juice and people searching—you're not creating demand, just showing up where demand exists.
+
+### Week 3-4: Contribute to ecosystem docs (Long-tail discoverability)
+
+9. Submit docs PRs to npm, Turborepo, Nx: "Publishing a subset of workspace packages" sections
+10. Make PRs genuinely helpful—include ALL approaches (bundling, publish-all, extraction), not just monocrate
+11. These take time to review/merge, so submit early
+
+**Why Week 3-4:** Docs PRs need maintainer review cycles. Submit when you have confidence the tool works (based on Week 1-2 feedback), but don't wait too long—these become evergreen discovery channels.
+
+### Week 4-8: Let organic discovery happen (Patience period)
+
+12. Monitor GitHub issues—every issue is data about real use cases
+13. Engage authentically on Twitter/Reddit when monorepo publishing discussions surface organically
+14. Update docs/README based on confusion patterns you're seeing
+15. Fix bugs, handle edge cases people report
+
+**Why Week 4-8:** This is the "does anyone actually need this?" validation period. If GitHub issues stay empty and no one's talking about it, that's signal. If issues come in with real use cases, that's different signal. Don't force distribution—watch what happens.
+
+### Ongoing: Stay present, don't push
+
+- Answer questions where they appear (Stack Overflow, GitHub, Reddit)
+- Update the guide as new solutions emerge or old ones evolve
+- Contribute to discussions about monorepo publishing problems
+- Create new content ONLY if there's a gap (don't manufacture content for "consistency")
+
+**Why ongoing:** OSS marketing isn't a campaign with a start/end. It's perpetual presence where the problem gets discussed. Some tools take years to find their audience. That's fine—monocrate isn't a product launch, it's a tool that exists for when developers need it.
 
 ## What Success Looks Like
 
