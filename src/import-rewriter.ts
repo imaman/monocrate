@@ -58,6 +58,13 @@ export class ImportRewriter {
             firstArg.replaceWithText(`'${newSpecifier}'`)
             modified = true
           }
+        } else if (firstArg) {
+          const line = String(firstArg.getStartLineNumber())
+          const computedExpr = firstArg.getText()
+          throw new Error(
+            `Computed import not supported: import(${computedExpr}) at ${pathToImporter}:${line}. ` +
+              `Dynamic imports must use string literals so monocrate can analyze and rewrite them.`
+          )
         }
       }
     }
