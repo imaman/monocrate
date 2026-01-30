@@ -8,7 +8,7 @@ Because publishing from a monorepo should take seconds, not days.
 
 ## The Problem
 
-You have a monorepo, you are really proud of `@acme/my-awesome-package` and you want to make it open source. Its main file, `packages/my-awesome-package/src/index.ts`, probably looks something like this:
+You have a monorepo, you are really proud of `@acme/my-awesome-package` and you want to make it open source. The package's main file, `packages/my-awesome-package/src/index.ts`, presumably looks something like this:
 
 
 ```typescript
@@ -38,7 +38,7 @@ npm notice Publishing to https://registry.npmjs.org/ with tag latest and public 
 + @acme/my-awesome-package@1.0.0
 ```
 
-But then when you try to install it:
+But when you try to install it, you discover it's broken:
 
 ```bash
 $ npm install @acme/my-awesome-package
@@ -48,12 +48,12 @@ npm error 404
 npm error 404  '@acme/internal-utils@1.0.0' is not in this registry.
 ```
 
-This is your 🚨🚨🚨 moment.
+This is a big 🚨 oh-no 🚨 moment. What are your options? 
 
-In theory, you could ...
-- ...bundle with esbuild, rollup, and similar tools but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting these typescript types (.d.ts files) bundled.
+In theory, you could:
+- ...bundle with esbuild, rollup, and similar tools but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
 - ...manually create the right directory structure, replacing all the imports with relative paths. You will manage to pull it off once, but that's definitely not sustainable.
-- ...use a tool such as `lerna` which publishes every internal dependency separately as a standalone public package, but now `@acme/internal-utils` becomes permanent published API. This locks you into supporting that interface indefinitely, and internal refactoring freedom is lost.
+- ...use a tool such as `lerna` which publishes every internal dependency as its own public package, but now `@acme/internal-utils` becomes a permanently published API you're committed to, and your internal refactoring freedom is gone.
 
 
 ## The Solution
