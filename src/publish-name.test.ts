@@ -29,7 +29,7 @@ describe('publishName feature', () => {
       name: '@published/my-package',
     })
     expect(output['package.json']).not.toHaveProperty('monocrate')
-  })
+  }, 30000)
 
   test('uses original name when publishName is not specified', async () => {
     const repoDir = folderify({
@@ -50,7 +50,7 @@ describe('publishName feature', () => {
     expect(output['package.json']).toMatchObject({
       name: '@workspace/my-package',
     })
-  })
+  }, 30000)
 
   test('throws error when publishName conflicts with existing package name', async () => {
     const repoDir = folderify({

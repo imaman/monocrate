@@ -8,7 +8,7 @@ import { folderify } from './testing/folderify.js'
 import { VerdaccioTestkit } from './testing/verdaccio-testkit.js'
 
 describe('npm login check', () => {
-  it('fails early with actionable message when not logged in to npm', async () => {
+  it('fails early with actionable message when not logged in to npm, but skips check when publish is false', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
       'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', main: 'dist/index.js' },
@@ -20,6 +20,7 @@ describe('npm login check', () => {
     const npmrcPath = path.join(configDir, '.npmrc')
     fs.writeFileSync(npmrcPath, 'registry=http://localhost:12345\n')
 
+    // Should throw when publish is true
     await expect(
       monocrate({
         cwd: monorepoRoot,
@@ -30,21 +31,8 @@ describe('npm login check', () => {
         npmrcPath,
       })
     ).rejects.toThrow("Not logged in to npm")
-  }, 30000)
 
-  it('does not check login when publish is false', async () => {
-    const monorepoRoot = folderify({
-      'package.json': { workspaces: ['packages/*'] },
-      'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', main: 'dist/index.js' },
-      'packages/mylib/dist/index.js': `export function hello() { return 'Hello!'; }`,
-    })
-
-    // Create an npmrc that points to a fake registry without authentication
-    const configDir = createTempDir('npm-no-auth-')
-    const npmrcPath = path.join(configDir, '.npmrc')
-    fs.writeFileSync(npmrcPath, 'registry=http://localhost:12345\n')
-
-    // This should not throw because publish is false
+    // Should not throw when publish is false
     const result = await monocrate({
       cwd: monorepoRoot,
       pathToSubjectPackages: path.join(monorepoRoot, 'packages/mylib'),
@@ -53,7 +41,6 @@ describe('npm login check', () => {
       publish: false,
       npmrcPath,
     })
-
     expect(result.resolvedVersion).toBe('1.0.0')
   }, 30000)
 })

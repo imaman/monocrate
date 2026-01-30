@@ -1,12 +1,12 @@
 import type { ChildProcess } from 'node:child_process'
 import { execSync, spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { createTempDir } from './monocrate-teskit.js'
 import getPort from 'get-port'
 import path from 'node:path'
 import fs from 'node:fs'
 import { folderify } from './folderify.js'
 import { z } from 'zod'
-import { hashSync } from 'bcryptjs'
 
 interface VerdaccioServer {
   process: ChildProcess
@@ -98,10 +98,11 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
   const url = `http://localhost:${String(port)}`
 
   // Create htpasswd file with a test user
-  // Verdaccio uses bcrypt for password hashing in htpasswd format
+  // Using SHA1 format ({SHA}base64hash) which is supported by Apache htpasswd and Verdaccio
   const testUser = 'testuser'
   const testPassword = 'testpassword'
-  const hashedPassword = hashSync(testPassword, 10)
+  const sha1Hash = createHash('sha1').update(testPassword).digest('base64')
+  const hashedPassword = `{SHA}${sha1Hash}`
   const htpasswdPath = path.join(configDir, 'htpasswd')
   fs.writeFileSync(htpasswdPath, `${testUser}:${hashedPassword}\n`)
 
