@@ -148,6 +148,8 @@ monocrate <packages...> [options]
 
 ## Programmatic API
 
+Use monocrate as a library for custom workflows or build scripts:
+
 ```typescript
 import { monocrate } from 'monocrate'
 
@@ -161,11 +163,13 @@ const result = await monocrate({
 console.log(result.resolvedVersion) // '1.3.0'
 ```
 
+See the reference below for all available options.
+
 ### API Reference
 
 #### `monocrate(options): Promise<MonocrateResult>`
 
-Assembles a monorepo package and its in-repo dependencies for npm publishing.
+Assembles a monorepo package and its in-repo dependencies, and optionally publishes to npm.
 
 #### `MonocrateOptions`
 
