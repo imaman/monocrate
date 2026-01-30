@@ -169,7 +169,7 @@ Equivalent CLI: `npx monocrate packages/my-awesome-package --bump minor`
 
 #### `monocrate(options): Promise<MonocrateResult>`
 
-Assembles a monorepo package and its in-repo dependencies, and optionally publishes to npm.
+Assembles one or more monorepo packages and their in-repo dependencies, and optionally publishes to npm.
 
 #### `MonocrateOptions`
 
