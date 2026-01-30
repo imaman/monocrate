@@ -38,7 +38,7 @@ The philosophy: do one thing, do it well, integrate with the ecosystem. Monocrat
 
 ## Guiding Principles
 
-**Monorepo to npm should take seconds, not days.** Just run `npx monocrate publish packages/my-app`. It just works. Easy to remember, nothing to configure. Ergonomics win.
+**Monorepo to npm should take seconds, not days.** Just run `npx monocrate packages/my-app`. It just works. Easy to remember, nothing to configure. Ergonomics win.
 
 **Don't be clever.** We use `npm pack` to determine publishable files instead of reimplementing the logic. We use `ts-morph` for parsing instead of regex. We delegate to existing, battle-tested tools rather than rolling our own. The tool should be boring and reliable.
 
