@@ -163,7 +163,7 @@ const result = await monocrate({
 console.log(result.resolvedVersion) // '1.3.0'
 ```
 
-See the reference below for all available options.
+Equivalent CLI: `npx monocrate packages/my-awesome-package --bump minor`
 
 ### API Reference
 
