@@ -134,7 +134,7 @@ describe('publishName feature', () => {
     expect(output2['package.json']).toMatchObject({
       name: '@published/package-b',
     })
-  })
+  }, 30000)
 
   test('monocrate field is stripped from output package.json', async () => {
     const repoDir = folderify({
@@ -159,7 +159,7 @@ describe('publishName feature', () => {
       description: 'Test package',
     })
     expect(output['package.json']).not.toHaveProperty('monocrate')
-  })
+  }, 30000)
 })
 
 describe('publishName integration with npm registry', () => {

@@ -3,9 +3,60 @@ import * as fs from 'node:fs'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import type { MonocrateOptions } from './index.js'
 import { monocrate } from './index.js'
-import { pj } from './testing/monocrate-teskit.js'
+import { pj, createTempDir } from './testing/monocrate-teskit.js'
 import { folderify } from './testing/folderify.js'
 import { VerdaccioTestkit } from './testing/verdaccio-testkit.js'
+
+describe('npm login check', () => {
+  it('fails early with actionable message when not logged in to npm', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', main: 'dist/index.js' },
+      'packages/mylib/dist/index.js': `export function hello() { return 'Hello!'; }`,
+    })
+
+    // Create an npmrc that points to a fake registry without authentication
+    const configDir = createTempDir('npm-no-auth-')
+    const npmrcPath = path.join(configDir, '.npmrc')
+    fs.writeFileSync(npmrcPath, 'registry=http://localhost:12345\n')
+
+    await expect(
+      monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: path.join(monorepoRoot, 'packages/mylib'),
+        monorepoRoot,
+        bump: '1.0.0',
+        publish: true,
+        npmrcPath,
+      })
+    ).rejects.toThrow("Not logged in to npm")
+  }, 30000)
+
+  it('does not check login when publish is false', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', main: 'dist/index.js' },
+      'packages/mylib/dist/index.js': `export function hello() { return 'Hello!'; }`,
+    })
+
+    // Create an npmrc that points to a fake registry without authentication
+    const configDir = createTempDir('npm-no-auth-')
+    const npmrcPath = path.join(configDir, '.npmrc')
+    fs.writeFileSync(npmrcPath, 'registry=http://localhost:12345\n')
+
+    // This should not throw because publish is false
+    const result = await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/mylib'),
+      monorepoRoot,
+      bump: '1.0.0',
+      publish: false,
+      npmrcPath,
+    })
+
+    expect(result.resolvedVersion).toBe('1.0.0')
+  }, 30000)
+})
 
 describe('npm publishing with Verdaccio', () => {
   const verdaccio = new VerdaccioTestkit()

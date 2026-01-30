@@ -14,6 +14,29 @@ const NpmErrorResponse = z.object({
 export class NpmClient {
   constructor(private readonly npmOptions?: NpmOptionsBase) {}
 
+  /**
+   * Checks if the user is logged in to npm.
+   * @param cwd - The working directory for the npm command
+   * @returns The username if logged in
+   * @throws Error with actionable message if not logged in
+   */
+  async whoami(cwd: AbsolutePath): Promise<string> {
+    const { ok, stdout } = await runNpm('whoami', [], cwd, {
+      ...this.npmOptions,
+      stdio: 'pipe',
+      nonZeroExitCodePolicy: 'return',
+    })
+
+    if (!ok) {
+      const registry = this.npmOptions?.userconfig ? ` (using config: ${this.npmOptions.userconfig})` : ''
+      throw new Error(
+        `Not logged in to npm${registry}. Run 'npm login' to authenticate before publishing.`
+      )
+    }
+
+    return stdout.trim()
+  }
+
   async publish(dir: AbsolutePath, tag?: string): Promise<void> {
     const args = tag ? ['--tag', tag] : []
     await runNpm('publish', args, dir, { ...this.npmOptions, stdio: 'inherit' })

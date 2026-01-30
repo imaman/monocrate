@@ -6,6 +6,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { folderify } from './folderify.js'
 import { z } from 'zod'
+import { hashSync } from 'bcryptjs'
 
 interface VerdaccioServer {
   process: ChildProcess
@@ -96,20 +97,33 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
   const port = await getPort()
   const url = `http://localhost:${String(port)}`
 
+  // Create htpasswd file with a test user
+  // Verdaccio uses bcrypt for password hashing in htpasswd format
+  const testUser = 'testuser'
+  const testPassword = 'testpassword'
+  const hashedPassword = hashSync(testPassword, 10)
+  const htpasswdPath = path.join(configDir, 'htpasswd')
+  fs.writeFileSync(htpasswdPath, `${testUser}:${hashedPassword}\n`)
+
   // Create Verdaccio config file (JSON format)
   const configPath = path.join(configDir, 'config.json')
   const config = {
     storage: storageDir,
+    auth: {
+      htpasswd: {
+        file: htpasswdPath,
+      },
+    },
     packages: {
       '@*/*': {
         access: '$all',
-        publish: '$all',
-        unpublish: '$all',
+        publish: '$authenticated',
+        unpublish: '$authenticated',
       },
       '**': {
         access: '$all',
-        publish: '$all',
-        unpublish: '$all',
+        publish: '$authenticated',
+        unpublish: '$authenticated',
       },
     },
     log: {
@@ -120,10 +134,10 @@ async function startVerdaccio(): Promise<VerdaccioServer> {
   }
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
 
-  // Verdaccio requires some form of auth token even with $all access
-  // Extract host from URL for the _authToken line (npm requires host without protocol)
-  const u = url
-  const npmrcContent = `registry=${u}\n//${new URL(u).host}/:_authToken=fake-token-for-testing\n`
+  // Create npm auth token for the test user
+  // npm uses base64(username:password) as the token for basic auth
+  const authToken = Buffer.from(`${testUser}:${testPassword}`).toString('base64')
+  const npmrcContent = `registry=${url}\n//${new URL(url).host}/:_auth=${authToken}\n`
 
   const npmrcPath = path.join(configDir, 'verdaccio.npmrc')
   fs.writeFileSync(npmrcPath, npmrcContent)
