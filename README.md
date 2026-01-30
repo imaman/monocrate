@@ -121,7 +121,34 @@ Publish several packages together with the same version:
 npx monocrate packages/lib-a packages/lib-b --bump 2.4.0
 ```
 
+### CLI Reference
+
+```
+monocrate <packages...> [options]
+```
+
+#### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `packages` | One or more package directories to publish (required) |
+
+#### Options
+
+| Option | Alias | Type | Default | Description |
+|--------|-------|------|---------|-------------|
+| `--bump` | `-b` | `string` | `minor` | Version bump strategy: `patch`, `minor`, `major`, or explicit semver (e.g., `2.3.0`) |
+| `--dry-run` | `-d` | `boolean` | `false` | Prepare the package without publishing to npm |
+| `--output-dir` | `-o` | `string` | (temp dir) | Directory where assembled package is written |
+| `--root` | `-r` | `string` | (auto) | Monorepo root directory (auto-detected if omitted) |
+| `--mirror-to` | `-m` | `string` | — | Mirror source files to a directory (for public repos) |
+| `--report` | | `string` | — | Write resolved version to a file instead of stdout |
+| `--help` | | | | Show help |
+| `--version` | | | | Show version number |
+
 ## Programmatic API
+
+Use monocrate as a library for custom workflows or build scripts:
 
 ```typescript
 import { monocrate } from 'monocrate'
@@ -135,6 +162,36 @@ const result = await monocrate({
 
 console.log(result.resolvedVersion) // '1.3.0'
 ```
+
+The above snippet is the programmatic equivalent of `npx monocrate packages/my-awesome-package --bump minor`.
+
+### API Reference
+
+#### `monocrate(options): Promise<MonocrateResult>`
+
+Assembles one or more monorepo packages and their in-repo dependencies, and optionally publishes to npm.
+
+#### `MonocrateOptions`
+
+| Property | Type | Required | Default | Description |
+|----------|------|----------|---------|-------------|
+| `pathToSubjectPackages` | `string \| string[]` | Yes | — | Package directories to assemble. Relative paths resolved from `cwd`. |
+| `publish` | `boolean` | Yes | — | Whether to publish to npm after assembly. |
+| `cwd` | `string` | Yes | — | Base directory for resolving relative paths. |
+| `bump` | `string` | No | `"minor"` | Version specifier: `"patch"`, `"minor"`, `"major"`, or explicit semver. |
+| `outputRoot` | `string` | No | (temp dir) | Output directory for the assembled package. |
+| `monorepoRoot` | `string` | No | (auto) | Monorepo root directory; auto-detected if omitted. |
+| `report` | `string` | No | — | Write resolved version to this file instead of stdout. |
+| `mirrorTo` | `string` | No | — | Mirror source files to this directory. |
+| `npmrcPath` | `string` | No | — | Path to `.npmrc` file for npm authentication. |
+
+#### `MonocrateResult`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `outputDir` | `string` | Directory where the first package was assembled. |
+| `resolvedVersion` | `string` | The resolved version that was applied. |
+| `summaries` | `Array<{ packageName: string; outputDir: string }>` | Details for each assembled package. |
 
 ## Installation
 
