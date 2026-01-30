@@ -72,17 +72,17 @@ Once the package is built, you can run monocrate:
 
 ```bash
 # Publish a package, patch bumping its version
-npx monocrate publish packages/my-awesome-package --bump patch
+npx monocrate packages/my-awesome-package --bump patch
 
-# Inspect before publishing
-npx monocrate prepare packages/my-awesome-package --output-dir /tmp/inspect --bump patch
+# Inspect before publishing (--dry-run prepares without publishing)
+npx monocrate packages/my-awesome-package --output-dir /tmp/inspect --bump patch --dry-run
 
 # --bump defaults to "minor", so these two are identical:
-npx monocrate publish packages/my-awesome-package --bump minor
-npx monocrate publish packages/my-awesome-package
+npx monocrate packages/my-awesome-package --bump minor
+npx monocrate packages/my-awesome-package
 
 # Explicit version
-npx monocrate publish packages/my-awesome-package --bump 2.3.0
+npx monocrate packages/my-awesome-package --bump 2.3.0
 ```
 
 > **Note:** Monocrate does not modify your source code. Bump strategies are applied to the package's most recent version on the registry, not the version in your local `package.json`.
@@ -106,7 +106,7 @@ Publish `@acme/my-awesome-package` as `best-package-ever` without doing a repo-w
 Want to open-source your package while keeping your monorepo private? Use `--mirror-to` to copy the package and its internal dependencies to a separate public repository:
 
 ```bash
-npx monocrate publish packages/my-awesome-package --mirror-to ../public-repo
+npx monocrate packages/my-awesome-package --mirror-to ../public-repo
 ```
 
 This way, your public repo is self-contained—no dangling references to internal packages. Contributors can clone and work on your package.
@@ -118,7 +118,7 @@ Only committed files (from `git HEAD`) are mirrored; fails if untracked files ex
 Publish several packages together with the same version:
 
 ```bash
-npx monocrate publish packages/lib-a packages/lib-b --bump 2.4.0
+npx monocrate packages/lib-a packages/lib-b --bump 2.4.0
 ```
 
 ## Programmatic API
