@@ -10,17 +10,13 @@
 
 Monorepo packages with internal dependencies break when published to npm.
 
-You have a monorepo, you're really proud of `@acme/my-awesome-package` and you want to publish it to npm. The package's main file, `packages/my-awesome-package/src/index.ts`, probably looks something like this:
+**The trap looks like this:**
 
+You have a monorepo, you're really proud of `@acme/my-awesome-package` and you want to publish it to npm. The package imports your internal utilities:
 
 ```typescript
-// Reusing validation logic from elsewhere in the monorepo
+// packages/my-awesome-package/src/index.ts
 import { validateUserInput } from '@acme/internal-utils'
-
-export function processData(data: unknown) {
-  const validated = validateUserInput(data)
-  // ...
-}
 ```
 
 When you publish, things look great:
@@ -30,27 +26,25 @@ $ cd packages/my-awesome-package
 $ npm publish
 npm notice
 npm notice 📦  @acme/my-awesome-package@1.0.0
-npm notice Tarball Contents
-npm notice 4.4kB README.md
-npm notice 9.1kB dist/index.js
 ...
-npm notice
-npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
-
 + @acme/my-awesome-package@1.0.0
 ```
 
-But when you try to install it, you discover it's broken:
+But when you try to install it:
 
 ```bash
 $ npm install @acme/my-awesome-package
 npm error code E404
 npm error 404 Not Found - GET https://registry.npmjs.org/@acme%2finternal-utils - Not found
-npm error 404
-npm error 404  '@acme/internal-utils@1.0.0' is not in this registry.
 ```
 
-This is a big 🚨 oh-no 🚨 moment. What are your options? 
+**Why this happens:**
+
+1. **The tarball only contains `my-awesome-package`.** Your workspace sibling `@acme/internal-utils` is not bundled.
+2. **`package.json` still declares `@acme/internal-utils` as a dependency.** npm tries to install it from the registry.
+3. **The package does not exist on npm.** It only exists in your local workspace.
+
+**This is the "oh-no" moment.** Your package is live but broken for every consumer.
 
 In theory, you could:
 - ...bundle with [esbuild](https://esbuild.github.io/), [rollup](https://rollupjs.org/), and similar tools but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
