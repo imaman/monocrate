@@ -8,7 +8,9 @@ Because publishing from a monorepo should take seconds, not days.
 
 ## The Problem
 
-You have a monorepo, you are really proud of `@acme/my-awesome-package` and you want to make it open source. The package's main file, `packages/my-awesome-package/src/index.ts`, presumably looks something like this:
+Monorepo packages with internal dependencies break when published to npm.
+
+You have a monorepo, you're really proud of `@acme/my-awesome-package` and you want to make it open source. The package's main file, `packages/my-awesome-package/src/index.ts`, probably looks something like this:
 
 
 ```typescript
@@ -74,7 +76,7 @@ Once the package is built, you can run monocrate:
 # Publish a package, patch bumping its version
 npx monocrate packages/my-awesome-package --bump patch
 
-# Use --dry-run to run in "prepare" mode: do everything but stop short of publishing to the registry
+# Use --dry-run to run in "prepare" mode: do everything except publish to the registry
 npx monocrate packages/my-awesome-package --output-dir /tmp/inspect --bump patch --dry-run
 
 # --bump defaults to "minor", so these two are identical:
@@ -89,7 +91,7 @@ npx monocrate packages/my-awesome-package --bump 2.3.0
 
 ### Custom Publish Name
 
-Publish `@acme/my-awesome-package` as `best-package-ever` without doing a repo-wide renaming:
+Publish `@acme/my-awesome-package` as `best-package-ever` without a repo-wide rename:
 
 ```json
 {
@@ -148,7 +150,7 @@ monocrate <packages...> [options]
 
 ## Programmatic API
 
-Use monocrate as a library for custom workflows or build scripts:
+Use monocrate as a library for custom workflows or build steps:
 
 ```typescript
 import { monocrate } from 'monocrate'
