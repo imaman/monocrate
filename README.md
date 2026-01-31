@@ -18,7 +18,7 @@ Bundlers offer the opposite approach: tools like [esbuild](https://esbuild.githu
 
 ## The Solution
 
-[monocrate](https://www.npmjs.com/package/monocrate) solves this properly: a publishing CLI built for monorepos, it collects your package and its transitive internal dependencies into a single publishable unit. It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
+[monocrate](https://www.npmjs.com/package/monocrate) solves this properly: a publishing CLI built for the monorepo era, it collects your package and its transitive internal dependencies into a single publishable unit. It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
 
 ## How It Works
 
