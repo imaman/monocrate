@@ -17,7 +17,7 @@ You have a monorepo, you're really proud of `@acme/my-awesome-package` and you w
 ```typescript
 // packages/my-awesome-package/src/index.ts
 import { validateUserInput } from '@acme/internal-utils'
-// A bunch of stuff
+// A bunch of stuff goes here ...
 ```
 
 When you publish, things look great:
@@ -47,10 +47,13 @@ npm error 404  '@acme/internal-utils@1.0.0' is not in this registry.
 
 **This is the "oh-no" moment.** Your package is live but broken for every consumer.
 
-In theory, you could:
-- ...bundle with [esbuild](https://esbuild.github.io/), [rollup](https://rollupjs.org/), and similar tools but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
-- ...manually create the right directory structure, replacing all the imports with relative paths. You will manage to pull it off once, but that's definitely not sustainable.
-- ...use a tool such as [lerna](https://lerna.js.org/) which publishes every internal dependency as its own public package, but now `@acme/internal-utils` becomes a permanently published API you're committed to, and your internal refactoring freedom is gone.
+## Shotcomings of Existing Approaches 
+
+- Bundlers [esbuild](https://esbuild.github.io/), [rollup](https://rollupjs.org/), and similar tools can produce a self contained file but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
+
+- You can manually create the right directory structure, replacing all the imports with relative paths. You will manage to pull it off once, but that's definitely not sustainable across refactorings and PRs.
+
+- Publish everything tools such as [lerna](https://lerna.js.org/) publish every internal dependency as its own public package, but now `@acme/internal-utils` becomes a permanently published API you're committed to, and your internal refactoring freedom is gone.
 
 
 ## The Solution
@@ -61,12 +64,14 @@ Enter [monocrate](https://www.npmjs.com/package/monocrate). It collects your pac
 
 Monocrate treats your package as the entry point of a dependency graph. It traverses the graph to find every workspace sibling your code actually touches—whether imported statically, dynamically, or via TypeScript path aliases.
 
-Then it builds a self-contained directory:
+Then it builds a self-contained publishable structure:
 
-1. **Import Rewriting**: Converts workspace imports (e.g., `@acme/internal-utils`) to relative paths (`../../internal-utils`)
-2. **Physical Inlining**: Copies the source of internal dependencies into the output directory
-3. **Declaration Mapping**: Adjusts TypeScript declaration files and sourcemaps so they resolve correctly in the consumer's editor
-4. **Dependency Pruning**: Removes inlined packages from `package.json` dependencies, replacing them with any *external* transitive deps they might have had
+0. Creates a dedicated output directory
+1. **Dependency Discovery**: Traverses the dependency graph to find all workspace packages your code depends on, transitively
+2. **File Embedding**: Copies the publishable files (what `npm pack` would include) of each internal dependency into the output directory
+3. **Entry Point Resolution**: Examines each package's entry points to compute the exact file locations that imports will resolve to
+4. **Import Rewriting**: Converts workspace imports in `.js` and `.d.ts` files (e.g., `@acme/internal-utils`) to relative paths (`../deps/internal-utils`)
+5. **Dependency Pruning**: Removes internal workspace packages from the published `package.json` dependencies, replacing them with any third-party deps they brought in
 
 The result is a standard npm package that looks like you hand-crafted it for publication.
 
@@ -89,13 +94,16 @@ packages/
 Running `npx monocrate packages/my-awesome-package` produces:
 
 ```
-dist/
-├── package.json          # name: @acme/my-awesome-package
-├── src/
-│   └── index.ts          # rewritten: import ... from '../internal-utils'
-└── internal-utils/       # inlined dependency
-    └── src/
-        └── index.ts
+<tmpdir>/
+├── __acme__my-awesome-package/
+│   ├── package.json      # name: @acme/my-awesome-package
+│   └── dist/
+│       └── index.js      # rewritten: import ... from '../deps/packages/internal-utils/dist/index.js'
+└── deps/
+    └── packages/
+        └── internal-utils/
+            └── dist/
+                └── index.js
 ```
 
 Consumers get one package containing exactly the code they need, with no broken references to private workspace packages.
