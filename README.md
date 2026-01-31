@@ -28,8 +28,8 @@ Monocrate treats your package as the root of a dependency graph, then builds a s
 1. **Dependency Discovery**: Traverses the dependency graph to find all workspace packages your code depends on, transitively
 2. **File Embedding**: Copies the publishable files (what `npm pack` would include) of each internal dependency into the output directory
 3. **Entry Point Resolution**: Examines each package's entry points to compute the exact file locations that imports will resolve to
-4. **Import Rewriting**: Converts workspace imports in `.js` and `.d.ts` files (e.g., `@acme/internal-utils`) to relative paths (`../deps/internal-utils`)
-5. **Dependency Pruning**: Removes internal workspace packages from the published `package.json` dependencies, replacing them with any third-party deps they brought in
+4. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path imports (`@acme/internal-utils` -> `../deps/packages/internal-utils/dist/index.js`)
+5. **Dependency Pruning**: Rewrites the dependencies in the `package.json` - removes all workspace packages deps, adds any third-party deps they brought in
 
 The result is a standard npm package that looks like you hand-crafted it for publication.
 
@@ -40,13 +40,13 @@ Given this monorepo structure:
 ```
 packages/
 ├── my-awesome-package/
-│   ├── src/
-│   │   └── index.ts      # imports '@acme/internal-utils'
-│   └── package.json      # name: @acme/my-awesome-package
+│   ├── package.json      # name: @acme/my-awesome-package
+│   └── src/
+│       └── index.ts      # import ... from '@acme/internal-utils'
 └── internal-utils/
-    ├── src/
-    │   └── index.ts
-    └── package.json      # name: @acme/internal-utils (private)
+    ├── package.json      # name: @acme/internal-utils (private)
+    └── src/
+        └── index.ts
 ```
 
 Running `npx monocrate packages/my-awesome-package` produces:
