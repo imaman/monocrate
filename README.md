@@ -98,7 +98,8 @@ Running `npx monocrate packages/my-awesome-package` produces:
 ├── __acme__my-awesome-package/
 │   ├── package.json      # name: @acme/my-awesome-package
 │   └── dist/
-│       └── index.js      # rewritten: import ... from '../deps/packages/internal-utils/dist/index.js'
+│       └── index.js      # rewritten: 
+|                         # import ... from '../deps/packages/internal-utils/dist/index.js'
 └── deps/
     └── packages/
         └── internal-utils/
