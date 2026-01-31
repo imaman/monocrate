@@ -4,78 +4,96 @@
 [![CI](https://github.com/imaman/monocrate/actions/workflows/ci.yml/badge.svg)](https://github.com/imaman/monocrate/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Because publishing from a monorepo should take seconds, not days.
+*Because publishing from a monorepo should take seconds, not days.*
 
 ## The Problem
 
-You have a monorepo, you are really proud of `@acme/my-awesome-package` and you want to make it open source. The package's main file, `packages/my-awesome-package/src/index.ts`, presumably looks something like this:
+Monorepo packages with internal dependencies break when published to npm. 
 
 
-```typescript
-// Reusing validation logic from elsewhere in the monorepo
-import { validateUserInput } from '@acme/internal-utils'
+## Shortcomings of Existing Approaches 
 
-export function processData(data: unknown) {
-  const validated = validateUserInput(data)
-  // ...
-}
-```
+- Bundlers like [esbuild](https://esbuild.github.io/), [rollup](https://rollupjs.org/), or similar tools can produce a self contained file but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
 
-When you publish, things look great:
+- You can manually create the right directory structure, replacing all the imports with relative paths. You will manage to pull it off once, but that's definitely not sustainable across refactorings and PRs.
 
-```bash
-$ cd packages/my-awesome-package
-$ npm publish
-npm notice
-npm notice 📦  @acme/my-awesome-package@1.0.0
-npm notice Tarball Contents
-npm notice 4.4kB README.md
-npm notice 9.1kB dist/index.js
-...
-npm notice
-npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
-
-+ @acme/my-awesome-package@1.0.0
-```
-
-But when you try to install it, you discover it's broken:
-
-```bash
-$ npm install @acme/my-awesome-package
-npm error code E404
-npm error 404 Not Found - GET https://registry.npmjs.org/@acme%2finternal-utils - Not found
-npm error 404
-npm error 404  '@acme/internal-utils@1.0.0' is not in this registry.
-```
-
-This is a big 🚨 oh-no 🚨 moment. What are your options? 
-
-In theory, you could:
-- ...bundle with esbuild, rollup, and similar tools but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
-- ...manually create the right directory structure, replacing all the imports with relative paths. You will manage to pull it off once, but that's definitely not sustainable.
-- ...use a tool such as `lerna` which publishes every internal dependency as its own public package, but now `@acme/internal-utils` becomes a permanently published API you're committed to, and your internal refactoring freedom is gone.
+- "Publish everything" tools such as [lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation will now work, but `@acme/internal-utils` just became a permanently published API you're committed to, and your internal refactoring freedom is gone.
 
 
 ## The Solution
 
-Enter monocrate. It collects your package and its transitive internal dependencies into a single publishable unit. It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
+Enter [monocrate](https://www.npmjs.com/package/monocrate). It collects your package and its transitive internal dependencies into a single publishable unit. It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
 
+## How It Works
+
+Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure:
+
+0. Creates a dedicated output directory
+1. **Dependency Discovery**: Traverses the dependency graph to find all workspace packages your code depends on, transitively
+2. **File Embedding**: Copies the publishable files (what `npm pack` would include) of each internal dependency into the output directory
+3. **Entry Point Resolution**: Examines each package's entry points to compute the exact file locations that imports will resolve to
+4. **Import Rewriting**: Converts workspace imports in `.js` and `.d.ts` files (e.g., `@acme/internal-utils`) to relative paths (`../deps/internal-utils`)
+5. **Dependency Pruning**: Removes internal workspace packages from the published `package.json` dependencies, replacing them with any third-party deps they brought in
+
+The result is a standard npm package that looks like you hand-crafted it for publication.
+
+### What Gets Published
+
+Given this monorepo structure:
+
+```
+packages/
+├── my-awesome-package/
+│   ├── src/
+│   │   └── index.ts      # imports '@acme/internal-utils'
+│   └── package.json      # name: @acme/my-awesome-package
+└── internal-utils/
+    ├── src/
+    │   └── index.ts
+    └── package.json      # name: @acme/internal-utils (private)
+```
+
+Running `npx monocrate packages/my-awesome-package` produces:
+
+```
+<tmpdir>/
+├── __acme__my-awesome-package/
+│   ├── package.json      # name: @acme/my-awesome-package
+│   └── dist/
+│       └── index.js      # rewritten: 
+|                         # import ... from '../deps/packages/internal-utils/dist/index.js'
+└── deps/
+    └── packages/
+        └── internal-utils/
+            └── dist/
+                └── index.js
+```
+
+Consumers get one package containing exactly the code they need, with no broken references to private workspace packages.
+
+## Installation
+
+```bash
+pnpm add --save-dev monocrate
+# or: yarn add --dev monocrate
+# or: npm install --save-dev monocrate
+```
 
 ## Usage
 
-> **Note:** Monocrate is a publishing tool, not a build tool. If you have a build script, run it first:
+> **Note:** `monocrate` is a publishing tool, not a build tool. If you have a build script, run it first:
 > ```bash
 > npm run build
 > ```
 
-Once the package is built, you can run monocrate:
+Once the package is built, you can run `monocrate`:
 
 ```bash
 # Publish a package, patch bumping its version
 npx monocrate packages/my-awesome-package --bump patch
 
-# Use --dry-run to run in "prepare" mode: do everything but stop short of publishing to the registry
-npx monocrate packages/my-awesome-package --output-dir /tmp/inspect --bump patch --dry-run
+# Use --dry-run to run in "prepare" mode: do everything short of publishing
+npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
 
 # --bump defaults to "minor", so these two are identical:
 npx monocrate packages/my-awesome-package --bump minor
@@ -85,11 +103,11 @@ npx monocrate packages/my-awesome-package
 npx monocrate packages/my-awesome-package --bump 2.3.0
 ```
 
-> **Note:** Monocrate does not modify your source code. Bump strategies are applied to the package's most recent version on the registry, not the version in your local `package.json`.
+> **Note:** `monocrate` does not modify your source code. Bump strategies are applied to the package's most recent version on the registry, not the version in your local `package.json`.
 
 ### Custom Publish Name
 
-Publish `@acme/my-awesome-package` as `best-package-ever` without doing a repo-wide renaming:
+Publish `@acme/my-awesome-package` as `best-package-ever` without a repo-wide rename:
 
 ```json
 {
@@ -148,7 +166,7 @@ monocrate <packages...> [options]
 
 ## Programmatic API
 
-Use monocrate as a library for custom workflows or build scripts:
+Use `monocrate` as a library for custom workflows or build steps:
 
 ```typescript
 import { monocrate } from 'monocrate'
@@ -193,8 +211,3 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `resolvedVersion` | `string` | The resolved version that was applied. |
 | `summaries` | `Array<{ packageName: string; outputDir: string }>` | Details for each assembled package. |
 
-## Installation
-
-```bash
-npm install --save-dev monocrate
-```
