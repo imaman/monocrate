@@ -47,7 +47,7 @@ npm error 404  '@acme/internal-utils@1.0.0' is not in this registry.
 
 **This is the "oh-no" moment.** Your package is live but broken for every consumer.
 
-## Shotcomings of Existing Approaches 
+## Shortcomings of Existing Approaches 
 
 - Bundlers [esbuild](https://esbuild.github.io/), [rollup](https://rollupjs.org/), and similar tools can produce a self contained file but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
 
