@@ -8,13 +8,13 @@
 
 ## The Problem
 
-Monorepos are great. Publishing from a monorepo is pathetically hard:
+Monorepos are great. Publishing from a monorepo is comically hard:
 
-Consider `@acme/my-awesome-package` which imports `@acme/internal-utils`, a workspace dependency. Running `npm publish`, the naive approach, produces an uninstallable package because `@acme/internal-utils` was never published to npm.
+Consider `@acme/my-awesome-package`, which imports `@acme/internal-utils`, a workspace dependency. The naive approach, running `npm publish`, produces an uninstallable package because `@acme/internal-utils` was never published to npm.
 
-The standard solution is the "publish everything" approach. Tools like [Lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation now works, but `@acme/internal-utils` just became a permanently published API you're committed to maintaining. Your internal refactoring freedom is gone.
+The standard solution is the "publish everything" approach. Tools like [Lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation now works, but `@acme/internal-utils` just became a permanently published API you're committed to maintaining. *Your internal refactoring freedom is gone.*
 
-Bundlers offer the opposite approach: tools like [esbuild](https://esbuild.github.io/) or [Rollup](https://rollupjs.org/) produce a self-contained file. But getting the TypeScript declarations (those `.d.ts` files) and the sourcemaps to dovetail with the bundle is excruciating.
+Bundlers offer the opposite approach: tools like [esbuild](https://esbuild.github.io/) or [Rollup](https://rollupjs.org/) produce a self-contained file. But getting the TypeScript declarations (those `.d.ts` files) and the sourcemaps to *dovetail with the bundle* requires fragile toolchain gymnastics.
 
 ## The Solution
 
