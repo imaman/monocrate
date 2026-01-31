@@ -8,7 +8,7 @@
 
 ## The Problem
 
-Publishing a monorepo package which depends on other monorepo packages is broken. Sadly, this is almost always the case: you put packages in a monorepo exactly because you want to have code used across packages.
+Monorepos are great. Publishing from a monorepo is pathetically hard:
 
 Consider `@acme/my-awesome-package` which imports `@acme/internal-utils`, a workspace dependency. Running `npm publish`, the naive approach, produces an uninstallable package because `@acme/internal-utils` was never published to npm.
 
