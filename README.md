@@ -12,7 +12,7 @@ Monorepos are great. Publishing from a monorepo is pathetically hard:
 
 Consider `@acme/my-awesome-package` which imports `@acme/internal-utils`, a workspace dependency. Running `npm publish`, the naive approach, produces an uninstallable package because `@acme/internal-utils` was never published to npm.
 
-The standard solution is "publish everything." Tools like [Lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation now works, but `@acme/internal-utils` just became a permanently published API you're committed to maintaining. Your internal refactoring freedom is gone.
+The standard solution is the "publish everything" approach. Tools like [Lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation now works, but `@acme/internal-utils` just became a permanently published API you're committed to maintaining. Your internal refactoring freedom is gone.
 
 Bundlers seem like an alternative, but they come with their own costs. Tools like [esbuild](https://esbuild.github.io/) or [Rollup](https://rollupjs.org/) can produce a self-contained file, but downstream tree-shaking breaks for your consumers, and getting TypeScript declarations (`.d.ts`) and source maps to harmonize with the bundle is excruciatingly difficult.
 
