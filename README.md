@@ -17,6 +17,7 @@ You have a monorepo, you're really proud of `@acme/my-awesome-package` and you w
 ```typescript
 // packages/my-awesome-package/src/index.ts
 import { validateUserInput } from '@acme/internal-utils'
+// A bunch of stuff
 ```
 
 When you publish, things look great:
@@ -35,7 +36,7 @@ But when you try to install it:
 ```bash
 $ npm install @acme/my-awesome-package
 npm error code E404
-npm error 404 Not Found - GET https://registry.npmjs.org/@acme%2finternal-utils - Not found
+npm error 404  '@acme/internal-utils@1.0.0' is not in this registry.
 ```
 
 **Why this happens:**
@@ -70,8 +71,8 @@ Once the package is built, you can run `monocrate`:
 # Publish a package, patch bumping its version
 npx monocrate packages/my-awesome-package --bump patch
 
-# Use --dry-run to run in "prepare" mode: do everything short of publishing to the registry
-npx monocrate packages/my-awesome-package --output-dir /tmp/inspect --bump patch --dry-run
+# Use --dry-run to run in "prepare" mode: do everything short of publishing
+npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
 
 # --bump defaults to "minor", so these two are identical:
 npx monocrate packages/my-awesome-package --bump minor
