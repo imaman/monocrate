@@ -55,16 +55,16 @@ Running `npx monocrate packages/my-awesome-package` produces:
 
 ```
 <tmpdir>/
-├── __acme__my-awesome-package/
-│   ├── package.json      # name: @acme/my-awesome-package
-│   └── dist/
-│       └── index.js      # rewritten: 
-│                         # import ... from '../deps/packages/internal-utils/dist/index.js'
-└── deps/
-    └── packages/
-        └── internal-utils/
-            └── dist/
-                └── index.js
+└── __acme__my-awesome-package/
+    ├── package.json      # name: @acme/my-awesome-package
+    ├── dist/
+    │   └── index.js      # rewritten:
+    │                     # import ... from '../deps/packages/internal-utils/dist/index.js'
+    └── deps/
+        └── packages/
+            └── internal-utils/
+                └── dist/
+                    └── index.js
 ```
 
 Consumers get one package containing exactly the code they need, with no broken references to private workspace packages.
