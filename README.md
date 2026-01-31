@@ -53,24 +53,24 @@ npm error 404  '@acme/internal-utils@1.0.0' is not in this registry.
 This is a big 🚨 oh-no 🚨 moment. What are your options? 
 
 In theory, you could:
-- ...bundle with esbuild, rollup, and similar tools but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
+- ...bundle with [esbuild](https://esbuild.github.io/), [rollup](https://rollupjs.org/), and similar tools but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
 - ...manually create the right directory structure, replacing all the imports with relative paths. You will manage to pull it off once, but that's definitely not sustainable.
-- ...use a tool such as `lerna` which publishes every internal dependency as its own public package, but now `@acme/internal-utils` becomes a permanently published API you're committed to, and your internal refactoring freedom is gone.
+- ...use a tool such as [lerna](https://lerna.js.org/) which publishes every internal dependency as its own public package, but now `@acme/internal-utils` becomes a permanently published API you're committed to, and your internal refactoring freedom is gone.
 
 
 ## The Solution
 
-Enter monocrate. It collects your package and its transitive internal dependencies into a single publishable unit. It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
+Enter [monocrate](https://www.npmjs.com/package/monocrate). It collects your package and its transitive internal dependencies into a single publishable unit. It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
 
 
 ## Usage
 
-> **Note:** Monocrate is a publishing tool, not a build tool. If you have a build script, run it first:
+> **Note:** `monocrate` is a publishing tool, not a build tool. If you have a build script, run it first:
 > ```bash
 > npm run build
 > ```
 
-Once the package is built, you can run monocrate:
+Once the package is built, you can run `monocrate`:
 
 ```bash
 # Publish a package, patch bumping its version
@@ -87,7 +87,7 @@ npx monocrate packages/my-awesome-package
 npx monocrate packages/my-awesome-package --bump 2.3.0
 ```
 
-> **Note:** Monocrate does not modify your source code. Bump strategies are applied to the package's most recent version on the registry, not the version in your local `package.json`.
+> **Note:** `monocrate` does not modify your source code. Bump strategies are applied to the package's most recent version on the registry, not the version in your local `package.json`.
 
 ### Custom Publish Name
 
@@ -150,7 +150,7 @@ monocrate <packages...> [options]
 
 ## Programmatic API
 
-Use monocrate as a library for custom workflows or build steps:
+Use `monocrate` as a library for custom workflows or build steps:
 
 ```typescript
 import { monocrate } from 'monocrate'
