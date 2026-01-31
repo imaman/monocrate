@@ -24,7 +24,7 @@ Enter [monocrate](https://www.npmjs.com/package/monocrate). It collects your pac
 
 Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure:
 
-0. Creates a dedicated output directory
+0. **Setup**: Creates a dedicated output directory
 1. **Dependency Discovery**: Traverses the dependency graph to find all workspace packages your code depends on, transitively
 2. **File Embedding**: Copies the publishable files (what `npm pack` would include) of each internal dependency into the output directory
 3. **Entry Point Resolution**: Examines each package's entry points to compute the exact file locations that imports will resolve to
