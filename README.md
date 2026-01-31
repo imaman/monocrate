@@ -62,9 +62,7 @@ Enter [monocrate](https://www.npmjs.com/package/monocrate). It collects your pac
 
 ## How It Works
 
-Monocrate treats your package as the entry point of a dependency graph. It traverses the graph to find every workspace sibling your code actually touches—whether imported statically, dynamically, or via TypeScript path aliases.
-
-Then it builds a self-contained publishable structure:
+Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure:
 
 0. Creates a dedicated output directory
 1. **Dependency Discovery**: Traverses the dependency graph to find all workspace packages your code depends on, transitively
@@ -75,7 +73,7 @@ Then it builds a self-contained publishable structure:
 
 The result is a standard npm package that looks like you hand-crafted it for publication.
 
-### What Gets Built
+### What Gets Published
 
 Given this monorepo structure:
 
