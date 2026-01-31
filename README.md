@@ -57,6 +57,56 @@ In theory, you could:
 
 Enter [monocrate](https://www.npmjs.com/package/monocrate). It collects your package and its transitive internal dependencies into a single publishable unit. It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
 
+## How It Works
+
+Monocrate treats your package as the entry point of a dependency graph. It traverses the graph to find every workspace sibling your code actually touches—whether imported statically, dynamically, or via TypeScript path aliases.
+
+Then it builds a self-contained directory:
+
+1. **Import Rewriting**: Converts workspace imports (e.g., `@acme/internal-utils`) to relative paths (`../../internal-utils`)
+2. **Physical Inlining**: Copies the source of internal dependencies into the output directory
+3. **Declaration Mapping**: Adjusts TypeScript declaration files and sourcemaps so they resolve correctly in the consumer's editor
+4. **Dependency Pruning**: Removes inlined packages from `package.json` dependencies, replacing them with any *external* transitive deps they might have had
+
+The result is a standard npm package that looks like you hand-crafted it for publication.
+
+### What Gets Built
+
+Given this monorepo structure:
+
+```
+packages/
+├── my-awesome-package/
+│   ├── src/
+│   │   └── index.ts      # imports '@acme/internal-utils'
+│   └── package.json      # name: @acme/my-awesome-package
+└── internal-utils/
+    ├── src/
+    │   └── index.ts
+    └── package.json      # name: @acme/internal-utils (private)
+```
+
+Running `npx monocrate packages/my-awesome-package` produces:
+
+```
+dist/
+├── package.json          # name: @acme/my-awesome-package
+├── src/
+│   └── index.ts          # rewritten: import ... from '../internal-utils'
+└── internal-utils/       # inlined dependency
+    └── src/
+        └── index.ts
+```
+
+Consumers get one package containing exactly the code they need, with no broken references to private workspace packages.
+
+## Installation
+
+```bash
+pnpm add --save-dev monocrate
+# or: yarn add --dev monocrate
+# or: npm install --save-dev monocrate
+```
 
 ## Usage
 
@@ -190,8 +240,3 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `resolvedVersion` | `string` | The resolved version that was applied. |
 | `summaries` | `Array<{ packageName: string; outputDir: string }>` | Details for each assembled package. |
 
-## Installation
-
-```bash
-npm install --save-dev monocrate
-```
