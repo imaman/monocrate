@@ -8,17 +8,13 @@
 
 ## The Problem
 
-Monorepo packages with internal dependencies break when published to npm. 
+Publishing a monorepo package which depends on other monorepo packages is broken. Sadly, this is almost always the case: you put packages in a monorepo exactly because you want to have code used across packages.
 
+Consider `@acme/my-awesome-package` which imports `@acme/internal-utils`, a workspace dependency. Running `npm publish`, the naive approach, produces an uninstallable package because `@acme/internal-utils` was never published to npm.
 
-## Shortcomings of Existing Approaches 
+The standard solution is "publish everything." Tools like [Lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation now works, but `@acme/internal-utils` just became a permanently published API you're committed to maintaining. Your internal refactoring freedom is gone.
 
-- Bundlers like [esbuild](https://esbuild.github.io/), [rollup](https://rollupjs.org/), or similar tools can produce a self contained file but tree-shaking breaks for consumers, source maps need a lot of attention to get right, and good luck getting those TypeScript types (.d.ts files) bundled.
-
-- You can manually create the right directory structure, replacing all the imports with relative paths. You will manage to pull it off once, but that's definitely not sustainable across refactorings and PRs.
-
-- "Publish everything" tools such as [lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation will now work, but `@acme/internal-utils` just became a permanently published API you're committed to, and your internal refactoring freedom is gone.
-
+Bundlers seem like an alternative, but they come with their own costs. Tools like [esbuild](https://esbuild.github.io/) or [Rollup](https://rollupjs.org/) can produce a self-contained file, but downstream tree-shaking breaks for your consumers, and getting TypeScript declarations (`.d.ts`) and source maps to harmonize with the bundle is excruciatingly difficult.
 
 ## The Solution
 
