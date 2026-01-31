@@ -4,7 +4,7 @@
 [![CI](https://github.com/imaman/monocrate/actions/workflows/ci.yml/badge.svg)](https://github.com/imaman/monocrate/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Because publishing from a monorepo should take seconds, not days.
+*Because publishing from a monorepo should take seconds, not days.*
 
 ## The Problem
 
