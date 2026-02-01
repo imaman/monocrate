@@ -6,15 +6,15 @@ import { ImportRewriter } from './import-rewriter.js'
 import { resolveVersion } from './resolve-version.js'
 import { rewritePackageJson } from './rewrite-package-json.js'
 import type { VersionSpecifier } from './version-specifier.js'
-import { AbsolutePath, RelativePath } from './paths.js'
+import { AbsolutePath } from './paths.js'
 import type { RepoExplorer, MonorepoPackage } from './repo-explorer.js'
 import { computePackageClosure } from './compute-package-closure.js'
-import { manglePackageName } from './name-mangler.js'
 import type { NpmClient } from './npm-client.js'
 
 export class PackageAssembler {
   readonly pkgName
   readonly publishAs
+  private readonly pathInRepo
   constructor(
     private readonly npmClient: NpmClient,
     private readonly explorer: RepoExplorer,
@@ -27,10 +27,11 @@ export class PackageAssembler {
     }
     this.pkgName = found.name
     this.publishAs = found.publishAs
+    this.pathInRepo = found.pathInRepo
   }
 
   getOutputDir() {
-    return AbsolutePath.join(this.outputRoot, RelativePath(manglePackageName(this.pkgName)))
+    return AbsolutePath.join(this.outputRoot, this.pathInRepo)
   }
 
   async computeNewVersion(versionSpecifier: VersionSpecifier | undefined) {
