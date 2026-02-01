@@ -104,7 +104,7 @@ npx monocrate packages/my-awesome-package --bump patch
 # Use --dry-run to run in "prepare" mode: do everything short of publishing
 npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
 
-# --bump defaults to "minor", so these two are identical:
+# --bump defaults to "minor", so these two are equivalent:
 npx monocrate packages/my-awesome-package --bump minor
 npx monocrate packages/my-awesome-package
 
@@ -112,7 +112,7 @@ npx monocrate packages/my-awesome-package
 npx monocrate packages/my-awesome-package --bump 2.3.0
 ```
 
-> **Note:** `monocrate` does not modify your source code. Bump strategies are applied to the package's most recent
+> **Note:** `monocrate` does not modify your source code. The new version is calculated from the package's most recent
 version on the registry, not the version in your local `package.json`.
 
 ### Custom Publish Name
