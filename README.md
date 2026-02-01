@@ -148,8 +148,8 @@ The above snippet is the programmatic equivalent of `npx monocrate packages/my-a
 
 ### Custom Publish Name
 
-Sometimes your internal package name doesn't match the name you want on npm. Use `publishName` to publish under a
-different name without renaming the package across your monorepo:
+Sometimes your internal package name doesn't match the name you want on npm. Add a `monocrate.publishName` field to 
+your `package.json` to publish under a different name without renaming the package across your monorepo:
 
 ```json
 {
