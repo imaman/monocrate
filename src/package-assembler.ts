@@ -51,7 +51,8 @@ export class PackageAssembler {
 
     await fsPromises.mkdir(outputDir, { recursive: true })
     const copiedFiles = await new FileCopier(packageMap).copy()
-    await new ImportRewriter(packageMap).rewriteAll(copiedFiles)
+    const isInRepoPackage = (pkgName: string) => this.explorer.lookupPackage(pkgName) !== undefined
+    await new ImportRewriter(packageMap, isInRepoPackage).rewriteAll(copiedFiles)
 
     // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
     rewritePackageJson(closure, newVersion, outputDir)
