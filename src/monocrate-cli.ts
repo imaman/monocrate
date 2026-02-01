@@ -17,6 +17,7 @@ interface YargsArgs {
   report?: string
   'mirror-to'?: string
   'dry-run'?: boolean
+  max?: boolean
 }
 
 export function monocrateCli(): void {
@@ -70,6 +71,11 @@ Usage: $0 <packages...> [options]`
         description: 'Prepare without publishing',
         default: false,
       },
+      max: {
+        type: 'boolean' as const,
+        description: 'Use max version across all packages (default: true)',
+        default: true,
+      },
     })
     .strict()
     .help()
@@ -91,13 +97,15 @@ Usage: $0 <packages...> [options]`
         publish: !args['dry-run'],
         cwd: process.cwd(),
         mirrorTo: args['mirror-to'],
+        max: args.max,
       }
       const result = await monocrate(options)
+      const output = result.resolvedVersion ?? result.summaries.map((s) => `${s.packageName}@${s.version}`).join('\n')
       if (args.report) {
         const outputFilePath = path.resolve(process.cwd(), args.report)
-        fs.writeFileSync(outputFilePath, result.resolvedVersion)
+        fs.writeFileSync(outputFilePath, output)
       } else {
-        console.log(result.resolvedVersion)
+        console.log(output)
       }
     })
     .catch((error: unknown) => {

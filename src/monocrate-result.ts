@@ -4,11 +4,13 @@ export interface MonocrateResult {
    */
   outputDir: string
   /**
-   * The new version (AKA: 'resolved version') for the package (or packages).
+   * The unified version for all packages. Only set when using unified versioning (--max, the default).
+   * When using individual versioning (--max=false), this is undefined and each package's version
+   * can be found in its respective summary entry.
    */
-  resolvedVersion: string
+  resolvedVersion?: string
   /**
    * Details about each individual package that was assembled/published.
    */
-  summaries: { packageName: string; outputDir: string }[]
+  summaries: { packageName: string; outputDir: string; version: string }[]
 }

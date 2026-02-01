@@ -5,11 +5,8 @@ export type VersionSpecifier =
   | { tag: 'major' | 'minor' | 'patch' }
   | { tag: 'explicit'; value: string }
   | { tag: 'package' }
-export function parseVersionSpecifier(value: string | undefined): VersionSpecifier | undefined {
-  if (value === undefined) {
-    return undefined
-  }
 
+export function parseVersionSpecifier(value: string): VersionSpecifier {
   const parsedPart = SemVerPart.safeParse(value)
   if (parsedPart.success) {
     return { tag: parsedPart.data }

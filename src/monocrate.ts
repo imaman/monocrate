@@ -23,6 +23,9 @@ export type { MonocrateResult } from './monocrate-result.js'
  * @throws Error if assembly or publishing fails
  */
 export async function monocrate(options: MonocrateOptions): Promise<MonocrateResult> {
+  // Determine whether to use unified max version or individual versions per package
+  const useMax = options.max ?? true
+
   // Resolve and validate cwd first, then use it to resolve all other paths
   const cwd = AbsolutePath(path.resolve(options.cwd))
   const cwdExists = await fs
@@ -67,22 +70,24 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     throw new Error(`Incosistency - could not find an assembler for the first package`)
   }
 
-  // versionSpecifier is always defined (defaults to 'minor'), so computeNewVersion always returns a string
-  const versions = (await Promise.all(assemblers.map((a) => a.computeNewVersion(versionSpecifier)))).flatMap((v) =>
-    v ? [v] : []
+  const pairs = await Promise.all(
+    assemblers.map(async (a) => ({ assembler: a, version: await a.computeNewVersion(versionSpecifier) }))
   )
 
-  const v = versions.at(0)
-  if (!v) {
+  let max = pairs.at(0)?.version
+  if (!max) {
     throw new Error('Inconsistency - no versions computed')
   }
-  const resolvedVersion = versions.reduce((soFar, curr) => maxVersion(soFar, curr), v)
+  for (const at of pairs) {
+    max = maxVersion(max, at.version)
+  }
 
+  const resolvedPairs = pairs.map((at) => ({ ...at, version: useMax ? max : at.version }))
   const allPackagesForMirror = new Map<string, MonorepoPackage>()
 
   // Phase 1: Assemble all packages and publish with --tag pending
-  for (const assembler of assemblers) {
-    const { compiletimeMembers } = await assembler.assemble(resolvedVersion)
+  for (const { assembler, version } of resolvedPairs) {
+    const { compiletimeMembers } = await assembler.assemble(version)
     for (const pkg of compiletimeMembers) {
       allPackagesForMirror.set(pkg.name, pkg)
     }
@@ -94,8 +99,8 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
 
   // Phase 2: Move 'latest' tag to all published packages (only if all publishes succeeded)
   if (options.publish) {
-    for (const assembler of assemblers) {
-      await npmClient.distTagAdd(`${assembler.publishAs}@${resolvedVersion}`, 'latest', assembler.getOutputDir())
+    for (const { assembler, version } of resolvedPairs) {
+      await npmClient.distTagAdd(`${assembler.publishAs}@${version}`, 'latest', assembler.getOutputDir())
     }
   }
 
@@ -107,7 +112,11 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
 
   return {
     outputDir: a0.getOutputDir(),
-    resolvedVersion,
-    summaries: assemblers.map((at) => ({ outputDir: at.getOutputDir(), packageName: at.pkgName })),
+    resolvedVersion: useMax ? max : undefined,
+    summaries: resolvedPairs.map(({ assembler, version }) => ({
+      outputDir: assembler.getOutputDir(),
+      packageName: assembler.pkgName,
+      version,
+    })),
   }
 }
