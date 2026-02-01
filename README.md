@@ -32,24 +32,11 @@ Internal packages remain unpublished. Only one package to install. Tree-shaking 
 
 ## How It Works
 
-Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure:
-
-0. **Setup**: Creates a dedicated output directory
-1. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
-2. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
-3. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
-the exact file locations that import statements will resolve to
-4. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path 
-imports (`@acme/internal-utils` becomes `../deps/packages/internal-utils/dist/index.js`)
-5. **Dependency Pruning**: Rewrites `package.json` dependencies by removing all in-repo deps, adding any third-party 
-deps they brought in
-
-The result is a standard npm package that looks like you hand-crafted it for publication.
+Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure.
 
 ### What Gets Published
 
 Given this monorepo structure:
-
 ```
 packages/
 ├── my-awesome-package/
@@ -63,7 +50,6 @@ packages/
 ```
 
 Running `npx monocrate packages/my-awesome-package` produces:
-
 ```
 /tmp/monocrate-xxxxxx/
 └── __acme__my-awesome-package/  # mangled package name
@@ -84,6 +70,20 @@ If it had been at `libs/shared/utils`, it would be at `deps/libs/shared/utils`. 
 avoids name collisions.
 
 Consumers get one package containing exactly the code they need.
+
+### The Assembly Process
+
+Here's how monocrate achieves this:
+
+0. **Setup**: Creates a dedicated output directory
+1. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
+2. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
+3. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
+the exact file locations that import statements will resolve to
+4. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path 
+imports (`@acme/internal-utils` becomes `../deps/packages/internal-utils/dist/index.js`)
+5. **Dependency Pruning**: Rewrites `package.json` dependencies by removing all in-repo deps, adding any third-party 
+deps they brought in
 
 ## Installation
 
