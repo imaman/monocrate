@@ -4,8 +4,15 @@ import type { PackageMap } from './package-location.js'
 import { resolveImport } from './collect-package-locations.js'
 import { AbsolutePath, RelativePath } from './paths.js'
 
+export type InRepoPackageChecker = (packageName: string) => boolean
+export type OutputPathToRepoPath = (outputPath: AbsolutePath) => string
+
 export class ImportRewriter {
-  constructor(private packageMap: PackageMap) {}
+  constructor(
+    private packageMap: PackageMap,
+    private isInRepoPackage: InRepoPackageChecker,
+    private toRepoPath: OutputPathToRepoPath
+  ) {}
 
   async rewriteAll(files: AbsolutePath[]): Promise<void> {
     const jsAndDtsFiles = files.filter((f) => f.endsWith('.js') || f.endsWith('.d.ts'))
@@ -78,6 +85,13 @@ export class ImportRewriter {
     const { packageName, subPath } = this.extractPackageName(importSpecifier)
     const importeeLocation = this.packageMap.get(packageName)
     if (!importeeLocation) {
+      if (this.isInRepoPackage(packageName)) {
+        const repoPath = this.toRepoPath(pathToImporter)
+        throw new Error(
+          `Import of in-repo package "${packageName}" found in ${repoPath}, ` +
+            `but "${packageName}" is not listed in package.json dependencies`
+        )
+      }
       return undefined
     }
 

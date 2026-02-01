@@ -1,10 +1,9 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { monocrate } from './index.js'
 import { RepoExplorer } from './repo-explorer.js'
 import { AbsolutePath } from './paths.js'
-import * as publishModule from './publish.js'
 import { folderify } from './testing/folderify.js'
 import { unfolderify } from './testing/unfolderify.js'
 import { createTempDir, initGitRepo, pj, runMonocrate } from './testing/monocrate-teskit.js'
@@ -60,39 +59,6 @@ describe('monocrate', () => {
 
       expect(path.dirname(outputDir)).toBe(specifiedOutputRoot)
     })
-  })
-
-  describe('report option', () => {
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
-    it('writes resolved version to report file when specified', async () => {
-      vi.spyOn(publishModule, 'publish').mockImplementation(async () => {})
-
-      const monorepoRoot = folderify({
-        'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': pj('@test/app'),
-        'packages/app/dist/index.js': `export const foo = 'foo';`,
-      })
-
-      const dir = createTempDir()
-
-      const opts = {
-        cwd: monorepoRoot,
-        pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
-        monorepoRoot,
-        report: path.join(dir, 'stdout'),
-        publish: false,
-        bump: '2.8.512',
-      }
-
-      expect(await monocrate(opts)).toMatchObject({ resolvedVersion: '2.8.512' })
-      expect(unfolderify(dir)).toEqual({ stdout: '2.8.512' })
-
-      expect(await monocrate({ ...opts, bump: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
-      expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
-    }, 30000)
   })
 
   describe('monorepo discovery', () => {
@@ -229,6 +195,83 @@ describe('monocrate', () => {
         })
       ).rejects.toThrow(/Package "@test\/external" is located at .* which is outside the monorepo root/)
     })
+
+    it('throws when code imports an in-repo package not listed in dependencies', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        // app imports @test/lib but does NOT list it in dependencies
+        'packages/app/package.json': pj('@test/app'),
+        'packages/app/dist/index.js': `import { greet } from '@test/lib';
+export const message = greet();
+`,
+        // lib exists in the monorepo
+        'packages/lib/package.json': pj('@test/lib'),
+        'packages/lib/dist/index.js': `export function greet() { return 'Hello!' }`,
+      })
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackages: 'packages/app',
+          monorepoRoot,
+          publish: false,
+          bump: '2.8.512',
+        })
+      ).rejects.toThrow(
+        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js, ' +
+          'but "@test/lib" is not listed in package.json dependencies'
+      )
+    })
+
+    it('throws when code imports an in-repo package not listed in dependencies (via re-export)', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        // app re-exports from @test/lib but does NOT list it in dependencies
+        'packages/app/package.json': pj('@test/app'),
+        'packages/app/dist/index.js': `export { greet } from '@test/lib';
+`,
+        'packages/lib/package.json': pj('@test/lib'),
+        'packages/lib/dist/index.js': `export function greet() { return 'Hello!' }`,
+      })
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackages: 'packages/app',
+          monorepoRoot,
+          publish: false,
+          bump: '2.8.512',
+        })
+      ).rejects.toThrow(
+        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js'
+      )
+    })
+
+    it('throws when code imports an in-repo package not listed in dependencies (via dynamic import)', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        // app dynamically imports @test/lib but does NOT list it in dependencies
+        'packages/app/package.json': pj('@test/app'),
+        'packages/app/dist/index.js': `const lib = await import('@test/lib');
+export const message = lib.greet();
+`,
+        'packages/lib/package.json': pj('@test/lib'),
+        'packages/lib/dist/index.js': `export function greet() { return 'Hello!' }`,
+      })
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackages: 'packages/app',
+          monorepoRoot,
+          publish: false,
+          bump: '2.8.512',
+        })
+      ).rejects.toThrow(
+        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js'
+      )
+    })
+
     it('works with workspace object format (packages field)', async () => {
       const monorepoRoot = folderify({
         'package.json': { workspaces: { packages: ['packages/*'] } },

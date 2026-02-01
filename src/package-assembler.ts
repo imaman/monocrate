@@ -1,4 +1,5 @@
 import * as fsPromises from 'node:fs/promises'
+import * as path from 'node:path'
 import { collectPackageLocations } from './collect-package-locations.js'
 import { FileCopier } from './file-copier.js'
 import { ImportRewriter } from './import-rewriter.js'
@@ -51,7 +52,18 @@ export class PackageAssembler {
 
     await fsPromises.mkdir(outputDir, { recursive: true })
     const copiedFiles = await new FileCopier(packageMap).copy()
-    await new ImportRewriter(packageMap).rewriteAll(copiedFiles)
+    const isInRepoPackage = (pkgName: string) => this.explorer.lookupPackage(pkgName) !== undefined
+    const toRepoPath = (outputPath: AbsolutePath): string => {
+      for (const loc of packageMap.values()) {
+        if (outputPath.startsWith(loc.toDir)) {
+          const relativePath = outputPath.slice(loc.toDir.length)
+          const pkg = this.explorer.getPackage(loc.name)
+          return path.join(pkg.pathInRepo, relativePath)
+        }
+      }
+      throw new Error(`Could not map output path to repo path: ${outputPath}`)
+    }
+    await new ImportRewriter(packageMap, isInRepoPackage, toRepoPath).rewriteAll(copiedFiles)
 
     // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
     rewritePackageJson(closure, newVersion, outputDir)

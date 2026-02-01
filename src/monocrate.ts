@@ -1,5 +1,4 @@
 import * as fs from 'node:fs/promises'
-import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { RepoExplorer } from './repo-explorer.js'
@@ -104,13 +103,6 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   if (options.mirrorTo) {
     const mirrorDir = AbsolutePath(path.resolve(cwd, options.mirrorTo))
     await mirrorSources([...allPackagesForMirror.values()], mirrorDir)
-  }
-
-  if (options.report) {
-    const outputFilePath = path.resolve(cwd, options.report)
-    fsSync.writeFileSync(outputFilePath, resolvedVersion)
-  } else {
-    console.log(resolvedVersion)
   }
 
   return {
