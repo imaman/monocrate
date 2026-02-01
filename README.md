@@ -178,7 +178,7 @@ monocrate <packages...> [options]
 
 ## Programmatic API
 
-Use `monocrate` as a library for custom workflows or build steps:
+For CI pipelines, custom build steps, or integration with other tooling, you can use monocrate as a library instead of invoking the CLI:
 
 ```typescript
 import { monocrate } from 'monocrate'
