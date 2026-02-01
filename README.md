@@ -8,8 +8,6 @@
 
 ## The Problem
 
-Here is the distillation:
-
 Consider `@acme/my-awesome-package`, which imports `@acme/internal-utils`, a workspace dependency. The naive 
 approach - running `npm publish` - produces an uninstallable package because `@acme/internal-utils` was never published
 to npm.
