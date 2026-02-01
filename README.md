@@ -94,9 +94,12 @@ mangled version of its package name. This avoids name collisions regardless of w
 `monocrate` uses **registry-based versioning**: it queries the registry for the latest published version and bumps it
 according to your `--bump` flag (`patch`, `minor`, `major`). Your source `package.json` is never modified.
 
-This means you don't need to maintain version numbers in your source code. The registry is the versioning source of 
+This means you don't need to maintain version numbers in your source code. The registry is the versioning source of
 truth, and `monocrate` computes the next version at publish time. Of course, if an exact version is specified
 (`--bump 1.7.9`) it is used as-is.
+
+For first-time publishing (when the package doesn't exist in the registry yet), `monocrate` treats the current version
+as `0.0.0` and applies the bump—resulting in `0.0.1` for patch, `0.1.0` for minor (the default), or `1.0.0` for major.
 
 ## Examples
 
