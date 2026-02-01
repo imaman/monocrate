@@ -120,9 +120,12 @@ npx monocrate packages/my-awesome-package --bump 2.3.0
 > **Note:** `monocrate` does not modify your source code. The new version is calculated from the package's most recent
 version on the registry, not the version in your local `package.json`.
 
+## Advanced Features
+
 ### Custom Publish Name
 
-Publish `@acme/my-awesome-package` as `best-package-ever` without renaming it repo-wide:
+Sometimes your internal package name doesn't match the name you want on npm. Use `publishName` to publish under a
+different name without renaming the package across your monorepo:
 
 ```json
 {
@@ -146,29 +149,31 @@ npx monocrate packages/my-awesome-package --mirror-to ../public-repo
 This way, your public repo stays in sync with what you publish—all necessary packages included. Contributors can
 clone and work on your package.
 
-Requires a clean working tree. Only committed files (from `git HEAD`) are mirrored. 
+Requires a clean working tree. Only committed files (from `git HEAD`) are mirrored.
 
 ### Multiple Packages
 
-Publish several packages together with the same version:
+You can publish packages separately (`monocrate a; monocrate b`) or together in one command. Publishing together
+aligns their version numbers—useful when you want a unified version scheme across related packages (à la AWS SDK v3).
+This is purely a convenience; correctness is unaffected since in-repo dependencies are always embedded:
 
 ```bash
 npx monocrate packages/lib-a packages/lib-b --bump 2.4.0
 ```
 
-### CLI Reference
+## CLI Reference
 
 ```
 monocrate <packages...> [options]
 ```
 
-#### Arguments
+### Arguments
 
 | Argument | Description |
 |----------|-------------|
 | `packages` | One or more package directories to publish (required) |
 
-#### Options
+### Options
 
 | Option | Alias | Type | Default | Description |
 |--------|-------|------|---------|-------------|
