@@ -57,7 +57,8 @@ describe('monocrate', () => {
         bump: '2.8.512',
       })
 
-      expect(path.dirname(outputDir)).toBe(specifiedOutputRoot)
+      expect(outputDir.startsWith(specifiedOutputRoot)).toBe(true)
+      expect(outputDir).toBe(path.join(specifiedOutputRoot, 'packages/app'))
     })
   })
 
