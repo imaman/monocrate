@@ -211,7 +211,6 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `bump` | `string` | No | `"minor"` | Version specifier: `"patch"`, `"minor"`, `"major"`, or explicit semver. |
 | `outputRoot` | `string` | No | (temp dir) | Output directory for the assembled package. |
 | `monorepoRoot` | `string` | No | (auto) | Monorepo root directory; auto-detected if omitted. |
-| `report` | `string` | No | — | Write resolved version to this file instead of stdout. |
 | `mirrorTo` | `string` | No | — | Mirror source files to this directory. |
 | `npmrcPath` | `string` | No | — | Path to `.npmrc` file for npm authentication. |
 
