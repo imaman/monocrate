@@ -178,6 +178,7 @@ describe('npm publishing with Verdaccio', () => {
         bump: '3.1.4',
         publish: true,
         npmrcPath: verdaccio.npmrcPath(),
+        max: true,
       })
     ).toMatchObject({ resolvedVersion: '3.1.4' })
 
