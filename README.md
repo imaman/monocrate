@@ -4,11 +4,11 @@
 [![CI](https://github.com/imaman/monocrate/actions/workflows/ci.yml/badge.svg)](https://github.com/imaman/monocrate/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-*Because publishing from a monorepo should take seconds, not days.*
+*Monorepos? Great. Publishing from a monorepo? Comically hard.*
 
 ## The Problem
 
-Publishing from a monorepo? Comically hard.
+Here is the distillation:
 
 Consider `@acme/my-awesome-package`, which imports `@acme/internal-utils`, a workspace dependency. The naive 
 approach - running `npm publish` - produces an uninstallable package because `@acme/internal-utils` was never published
@@ -54,7 +54,7 @@ Running `npx monocrate packages/my-awesome-package` produces:
 ```
 /tmp/monocrate-xxxxxx/
 └── __acme__my-awesome-package/  # mangled package name
-    ├── package.json             # name: @acme/my-awesome-package
+    ├── package.json             # name: "@acme/my-awesome-package", version: "1.3.0" (the new resolved version)
     ├── dist/
     │   └── index.js      # rewritten:
     │                     # import ... from '../deps/packages/internal-utils/dist/index.js'
@@ -77,14 +77,22 @@ Consumers get one package containing exactly the code they need.
 Here's how monocrate achieves this:
 
 0. **Setup**: Creates a dedicated output directory
-1. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
-2. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
-3. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
+1. **Version Resolution**: Computes the new version (see [below](#version-resolution))
+2. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
+3. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
+4. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
 the exact file locations that import statements will resolve to
-4. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path 
+5. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path
 imports (`@acme/internal-utils` becomes `../deps/packages/internal-utils/dist/index.js`)
-5. **Dependency Pruning**: Rewrites `package.json` dependencies by removing all in-repo deps, adding any third-party 
-deps they brought in
+6. **Package.json Rewrite**: Sets the resolved version, removes in-repo deps, and adds any third-party deps they brought in
+
+### Version Resolution
+
+Monocrate uses **registry-based versioning**: it queries the registry for the latest published version and bumps it according
+to your `--bump` flag (`patch`, `minor`, `major`). Your source `package.json` is never modified.
+
+This means you don't need to maintain version numbers in your monorepo. The registry is the source of truth, and
+monocrate computes the next version at publish time. Of course, if --bump is an exact version ("1.7.9") it is used as-is.
 
 ## Installation
 
@@ -117,9 +125,6 @@ npx monocrate packages/my-awesome-package
 # Explicit version
 npx monocrate packages/my-awesome-package --bump 2.3.0
 ```
-
-> **Note:** `monocrate` does not modify your source code. The new version is calculated from the package's most recent
-version on the registry, not the version in your local `package.json`.
 
 ## Advanced Features
 
