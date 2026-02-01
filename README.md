@@ -32,6 +32,23 @@ produces a standard npm package that looks like you hand-crafted it for publicat
 - 🔒 Internal packages remain unpublished
 - ✅ Tree-shaking, sourcemaps, and types all work
 
+### Quickstart
+
+> **Note:** `monocrate` publishes, it doesn't build. Run your build first.
+> ```bash
+> npm run build
+> ```
+
+Once built, just `monocrate` it:
+
+```bash
+# Publish a package, patch bumping its version
+npx monocrate packages/my-awesome-package --bump patch
+
+# Use --dry-run to run in "prepare" mode: do everything short of publishing
+npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
+```
+
 ### What Gets Published
 
 Given this monorepo structure:
@@ -83,32 +100,27 @@ pnpm add --save-dev monocrate
 # or: npm install --save-dev monocrate
 ```
 
-## Usage
+## Examples
 
-> **Note:** `monocrate` publishes, it doesn't build. Run your build first.
-> ```bash
-> npm run build
-> ```
-
-Once built, just `monocrate` it:
+> **Note:** Remember - Run your build first.
 
 ```bash
-# Publish a package, patch bumping its version
-npx monocrate packages/my-awesome-package --bump patch
-
-# Use --dry-run to run in "prepare" mode: do everything short of publishing
-npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
-
 # --bump defaults to "minor", so these two are equivalent:
 npx monocrate packages/my-awesome-package --bump minor
 npx monocrate packages/my-awesome-package
 
 # Explicit version
 npx monocrate packages/my-awesome-package --bump 2.3.0
+
+# Package location is resloved relative to CWD
+cd /path/to/my-monorepo/packages
+npx monocrate my-awesome-package --bump 2.3.0
 ```
+
 ## Programmatic API
 
-For CI pipelines, custom build steps, or integration with other tooling, you can use monocrate as a library instead of invoking the CLI:
+For custom build steps, or integration with other tooling, you can use `monocrate` as a library instead of invoking the
+CLI:
 
 ```typescript
 import { monocrate } from 'monocrate'
