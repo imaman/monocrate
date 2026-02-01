@@ -8,16 +8,11 @@ export type InRepoPackageChecker = (packageName: string) => boolean
 export type OutputPathToRepoPath = (outputPath: AbsolutePath) => string
 
 export class ImportRewriter {
-<<<<<<< Updated upstream
   constructor(
     private packageMap: PackageMap,
     private isInRepoPackage: InRepoPackageChecker,
     private toRepoPath: OutputPathToRepoPath
   ) {}
-=======
-  
-  constructor(private packageMap: PackageMap, private outputDir: string) {}
->>>>>>> Stashed changes
 
   async rewriteAll(files: AbsolutePath[]): Promise<void> {
     const jsAndDtsFiles = files.filter((f) => f.endsWith('.js') || f.endsWith('.d.ts'))
