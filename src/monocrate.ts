@@ -23,6 +23,9 @@ export type { MonocrateResult } from './monocrate-result.js'
  * @throws Error if assembly or publishing fails
  */
 export async function monocrate(options: MonocrateOptions): Promise<MonocrateResult> {
+  // Determine whether to use unified max version or individual versions per package
+  const useMax = options.max ?? true
+
   // Resolve and validate cwd first, then use it to resolve all other paths
   const cwd = AbsolutePath(path.resolve(options.cwd))
   const cwdExists = await fs
@@ -68,25 +71,20 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }
 
   // versionSpecifier is always defined (defaults to 'minor'), so computeNewVersion always returns a string
-  const individualVersions = await Promise.all(assemblers.map((a) => a.computeNewVersion(versionSpecifier)))
-  const v0 = individualVersions.at(0)
-  if (!v0) {
+  const pairs = await Promise.all(
+    assemblers.map(async (a) => [a, await a.computeNewVersion(versionSpecifier)] as const)
+  )
+  const pair0 = pairs.at(0)
+  if (!pair0) {
     throw new Error('Inconsistency - no versions computed')
   }
-  const resolvedVersion = individualVersions.reduce((soFar, curr) => maxVersion(soFar, curr), v0)
-
-  // Determine whether to use unified max version or individual versions per package
-  const useMax = options.max !== false
+  let max = pair0[1]
+  for (const [_, v] of pairs) {
+    max = maxVersion(max, v)
+  }
 
   // Pair each assembler with its version for easy iteration
-  const assemblersWithVersions = assemblers.map((assembler, i) => {
-    const version = useMax ? resolvedVersion : individualVersions[i]
-    if (!version) {
-      throw new Error(`Inconsistency - no version found for assembler ${String(i)}`)
-    }
-    return { assembler, version }
-  })
-
+  const assemblersWithVersions = pairs.map(([assembler, v]) => ({ assembler, version: useMax ? max : v }))
   const allPackagesForMirror = new Map<string, MonorepoPackage>()
 
   // Phase 1: Assemble all packages and publish with --tag pending
@@ -116,7 +114,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
 
   return {
     outputDir: a0.getOutputDir(),
-    resolvedVersion: useMax ? resolvedVersion : undefined,
+    resolvedVersion: useMax ? max : undefined,
     summaries: assemblersWithVersions.map(({ assembler, version }) => ({
       outputDir: assembler.getOutputDir(),
       packageName: assembler.pkgName,
