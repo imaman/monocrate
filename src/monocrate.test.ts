@@ -683,10 +683,10 @@ console.log(greet('World'));
       const { output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '1.0.0' })
 
       // lib (production dependency) should be included
-      expect(output).toHaveProperty('deps/packages/lib/package.json')
+      expect(output).toHaveProperty('deps/__test__lib/package.json')
 
       // build-tool (devDependency) should NOT be included in packaged output
-      expect(output).not.toHaveProperty('deps/packages/build-tool/package.json')
+      expect(output).not.toHaveProperty('deps/__test__build-tool/package.json')
     })
 
     it('preserves line numbers in stack traces', async () => {
@@ -761,11 +761,11 @@ export declare const bar: typeof foo;
 
       console.error(JSON.stringify(output, null, 2))
       // Verify .js file has rewritten import
-      expect(output['dist/index.js']).toContain('../deps/packages/b/dist/index.js')
+      expect(output['dist/index.js']).toContain('../deps/__myorg__b/dist/index.js')
       expect(output['dist/index.js']).not.toContain("'@myorg/b'")
 
       // Verify .d.ts file has rewritten import
-      expect(output['dist/index.d.ts']).toContain('../deps/packages/b/dist/index.js')
+      expect(output['dist/index.d.ts']).toContain('../deps/__myorg__b/dist/index.js')
       expect(output['dist/index.d.ts']).not.toContain("'@myorg/b'")
     })
 
@@ -793,7 +793,7 @@ export const bar = 'bar';
 
       // Verify export declarations have rewritten module specifiers
       const indexJs = output['dist/index.js'] as string
-      expect(indexJs).toContain('../deps/packages/b/dist/index.js')
+      expect(indexJs).toContain('../deps/__myorg__b/dist/index.js')
       expect(indexJs).not.toContain("'@myorg/b'")
     })
 
@@ -852,10 +852,10 @@ export const helper = foo + '-helper';
       const output = unfolderify(outputDir)
 
       // Root level file should have '../deps/...'
-      expect(output['dist/index.js']).toContain('../deps/packages/b/dist/index.js')
+      expect(output['dist/index.js']).toContain('../deps/__myorg__b/dist/index.js')
 
       // Nested file should have '../../deps/...'
-      expect(output['dist/utils/helper.js']).toContain('../../deps/packages/b/dist/index.js')
+      expect(output['dist/utils/helper.js']).toContain('../../deps/__myorg__b/dist/index.js')
     })
 
     it('handles packages in different monorepo directories', async () => {
@@ -885,12 +885,12 @@ export const bar = foo + util;
       const indexJs = output['dist/index.js'] as string
 
       // Both imports should be rewritten with correct paths
-      expect(indexJs).toContain('../deps/packages/b/dist/index.js')
-      expect(indexJs).toContain('../deps/libs/utils/dist/index.js')
+      expect(indexJs).toContain('../deps/__myorg__b/dist/index.js')
+      expect(indexJs).toContain('../deps/__myorg__utils/dist/index.js')
 
-      // Verify the deps directory structure mirrors the monorepo
-      expect(output).toHaveProperty('deps/packages/b/dist/index.js')
-      expect(output).toHaveProperty('deps/libs/utils/dist/index.js')
+      // Verify the deps directory structure uses mangled package names
+      expect(output).toHaveProperty('deps/__myorg__b/dist/index.js')
+      expect(output).toHaveProperty('deps/__myorg__utils/dist/index.js')
     }, 15000)
 
     it('verifies output directory structure matches spec', async () => {
@@ -934,8 +934,8 @@ export declare const bar: typeof foo;
       expect(output).toHaveProperty('dist/utils/helper.d.ts')
 
       // Verify deps structure
-      expect(output).toHaveProperty('deps/packages/b/dist/index.js')
-      expect(output).toHaveProperty('deps/packages/b/dist/index.d.ts')
+      expect(output).toHaveProperty('deps/__myorg__b/dist/index.js')
+      expect(output).toHaveProperty('deps/__myorg__b/dist/index.d.ts')
     })
 
     it('handles source package importing itself by name', async () => {
@@ -995,7 +995,7 @@ export const result = helper;
       const indexJs = output['dist/index.js'] as string
 
       // Subpath import should be rewritten with preserved subpath
-      expect(indexJs).toContain('../deps/packages/b/dist/utils/helper')
+      expect(indexJs).toContain('../deps/__myorg__b/dist/utils/helper')
       expect(indexJs).not.toContain("'@myorg/b/utils/helper'")
     })
 
@@ -1022,7 +1022,7 @@ export const foo = b.foo;
       const indexJs = output['dist/index.js'] as string
 
       // Dynamic import should be rewritten
-      expect(indexJs).toContain('../deps/packages/b/dist/index.js')
+      expect(indexJs).toContain('../deps/__myorg__b/dist/index.js')
       expect(indexJs).not.toContain("import('@myorg/b')")
     })
 
@@ -1068,8 +1068,8 @@ export const a = 'a-' + b;
       const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app')
 
       // Verify the deps files also have their imports rewritten
-      const libAIndex = output['deps/packages/lib-a/dist/index.js'] as string
-      expect(libAIndex).toContain('../lib-b/dist/index.js')
+      const libAIndex = output['deps/__myorg__lib-a/dist/index.js'] as string
+      expect(libAIndex).toContain('../__myorg__lib-b/dist/index.js')
       expect(libAIndex).not.toContain("'@myorg/lib-b'")
 
       // Verify execution works
@@ -1165,15 +1165,15 @@ console.log('Hello from bin');
       const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '3.9.27' })
 
       expect(output).toMatchObject({
-        'dist/index.js': `import { greet } from '../deps/packages/lib/dist/index.js'; console.log(greet());`,
+        'dist/index.js': `import { greet } from '../deps/__test__lib/dist/index.js'; console.log(greet());`,
         'package.json': {
           main: 'dist/index.js',
           name: '@test/app',
           version: '3.9.27',
         },
-        'deps/packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
-        'deps/packages/lib/extra/utils.js': `export const helper = 'helper';`,
-        'deps/packages/lib/package.json': {
+        'deps/__test__lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
+        'deps/__test__lib/extra/utils.js': `export const helper = 'helper';`,
+        'deps/__test__lib/package.json': {
           files: ['dist', 'extra'],
           main: 'dist/index.js',
           name: '@test/lib',
@@ -1401,7 +1401,7 @@ console.log('Hello from bin');
 
       expect(await runMonocrate(monorepoRoot, 'packages/app')).toMatchObject({
         output: {
-          'deps/packages/lib/.npmrc': 'registry=https://lib.registry.com',
+          'deps/lib/.npmrc': 'registry=https://lib.registry.com',
         },
       })
     })

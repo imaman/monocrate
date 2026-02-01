@@ -94,7 +94,7 @@ describe('publishName feature', () => {
         publish: false,
       })
     ).rejects.toThrow(
-      'Publish name collision: both "package-a" and "package-b" would both be published as "@published/shared-name"'
+      /Publish name collision: both "package-[ab]" and "package-[ab]" would both be published as "@published\/shared-name"/
     )
   })
 
