@@ -8,19 +8,19 @@
 
 ## The Problem
 
-Monorepos are great. Publishing from a monorepo is comically hard:
+Monorepos? Great. Publishing from a monorepo? Comically hard.
 
-Consider `@acme/my-awesome-package`, which imports `@acme/internal-utils`, a workspace dependency. The naive approach, running `npm publish`, produces an uninstallable package because `@acme/internal-utils` was never published to npm.
+Consider `@acme/my-awesome-package`, which imports `@acme/internal-utils`, a workspace dependency. The naive approach, `npm publish`, produces an uninstallable package because `@acme/internal-utils` was never published to npm.
 
 The standard solution is the "publish everything" approach. Tools like [Lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation now works, but `@acme/internal-utils` just became a permanently published API you're committed to maintaining. _Your internal refactoring freedom is gone._
 
-Bundlers offer the opposite approach: tools like [esbuild](https://esbuild.github.io/) or [Rollup](https://rollupjs.org/) produce a self-contained file. But getting the TypeScript declarations (those `.d.ts` files) and the sourcemaps to _dovetail with the bundle_ requires fragile toolchain gymnastics.
+Bundlers offer the opposite approach: tools like [esbuild](https://esbuild.github.io/) or [Rollup](https://rollupjs.org/) produce a self-contained file. But this kills tree shaking, and type declaration/sourcemaps are often broken as well.
 
 ## The Solution
 
-[monocrate](https://www.npmjs.com/package/monocrate) is a publishing CLI that gets this right. It produces a single publishable directory containing all that is needed from your package and its in-repo dependencies. The original file structure is preserved.
+[monocrate](https://www.npmjs.com/package/monocrate) is a publishing CLI that gets this right. It produces a single publishable directory containing everything needed from your package and its in-repo dependencies while preserving the original file structure.
 
-Only one package is published. Tree-shaking works. Sourcemaps work. Types work.
+Internal packages remain unpublished. Only one package to install. Tree-shaking works. Sourcemaps work. Types work.
 
 ## How It Works
 
@@ -31,7 +31,7 @@ Monocrate treats your package as the root of a dependency graph, then builds a s
 2. **File Embedding**: Copies the publishable files (what `npm pack` would include) of each in-repo dependency into the output directory
 3. **Entry Point Resolution**: Examines each package's entry points to compute the exact file locations that imports will resolve to
 4. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path imports (`@acme/internal-utils` -> `../deps/packages/internal-utils/dist/index.js`)
-5. **Dependency Pruning**: Rewrites the dependencies in the `package.json` - removes all workspace packages deps, adds any third-party deps they brought in
+5. **Dependency Pruning**: Rewrites `package.json` dependencies by removing all in-repo deps, adding any third-party deps they brought in
 
 The result is a standard npm package that looks like you hand-crafted it for publication.
 
@@ -67,7 +67,7 @@ Running `npx monocrate packages/my-awesome-package` produces:
                     └── index.js
 ```
 
-Consumers get one package containing exactly the code they need, with no broken dependencies.
+Consumers get one package containing exactly the code they need.
 
 ## Installation
 
@@ -84,7 +84,7 @@ pnpm add --save-dev monocrate
 > npm run build
 > ```
 
-Once the package is built, you can `monocrate` it:
+Once built, just `monocrate` it:
 
 ```bash
 # Publish a package, patch bumping its version
@@ -127,7 +127,7 @@ npx monocrate packages/my-awesome-package --mirror-to ../public-repo
 
 This way, your public repo stays in sync with what you publish—all necessary packages included. Contributors can clone and work on your package.
 
-Requires a clean working tree; only committed files (from `git HEAD`) are mirrored. 
+Requires a clean working tree. Only committed files (from `git HEAD`) are mirrored. 
 
 ### Multiple Packages
 
