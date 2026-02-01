@@ -39,15 +39,16 @@ The result is a standard npm package that looks like you hand-crafted it for pub
 
 Given this monorepo structure:
 ```
-packages/
-├── my-awesome-package/
-│   ├── package.json      # name: @acme/my-awesome-package
-│   └── src/
-│       └── index.ts      # import ... from '@acme/internal-utils'
-└── internal-utils/
-    ├── package.json      # name: @acme/internal-utils (private)
-    └── src/
-        └── index.ts
+/path/to/my-monorepo/
+└── packages/
+    ├── my-awesome-package/
+    │   ├── package.json      # name: @acme/my-awesome-package
+    │   └── src/
+    │       └── index.ts      # import ... from '@acme/internal-utils'
+    └── internal-utils/
+        ├── package.json      # name: @acme/internal-utils (private)
+        └── src/
+            └── index.ts
 ```
 
 Running `npx monocrate packages/my-awesome-package` produces:
