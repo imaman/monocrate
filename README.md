@@ -101,8 +101,6 @@ truth, and `monocrate` computes the next version at publish time. Of course, if 
 For first-time publishing (when the package doesn't exist in the registry yet), `monocrate` treats the current version
 as `0.0.0` and applies the bump—resulting in `0.0.1` for patch, `0.1.0` for minor (the default), or `1.0.0` for major.
 
-#### Using Pre-computed Versions
-
 If your workflow already computes versions (via `npm version`, Changesets, Lerna, etc.), use `--bump package` to read
 the version directly from the package's `package.json`:
 
@@ -146,20 +144,6 @@ console.log(result.summaries[0].version) // '1.3.0'
 
 The above snippet is the programmatic equivalent of `npx monocrate packages/my-awesome-package --bump minor`.
 
-For unified versioning across multiple packages, use `max: true`:
-
-```typescript
-const result = await monocrate({
-  pathToSubjectPackages: ['packages/lib-a', 'packages/lib-b'],
-  publish: true,
-  bump: 'patch',
-  max: true,
-  cwd: process.cwd()
-})
-
-console.log(result.resolvedVersion) // '2.0.1' (unified version)
-```
-
 ## Advanced Features
 
 ### Custom Publish Name
@@ -192,24 +176,24 @@ Requires a clean working tree. Only committed files (from `git HEAD`) are mirror
 
 ### Multiple Packages
 
-You can publish packages separately (`monocrate a; monocrate b`) or together in one command:
+If you have several public packages in your monorepo, publish them in one go by listing multiple directories:
 
 ```bash
 npx monocrate packages/lib-a packages/lib-b --bump patch
 ```
 
-By default, each package is published at its own version (individual versioning). If `lib-a` is at `1.0.0` and `lib-b`
+By default, each package will be published at its own version (individual versioning). If `lib-a` is at `1.0.0` and `lib-b`
 is at `2.0.0`, a patch bump publishes them at `1.0.1` and `2.0.1` respectively.
 
-To align version numbers across packages (à la AWS SDK v3), use the `--max` flag. This computes the maximum version
-across all packages and applies it uniformly:
+You can also publish all specified packages at the same version (unified versioning, à la AWS SDK v3), by using the 
+`--max` flag. This applies the bump to the maximum version and publishes all packages at that version.
 
 ```bash
+# Now both will be published at 2.0.1 (the max)
 npx monocrate packages/lib-a packages/lib-b --bump patch --max
-# Both published at 2.0.1 (the max)
 ```
 
-This is purely a convenience; correctness is unaffected since in-repo dependencies are always embedded.
+This is purely a stylistic choice; correctness is unaffected since in-repo dependencies are always embedded.
 
 ## CLI Reference
 
