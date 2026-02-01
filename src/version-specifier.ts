@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
-const SemVerPart = z.union([z.literal('patch'), z.literal('minor'), z.literal('major')])
-export type VersionSpecifier = { tag: 'major' | 'minor' | 'patch' } | { tag: 'explicit'; value: string }
+const SemVerPart = z.union([z.literal('patch'), z.literal('minor'), z.literal('major'), z.literal('package')])
+export type VersionSpecifier =
+  | { tag: 'major' | 'minor' | 'patch' }
+  | { tag: 'explicit'; value: string }
+  | { tag: 'package' }
 export function parseVersionSpecifier(value: string | undefined): VersionSpecifier | undefined {
   if (value === undefined) {
     return undefined
@@ -15,7 +18,7 @@ export function parseVersionSpecifier(value: string | undefined): VersionSpecifi
   const isSemver = /^\d+\.\d+\.\d+(-[\w.-]+)?(\+[\w.-]+)?$/.test(value)
   if (!isSemver) {
     throw new Error(
-      `Invalid publish value: "${value}". Expected "patch", "minor", "major" or an explicit version such as "1.2.3"`
+      `Invalid publish value: "${value}". Expected "patch", "minor", "major", "package" or an explicit version such as "1.2.3"`
     )
   }
 

@@ -243,9 +243,7 @@ export const message = greet();
           publish: false,
           bump: '2.8.512',
         })
-      ).rejects.toThrow(
-        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js'
-      )
+      ).rejects.toThrow('Import of in-repo package "@test/lib" found in packages/app/dist/index.js')
     })
 
     it('throws when code imports an in-repo package not listed in dependencies (via dynamic import)', async () => {
@@ -268,9 +266,7 @@ export const message = lib.greet();
           publish: false,
           bump: '2.8.512',
         })
-      ).rejects.toThrow(
-        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js'
-      )
+      ).rejects.toThrow('Import of in-repo package "@test/lib" found in packages/app/dist/index.js')
     })
 
     it('works with workspace object format (packages field)', async () => {
@@ -1367,6 +1363,123 @@ console.log('Hello from bin');
     })
   })
 
+  describe('--bump package option', () => {
+    it('uses version from package.json when --bump package is specified', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': {
+          name: '@test/app',
+          version: '3.5.7',
+          main: 'dist/index.js',
+        },
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      const { outputDir } = await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        publish: false,
+        bump: 'package',
+      })
+
+      const output = unfolderify(outputDir)
+      expect((output['package.json'] as Record<string, unknown>).version).toBe('3.5.7')
+    })
+
+    it('throws when package.json has no version field', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': {
+          name: '@test/app',
+          main: 'dist/index.js',
+        },
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackages: 'packages/app',
+          publish: false,
+          bump: 'package',
+        })
+      ).rejects.toThrow('No version found in package.json for "@test/app"')
+    })
+
+    it('throws friendly error for prerelease versions', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': {
+          name: '@test/app',
+          version: '1.0.0-beta.1',
+          main: 'dist/index.js',
+        },
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackages: 'packages/app',
+          publish: false,
+          bump: 'package',
+        })
+      ).rejects.toThrow(
+        'Prerelease versions are not supported with --bump package. Found "1.0.0-beta.1" in package.json for "@test/app". Please use a version in X.Y.Z format.'
+      )
+    })
+
+    it('throws for invalid semver in package.json', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': {
+          name: '@test/app',
+          version: 'not-a-version',
+          main: 'dist/index.js',
+        },
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackages: 'packages/app',
+          publish: false,
+          bump: 'package',
+        })
+      ).rejects.toThrow(
+        'Invalid version "not-a-version" in package.json for "@test/app". Expected a valid semver in X.Y.Z format.'
+      )
+    })
+
+    it('uses maximum version across multiple packages with --bump package', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app1/package.json': {
+          name: '@test/app1',
+          version: '1.2.3',
+          main: 'dist/index.js',
+        },
+        'packages/app1/dist/index.js': `export const app1 = 'app1';`,
+        'packages/app2/package.json': {
+          name: '@test/app2',
+          version: '5.6.7',
+          main: 'dist/index.js',
+        },
+        'packages/app2/dist/index.js': `export const app2 = 'app2';`,
+      })
+
+      const { resolvedVersion } = await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: ['packages/app1', 'packages/app2'],
+        publish: false,
+        bump: 'package',
+      })
+
+      expect(resolvedVersion).toBe('5.6.7')
+    }, 30000)
+  })
+
   describe('.npmrc file handling', () => {
     it('includes .npmrc file when present in package directory', async () => {
       const monorepoRoot = folderify({
@@ -1634,7 +1747,12 @@ console.log('Hello from bin');
       const mirrored = unfolderify(mirrorDir)
 
       expect(mirrored).toEqual({
-        'packages/app/package.json': { name: '@test/app', version: '0.9.9', main: 'dist/index.js', devDependencies: { '@test/build-tool': 'workspace:*' } },
+        'packages/app/package.json': {
+          name: '@test/app',
+          version: '0.9.9',
+          main: 'dist/index.js',
+          devDependencies: { '@test/build-tool': 'workspace:*' },
+        },
         'packages/app/dist/index.js': `export const foo = 'foo';`,
         'packages/build-tool/package.json': { name: '@test/build-tool', version: '0.9.9', main: 'dist/index.js' },
         'packages/build-tool/dist/index.js': `export function build() { return 'building'; }`,
@@ -1681,7 +1799,11 @@ console.log('Hello from bin');
       const mirrored = unfolderify(mirrorDir)
 
       // All 5 packages should be mirrored
-      expect(Object.keys(mirrored).filter((k) => k.endsWith('package.json')).sort()).toEqual([
+      expect(
+        Object.keys(mirrored)
+          .filter((k) => k.endsWith('package.json'))
+          .sort()
+      ).toEqual([
         'packages/app/package.json',
         'packages/build-tool/package.json',
         'packages/lib/package.json',

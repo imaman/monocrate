@@ -10,14 +10,41 @@ async function getCurrentPublishedVersion(
   return (await npmClient.viewVersion(packageName, dir)) ?? '0.0.0'
 }
 
+export function resolveVersionFromPackageJson(packageName: string, packageJsonVersion: string | undefined): string {
+  if (packageJsonVersion === undefined) {
+    throw new Error(`No version found in package.json for "${packageName}"`)
+  }
+
+  const prereleaseMatch = /^\d+\.\d+\.\d+-/.test(packageJsonVersion)
+  if (prereleaseMatch) {
+    throw new Error(
+      `Prerelease versions are not supported with --bump package. Found "${packageJsonVersion}" in package.json for "${packageName}". Please use a version in X.Y.Z format.`
+    )
+  }
+
+  const validSemver = /^\d+\.\d+\.\d+$/.test(packageJsonVersion)
+  if (!validSemver) {
+    throw new Error(
+      `Invalid version "${packageJsonVersion}" in package.json for "${packageName}". Expected a valid semver in X.Y.Z format.`
+    )
+  }
+
+  return packageJsonVersion
+}
+
 export async function resolveVersion(
   npmClient: NpmClient,
   dir: AbsolutePath,
   packageName: string,
-  versionSpecifier: VersionSpecifier
+  versionSpecifier: VersionSpecifier,
+  packageJsonVersion?: string
 ) {
   if (versionSpecifier.tag === 'explicit') {
     return versionSpecifier.value
+  }
+
+  if (versionSpecifier.tag === 'package') {
+    return resolveVersionFromPackageJson(packageName, packageJsonVersion)
   }
 
   const currentVersion = await getCurrentPublishedVersion(npmClient, dir, packageName)
