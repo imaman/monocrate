@@ -28,11 +28,9 @@ sourcemaps often break, and consumers can't tree-shake a pre-bundled blob.
 publishable directory containing everything needed from your package and its in-repo dependencies. Essentially, it 
 produces a standard npm package that looks like you hand-crafted it for publication.
 
-- Consumers - get one package containing exactly the code they need. 
-- Internal packages - remain unpublished.
-- Tree-shaking - works.
-- Sourcemaps - work. 
-- Types - work.
+- 📦 Consumers get one package with exactly the code they need
+- 🔒 Internal packages remain unpublished
+- ✅ Tree-shaking, sourcemaps, and types all work
 
 ### What Gets Published
 
@@ -60,14 +58,13 @@ Running `npx monocrate packages/my-awesome-package` produces:
         │   └── index.js         # rewritten:
         │                        # import ... from '../deps/__acme__internal-utils/dist/index.js'
         └── deps/
-            └── __acme__internal-utils/  # mangled package name
+            └── __acme__internal-utils/  # mangled package name, exact notation may vary.
                 └── dist/
                     └── index.js
 ```
 
 The `deps/` directory is where the files of in-repo dependencies get embedded. Each dependency is placed under a
-mangled version of its package name: `@acme/internal-utils` becomes `__acme__internal-utils`. This avoids name collisions 
-regardless of where packages live in the monorepo.
+mangled version of its package name. This avoids name collisions regardless of where packages live in the monorepo.
 
 ### Version Resolution
 
@@ -224,7 +221,7 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 
 ## The Assembly Process
 
-Here's a conceptual breakdown of the steps that happen at a typcial `monocrate` run:
+Here's a conceptual breakdown of the steps that happen at a typical `monocrate` run:
 
 0. **Setup**: Creates a dedicated output directory
 1. **Version Resolution**: Computes the new version (see [below](#version-resolution))
