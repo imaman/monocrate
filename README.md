@@ -25,15 +25,35 @@ sourcemaps often break, and consumers can't tree-shake a pre-bundled blob.
 ## The Solution
 
 [monocrate](https://www.npmjs.com/package/monocrate) is a publishing CLI that gets this right. It produces a single 
-publishable directory containing everything needed from your package and its in-repo dependencies while preserving the 
-original file structure.
+publishable directory containing everything needed from your package and its in-repo dependencies. Essentially, it 
+produces a standard npm package that looks like you hand-crafted it for publication.
 
-Internal packages remain unpublished. Only one package to install. Tree-shaking works. Sourcemaps work. Types work.
+- 📦 Consumers get one package with exactly the code they need
+- 🔒 Internal packages remain unpublished
+- ✅ Tree-shaking, sourcemaps, and types all work
 
-## How It Works
+### Quickstart
 
-Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure.
-The result is a standard npm package that looks like you hand-crafted it for publication.
+```bash
+pnpm add --save-dev monocrate
+# or: yarn add --dev monocrate
+# or: npm install --save-dev monocrate
+```
+
+> **Note:** `monocrate` publishes, it doesn't build. Run your build first.
+> ```bash
+> npm run build
+> ```
+
+Once built, just `monocrate` it:
+
+```bash
+# Publish a package, patch bumping its version
+npx monocrate packages/my-awesome-package --bump patch
+
+# Use --dry-run to run in "prepare" mode: do everything short of publishing
+npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
+```
 
 ### What Gets Published
 
@@ -61,70 +81,60 @@ Running `npx monocrate packages/my-awesome-package` produces:
         │   └── index.js         # rewritten:
         │                        # import ... from '../deps/__acme__internal-utils/dist/index.js'
         └── deps/
-            └── __acme__internal-utils/  # mangled package name
+            └── __acme__internal-utils/  # mangled package name, exact notation may vary.
                 └── dist/
                     └── index.js
 ```
 
 The `deps/` directory is where the files of in-repo dependencies get embedded. Each dependency is placed under a
-mangled version of its package name: `@acme/internal-utils` becomes `__acme__internal-utils`. This ensures predictable
-paths and avoids name collisions regardless of where packages live in the monorepo.
-
-Consumers get one package containing exactly the code they need.
-
-### The Assembly Process
-
-Here's how monocrate achieves this:
-
-0. **Setup**: Creates a dedicated output directory
-1. **Version Resolution**: Computes the new version (see [below](#version-resolution))
-2. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
-3. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
-4. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
-the exact file locations that import statements will resolve to
-5. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path
-imports (`@acme/internal-utils` becomes `../deps/__acme__internal-utils/dist/index.js`)
-6. **Package.json Rewrite**: Sets the resolved version, removes in-repo deps, and adds any third-party deps they brought in
+mangled version of its package name. This avoids name collisions regardless of where packages live in the monorepo.
 
 ### Version Resolution
 
-Monocrate uses **registry-based versioning**: it queries the registry for the latest published version and bumps it according
-to your `--bump` flag (`patch`, `minor`, `major`). Your source `package.json` is never modified.
+`monocrate` uses **registry-based versioning**: it queries the registry for the latest published version and bumps it
+according to your `--bump` flag (`patch`, `minor`, `major`). Your source `package.json` is never modified.
 
-This means you don't need to maintain version numbers in your monorepo. The registry is the source of truth, and
-monocrate computes the next version at publish time. Of course, if --bump is an exact version ("1.7.9") it is used as-is.
+This means you don't need to maintain version numbers in your source code. The registry is the versioning source of
+truth, and `monocrate` computes the next version at publish time. Of course, if an exact version is specified
+(`--bump 1.7.9`) it is used as-is.
 
-## Installation
+For first-time publishing (when the package doesn't exist in the registry yet), `monocrate` treats the current version
+as `0.0.0` and applies the bump—resulting in `0.0.1` for patch, `0.1.0` for minor (the default), or `1.0.0` for major.
 
-```bash
-pnpm add --save-dev monocrate
-# or: yarn add --dev monocrate
-# or: npm install --save-dev monocrate
-```
-
-## Usage
-
-> **Note:** `monocrate` is a publishing tool, not a build tool. If you have a build script, run it first:
-> ```bash
-> npm run build
-> ```
-
-Once built, just `monocrate` it:
+## Examples
 
 ```bash
-# Publish a package, patch bumping its version
-npx monocrate packages/my-awesome-package --bump patch
-
-# Use --dry-run to run in "prepare" mode: do everything short of publishing
-npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
-
 # --bump defaults to "minor", so these two are equivalent:
 npx monocrate packages/my-awesome-package --bump minor
 npx monocrate packages/my-awesome-package
 
 # Explicit version
 npx monocrate packages/my-awesome-package --bump 2.3.0
+
+# Package location is resolved relative to CWD
+cd /path/to/my-monorepo/packages
+npx monocrate my-awesome-package --bump 2.3.0
 ```
+
+## Programmatic API
+
+For custom build steps, or integration with other tooling, you can use `monocrate` as a library instead of invoking the
+CLI:
+
+```typescript
+import { monocrate } from 'monocrate'
+
+const result = await monocrate({
+  pathToSubjectPackages: ['packages/my-awesome-package'],
+  publish: true,
+  bump: 'minor',
+  cwd: process.cwd()
+})
+
+console.log(result.resolvedVersion) // '1.3.0'
+```
+
+The above snippet is the programmatic equivalent of `npx monocrate packages/my-awesome-package --bump minor`.
 
 ## Advanced Features
 
@@ -191,32 +201,14 @@ monocrate <packages...> [options]
 | `--help` | | | | Show help |
 | `--version` | | | | Show version number |
 
-## Programmatic API
 
-For CI pipelines, custom build steps, or integration with other tooling, you can use monocrate as a library instead of invoking the CLI:
+## API Reference
 
-```typescript
-import { monocrate } from 'monocrate'
-
-const result = await monocrate({
-  pathToSubjectPackages: ['packages/my-awesome-package'],
-  publish: true,
-  bump: 'minor',
-  cwd: process.cwd()
-})
-
-console.log(result.resolvedVersion) // '1.3.0'
-```
-
-The above snippet is the programmatic equivalent of `npx monocrate packages/my-awesome-package --bump minor`.
-
-### API Reference
-
-#### `monocrate(options): Promise<MonocrateResult>`
+### `monocrate(options): Promise<MonocrateResult>`
 
 Assembles one or more monorepo packages and their in-repo dependencies, and optionally publishes to npm.
 
-#### `MonocrateOptions`
+### `MonocrateOptions`
 
 | Property | Type | Required | Default | Description |
 |----------|------|----------|---------|-------------|
@@ -229,7 +221,7 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `mirrorTo` | `string` | No | — | Mirror source files to this directory. |
 | `npmrcPath` | `string` | No | — | Path to `.npmrc` file for npm authentication. |
 
-#### `MonocrateResult`
+### `MonocrateResult`
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -237,3 +229,17 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `resolvedVersion` | `string` | The resolved version that was applied. |
 | `summaries` | `Array<{ packageName: string; outputDir: string }>` | Details for each assembled package. |
 
+
+## The Assembly Process
+
+Here's a conceptual breakdown of the steps that happen at a typical `monocrate` run:
+
+0. **Setup**: Creates a dedicated output directory
+1. **Version Resolution**: Computes the new version (see [above](#version-resolution))
+2. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
+3. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
+4. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
+the exact file locations that import statements will resolve to
+5. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path
+imports (`@acme/internal-utils` becomes `../deps/__acme__internal-utils/dist/index.js`)
+6. **Package.json Rewrite**: Sets the resolved version, removes in-repo deps, and adds any third-party deps they brought in
