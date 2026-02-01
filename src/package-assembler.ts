@@ -52,7 +52,17 @@ export class PackageAssembler {
     await fsPromises.mkdir(outputDir, { recursive: true })
     const copiedFiles = await new FileCopier(packageMap).copy()
     const isInRepoPackage = (pkgName: string) => this.explorer.lookupPackage(pkgName) !== undefined
-    await new ImportRewriter(packageMap, isInRepoPackage).rewriteAll(copiedFiles)
+    const toRepoPath = (outputPath: AbsolutePath): string => {
+      for (const loc of packageMap.values()) {
+        if (outputPath.startsWith(loc.toDir)) {
+          const relativePath = outputPath.slice(loc.toDir.length + 1) // +1 for the path separator
+          const pkg = this.explorer.getPackage(loc.name)
+          return `${pkg.pathInRepo}/${relativePath}`
+        }
+      }
+      return outputPath // fallback to absolute path if no match
+    }
+    await new ImportRewriter(packageMap, isInRepoPackage, toRepoPath).rewriteAll(copiedFiles)
 
     // This must happen after file copying completes (otherwise the rewritten package.json could be overwritten)
     rewritePackageJson(closure, newVersion, outputDir)
