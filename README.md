@@ -130,7 +130,6 @@ different name without renaming the package across your monorepo:
 ```json
 {
   "name": "@acme/my-awesome-package",
-  ...
   "monocrate": {
     "publishName": "best-package-ever"
   }
