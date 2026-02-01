@@ -33,6 +33,7 @@ Internal packages remain unpublished. Only one package to install. Tree-shaking 
 ## How It Works
 
 Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure.
+The result is a standard npm package that looks like you hand-crafted it for publication.
 
 ### What Gets Published
 
