@@ -252,7 +252,8 @@ export const message = greet();
           bump: '2.8.512',
         })
       ).rejects.toThrow(
-        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js'
+        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js, ' +
+          'but "@test/lib" is not listed in package.json dependencies'
       )
     })
 

@@ -1,4 +1,5 @@
 import * as fsPromises from 'node:fs/promises'
+import * as path from 'node:path'
 import { collectPackageLocations } from './collect-package-locations.js'
 import { FileCopier } from './file-copier.js'
 import { ImportRewriter } from './import-rewriter.js'
@@ -55,9 +56,9 @@ export class PackageAssembler {
     const toRepoPath = (outputPath: AbsolutePath): string => {
       for (const loc of packageMap.values()) {
         if (outputPath.startsWith(loc.toDir)) {
-          const relativePath = outputPath.slice(loc.toDir.length + 1) // +1 for the path separator
+          const relativePath = outputPath.slice(loc.toDir.length + 1)
           const pkg = this.explorer.getPackage(loc.name)
-          return `${pkg.pathInRepo}/${relativePath}`
+          return path.join(pkg.pathInRepo, relativePath)
         }
       }
       throw new Error(`Could not map output path to repo path: ${outputPath}`)
