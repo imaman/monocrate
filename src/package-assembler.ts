@@ -60,7 +60,7 @@ export class PackageAssembler {
           return `${pkg.pathInRepo}/${relativePath}`
         }
       }
-      return outputPath // fallback to absolute path if no match
+      throw new Error(`Could not map output path to repo path: ${outputPath}`)
     }
     await new ImportRewriter(packageMap, isInRepoPackage, toRepoPath).rewriteAll(copiedFiles)
 

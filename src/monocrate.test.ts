@@ -252,7 +252,7 @@ export const message = greet();
           bump: '2.8.512',
         })
       ).rejects.toThrow(
-        'Import of in-repo package "@test/lib" found in'
+        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js'
       )
     })
 
@@ -276,7 +276,7 @@ export const message = greet();
           bump: '2.8.512',
         })
       ).rejects.toThrow(
-        'Import of in-repo package "@test/lib" found in'
+        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js'
       )
     })
 
@@ -301,7 +301,7 @@ export const message = lib.greet();
           bump: '2.8.512',
         })
       ).rejects.toThrow(
-        'Import of in-repo package "@test/lib" found in'
+        'Import of in-repo package "@test/lib" found in packages/app/dist/index.js'
       )
     })
 
