@@ -16,6 +16,7 @@ export const PackageJson = z
     dependencies: z.partialRecord(z.string(), z.string()).optional(),
     devDependencies: z.partialRecord(z.string(), z.string()).optional(),
     peerDependencies: z.partialRecord(z.string(), z.string()).optional(),
+    optionalDependencies: z.partialRecord(z.string(), z.string()).optional(),
     description: z.string().optional(),
     keywords: z.array(z.string()).optional(),
     author: z.union([z.string(), z.object({ name: z.string(), email: z.string().optional() })]).optional(),
