@@ -24,7 +24,7 @@ export type { MonocrateResult } from './monocrate-result.js'
  */
 export async function monocrate(options: MonocrateOptions): Promise<MonocrateResult> {
   // Determine whether to use unified max version or individual versions per package
-  const useMax = options.max ?? true
+  const useMax = options.max ?? false
 
   // Resolve and validate cwd first, then use it to resolve all other paths
   const cwd = AbsolutePath(path.resolve(options.cwd))
