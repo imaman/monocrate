@@ -188,6 +188,26 @@ npx monocrate packages/lib-a packages/lib-b --bump patch --max
 
 This is purely a stylistic choice; correctness is unaffected since in-repo dependencies are always embedded.
 
+## Scope
+
+monocrate makes a few deliberate choices:
+
+- **Runtime dependencies only** — Only `dependencies` are traversed and embedded. `devDependencies` are ignored since 
+consumers don't need your build tools.
+- **Version conflicts fail early** — If two in-repo packages require different versions of the same third-party 
+dependency, monocrate stops with a clear error rather than silently picking one.
+- **File selection via `npm pack`** — monocrate respects your existing `files` field in package.json. No extra 
+configuration needed.
+- **Validates before heavy work** — npm login and other prerequisites are checked upfront, before any file copying 
+begins.
+
+A few constraints to be aware of:
+
+- **Dynamic imports must use string literals** — `await import('@pkg/lib')` works; `await import(variable)` doesn't, 
+since static analysis can't follow variables.
+- **Prerelease versions require explicit `--bump`** — `--bump package` expects strict semver (`X.Y.Z`). For prereleases,
+pass the version explicitly: `--bump 1.0.0-beta.1`.
+
 ## CLI Reference
 
 ```
