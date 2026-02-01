@@ -35,23 +35,18 @@ produces a standard npm package that looks like you hand-crafted it for publicat
 ### Quickstart
 
 ```bash
+# Install
 pnpm add --save-dev monocrate
 # or: yarn add --dev monocrate
 # or: npm install --save-dev monocrate
-```
 
-> **Note:** `monocrate` publishes, it doesn't build. Run your build first.
-> ```bash
-> npm run build
-> ```
+# Build (monocrate publishes, it doesn't build)
+npm run build
 
-Once built, just `monocrate` it:
-
-```bash
-# Publish a package, patch bumping its version
+# Publish
 npx monocrate packages/my-awesome-package --bump patch
 
-# Use --dry-run to run in "prepare" mode: do everything short of publishing
+# Or use --dry-run to do everything short of publishing
 npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
 ```
 
