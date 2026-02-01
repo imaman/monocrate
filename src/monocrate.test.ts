@@ -1383,7 +1383,7 @@ console.log('Hello from bin');
       })
 
       const output = unfolderify(outputDir)
-      expect((output['package.json'] as Record<string, unknown>).version).toBe('3.5.7')
+      expect(output).toMatchObject({ 'package.json': { version: '3.5.7' } })
     })
 
     it('throws when package.json has no version field', async () => {
