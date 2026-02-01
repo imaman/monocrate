@@ -88,7 +88,7 @@ pnpm add --save-dev monocrate
 
 ## Usage
 
-> **Note:** `monocrate` is a publishing tool, not a build tool. If you have a build script, run it first:
+> **Note:** `monocrate` publishes, it doesn't build. Run your build first.
 > ```bash
 > npm run build
 > ```
@@ -109,6 +109,24 @@ npx monocrate packages/my-awesome-package
 # Explicit version
 npx monocrate packages/my-awesome-package --bump 2.3.0
 ```
+## Programmatic API
+
+For CI pipelines, custom build steps, or integration with other tooling, you can use monocrate as a library instead of invoking the CLI:
+
+```typescript
+import { monocrate } from 'monocrate'
+
+const result = await monocrate({
+  pathToSubjectPackages: ['packages/my-awesome-package'],
+  publish: true,
+  bump: 'minor',
+  cwd: process.cwd()
+})
+
+console.log(result.resolvedVersion) // '1.3.0'
+```
+
+The above snippet is the programmatic equivalent of `npx monocrate packages/my-awesome-package --bump minor`.
 
 ## Advanced Features
 
@@ -175,32 +193,14 @@ monocrate <packages...> [options]
 | `--help` | | | | Show help |
 | `--version` | | | | Show version number |
 
-## Programmatic API
 
-For CI pipelines, custom build steps, or integration with other tooling, you can use monocrate as a library instead of invoking the CLI:
+## API Reference
 
-```typescript
-import { monocrate } from 'monocrate'
-
-const result = await monocrate({
-  pathToSubjectPackages: ['packages/my-awesome-package'],
-  publish: true,
-  bump: 'minor',
-  cwd: process.cwd()
-})
-
-console.log(result.resolvedVersion) // '1.3.0'
-```
-
-The above snippet is the programmatic equivalent of `npx monocrate packages/my-awesome-package --bump minor`.
-
-### API Reference
-
-#### `monocrate(options): Promise<MonocrateResult>`
+### `monocrate(options): Promise<MonocrateResult>`
 
 Assembles one or more monorepo packages and their in-repo dependencies, and optionally publishes to npm.
 
-#### `MonocrateOptions`
+### `MonocrateOptions`
 
 | Property | Type | Required | Default | Description |
 |----------|------|----------|---------|-------------|
@@ -213,7 +213,7 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `mirrorTo` | `string` | No | — | Mirror source files to this directory. |
 | `npmrcPath` | `string` | No | — | Path to `.npmrc` file for npm authentication. |
 
-#### `MonocrateResult`
+### `MonocrateResult`
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -222,9 +222,9 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `summaries` | `Array<{ packageName: string; outputDir: string }>` | Details for each assembled package. |
 
 
-### The Assembly Process
+## The Assembly Process
 
-Here's how monocrate achieves this:
+Here's a conceptual breakdown of the steps that happen at a typcial `monocrate` run:
 
 0. **Setup**: Creates a dedicated output directory
 1. **Version Resolution**: Computes the new version (see [below](#version-resolution))
