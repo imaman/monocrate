@@ -205,8 +205,11 @@ A few constraints to be aware of:
 
 - **Dynamic imports must use string literals** — `await import('@pkg/lib')` works; `await import(variable)` doesn't, 
 since static analysis can't follow variables.
-- **Prerelease versions require explicit `--bump`** — `--bump package` expects strict semver (`X.Y.Z`). For prereleases,
-pass the version explicitly: `--bump 1.0.0-beta.1`.
+- **Prerelease versions require explicit `--bump`** — `--bump package` expects strict semver (`X.Y.Z`). For prereleases, pass the version explicitly: `--bump 1.0.0-beta.1`.
+- **peerDependencies are preserved, not embedded** — As with any npm package, you're responsible for ensuring peer dependencies (in-repo or not) are published and available to consumers.
+- **optionalDependencies are preserved, not embedded** — If you list an in-repo package as optional, you're responsible for publishing it separately.
+- **Symlinks must stay within monorepo** — Packages symlinked from outside the monorepo root are rejected.
+- **Undeclared in-repo imports fail** — If your code imports an in-repo package not listed in `dependencies`, monocrate catches this and fails with a clear error.
 
 ## CLI Reference
 
