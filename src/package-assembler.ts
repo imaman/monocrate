@@ -56,7 +56,7 @@ export class PackageAssembler {
     const toRepoPath = (outputPath: AbsolutePath): string => {
       for (const loc of packageMap.values()) {
         if (outputPath.startsWith(loc.toDir)) {
-          const relativePath = outputPath.slice(loc.toDir.length + 1)
+          const relativePath = outputPath.slice(loc.toDir.length)
           const pkg = this.explorer.getPackage(loc.name)
           return path.join(pkg.pathInRepo, relativePath)
         }
