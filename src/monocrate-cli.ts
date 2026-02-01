@@ -1,3 +1,5 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { createRequire } from 'node:module'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
@@ -86,11 +88,16 @@ Usage: $0 <packages...> [options]`
         monorepoRoot: args.root,
         bump: args.bump,
         publish: !args['dry-run'],
-        report: args.report,
         cwd: process.cwd(),
         mirrorTo: args['mirror-to'],
       }
-      await monocrate(options)
+      const result = await monocrate(options)
+      if (args.report) {
+        const outputFilePath = path.resolve(process.cwd(), args.report)
+        fs.writeFileSync(outputFilePath, result.resolvedVersion)
+      } else {
+        console.log(result.resolvedVersion)
+      }
     })
     .catch((error: unknown) => {
       console.error('Fatal error:', error instanceof Error ? error.stack : error)
