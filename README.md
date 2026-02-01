@@ -80,8 +80,8 @@ Running `npx monocrate packages/my-awesome-package` produces:
 
 The `deps/` directory is where the files of in-repo dependencies get embedded. It preserves the original monorepo
 path structure: since `internal-utils` lived at `packages/internal-utils`, it ends up at `deps/packages/internal-utils`.
-If it had been at `libs/shared/utils`, it would be at `deps/libs/shared/utils`. This mirroring ensures predictable
-paths and avoids name collisions.
+If it had been at `libs/shared/utils`, it would be at `deps/libs/shared/utils`. This ensures predictable paths and
+avoids name collisions.
 
 Consumers get one package containing exactly the code they need.
 
