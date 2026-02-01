@@ -65,9 +65,9 @@ packages/
 Running `npx monocrate packages/my-awesome-package` produces:
 
 ```
-<tmpdir>/
+/tmp/monocrate-xxxxxx/
 └── __acme__my-awesome-package/  # mangled package name
-    ├── package.json      # name: @acme/my-awesome-package
+    ├── package.json             # name: @acme/my-awesome-package
     ├── dist/
     │   └── index.js      # rewritten:
     │                     # import ... from '../deps/packages/internal-utils/dist/index.js'
