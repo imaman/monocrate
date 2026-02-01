@@ -70,25 +70,23 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
     throw new Error(`Incosistency - could not find an assembler for the first package`)
   }
 
-  // versionSpecifier is always defined (defaults to 'minor'), so computeNewVersion always returns a string
   const pairs = await Promise.all(
-    assemblers.map(async (a) => [a, await a.computeNewVersion(versionSpecifier)] as const)
+    assemblers.map(async (a) => ({ assembler: a, version: await a.computeNewVersion(versionSpecifier) }))
   )
-  const pair0 = pairs.at(0)
-  if (!pair0) {
+
+  let max = pairs.at(0)?.version
+  if (!max) {
     throw new Error('Inconsistency - no versions computed')
   }
-  let max = pair0[1]
-  for (const [_, v] of pairs) {
-    max = maxVersion(max, v)
+  for (const at of pairs) {
+    max = maxVersion(max, at.version)
   }
 
-  // Pair each assembler with its version for easy iteration
-  const assemblersWithVersions = pairs.map(([assembler, v]) => ({ assembler, version: useMax ? max : v }))
+  const resolvedPairs = pairs.map((at) => ({ ...at, version: useMax ? max : at.version }))
   const allPackagesForMirror = new Map<string, MonorepoPackage>()
 
   // Phase 1: Assemble all packages and publish with --tag pending
-  for (const { assembler, version } of assemblersWithVersions) {
+  for (const { assembler, version } of resolvedPairs) {
     const { compiletimeMembers } = await assembler.assemble(version)
     for (const pkg of compiletimeMembers) {
       allPackagesForMirror.set(pkg.name, pkg)
@@ -101,7 +99,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
 
   // Phase 2: Move 'latest' tag to all published packages (only if all publishes succeeded)
   if (options.publish) {
-    for (const { assembler, version } of assemblersWithVersions) {
+    for (const { assembler, version } of resolvedPairs) {
       await npmClient.distTagAdd(`${assembler.publishAs}@${version}`, 'latest', assembler.getOutputDir())
     }
   }
@@ -115,7 +113,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   return {
     outputDir: a0.getOutputDir(),
     resolvedVersion: useMax ? max : undefined,
-    summaries: assemblersWithVersions.map(({ assembler, version }) => ({
+    summaries: resolvedPairs.map(({ assembler, version }) => ({
       outputDir: assembler.getOutputDir(),
       packageName: assembler.pkgName,
       version,
