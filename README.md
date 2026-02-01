@@ -196,8 +196,8 @@ monocrate makes a few deliberate choices:
 consumers don't need your build tools.
 - **Version conflicts fail early** — If two in-repo packages require different versions of the same third-party 
 dependency, monocrate stops with a clear error rather than silently picking one.
-- **File selection via `npm pack`** — monocrate respects your existing `files` field in package.json. No extra 
-configuration needed.
+- **File selection via `npm pack`** — Your `files` field in package.json is the source of truth for what gets published.
+monocrate doesn't introduce its own file configuration.
 - **Validates before heavy work** — npm login and other prerequisites are checked upfront, before any file copying 
 begins.
 
