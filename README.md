@@ -8,8 +8,6 @@
 
 ## The Problem
 
-Here is the distillation:
-
 Consider `@acme/my-awesome-package`, which imports `@acme/internal-utils`, a workspace dependency. The naive 
 approach - running `npm publish` - produces an uninstallable package because `@acme/internal-utils` was never published
 to npm.
@@ -35,23 +33,18 @@ produces a standard npm package that looks like you hand-crafted it for publicat
 ### Quickstart
 
 ```bash
+# Install
 pnpm add --save-dev monocrate
 # or: yarn add --dev monocrate
 # or: npm install --save-dev monocrate
-```
 
-> **Note:** `monocrate` publishes, it doesn't build. Run your build first.
-> ```bash
-> npm run build
-> ```
+# Build (monocrate publishes, it doesn't build)
+npm run build
 
-Once built, just `monocrate` it:
-
-```bash
-# Publish a package, patch bumping its version
+# Publish
 npx monocrate packages/my-awesome-package --bump patch
 
-# Use --dry-run to run in "prepare" mode: do everything short of publishing
+# Or use --dry-run to do everything short of publishing
 npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
 ```
 
@@ -101,6 +94,14 @@ truth, and `monocrate` computes the next version at publish time. Of course, if 
 For first-time publishing (when the package doesn't exist in the registry yet), `monocrate` treats the current version
 as `0.0.0` and applies the bump—resulting in `0.0.1` for patch, `0.1.0` for minor (the default), or `1.0.0` for major.
 
+If the version to publish to is already set in the package's `package.json` file (via `npm version`, Changesets, Lerna,
+etc.), you can use `--bump package` to read the version directly from there:
+
+```bash
+npm version minor --no-git-tag-version   # Sets version in package.json
+npx monocrate . --bump package           # Uses that version
+```
+
 ## Examples
 
 ```bash
@@ -131,7 +132,7 @@ const result = await monocrate({
   cwd: process.cwd()
 })
 
-console.log(result.resolvedVersion) // '1.3.0'
+console.log(result.summaries[0].version) // '1.3.0'
 ```
 
 The above snippet is the programmatic equivalent of `npx monocrate packages/my-awesome-package --bump minor`.
@@ -140,8 +141,8 @@ The above snippet is the programmatic equivalent of `npx monocrate packages/my-a
 
 ### Custom Publish Name
 
-Sometimes your internal package name doesn't match the name you want on npm. Use `publishName` to publish under a
-different name without renaming the package across your monorepo:
+Sometimes your internal package name doesn't match the name you want on npm. Add a `monocrate.publishName` field to 
+your `package.json` to publish under a different name without renaming the package across your monorepo:
 
 ```json
 {
@@ -168,13 +169,46 @@ Requires a clean working tree. Only committed files (from `git HEAD`) are mirror
 
 ### Multiple Packages
 
-You can publish packages separately (`monocrate a; monocrate b`) or together in one command. Publishing together
-aligns their version numbers—useful when you want a unified version scheme across related packages (à la AWS SDK v3).
-This is purely a convenience; correctness is unaffected since in-repo dependencies are always embedded:
+If you have several public packages in your monorepo, publish them in one go by listing multiple directories:
 
 ```bash
-npx monocrate packages/lib-a packages/lib-b --bump 2.4.0
+npx monocrate packages/lib-a packages/lib-b --bump patch
 ```
+
+By default, each package will be published at its own version (individual versioning). If `lib-a` is at `1.0.0` and `lib-b`
+is at `2.0.0`, a patch bump publishes them at `1.0.1` and `2.0.1` respectively.
+
+You can also publish all specified packages at the same version (unified versioning, à la AWS SDK v3), by using the 
+`--max` flag. This applies the bump to the maximum version and publishes all packages at that version.
+
+```bash
+# Now both will be published at 2.0.1 (the max)
+npx monocrate packages/lib-a packages/lib-b --bump patch --max
+```
+
+This is purely a stylistic choice; correctness is unaffected since in-repo dependencies are always embedded.
+
+## Scope
+
+monocrate makes a few deliberate choices:
+
+- **Runtime dependencies only** — Only `dependencies` are traversed and embedded. `devDependencies` are ignored since 
+consumers don't need your build tools.
+- **Version conflicts fail early** — If two in-repo packages require different versions of the same third-party 
+dependency, monocrate stops with a clear error rather than silently picking one.
+- **File selection via `npm pack`** — Your `files` field in package.json is the source of truth for what gets published.
+monocrate doesn't introduce its own file configuration.
+- **Validates before heavy work** — npm login and other prerequisites are checked upfront, before any file copying 
+begins.
+
+A few constraints to be aware of:
+
+- **Dynamic imports must use string literals** — `await import('@pkg/lib')` works; if a dynamic module path like `await import(variable)` is detected, `monocrate` stops with a clear error.
+- **Prerelease versions require explicit `--bump`** — `--bump package` expects strict semver (`X.Y.Z`). For prereleases, pass the version explicitly: `--bump 1.0.0-beta.1`.
+- **peerDependencies are preserved, not embedded** — As with any package publishing tool, you're responsible for ensuring peer dependencies (in-repo or not) are published and available to consumers.
+- **optionalDependencies are preserved, not embedded** — If you list an in-repo package as optional, you're responsible for publishing it separately.
+- **Symlinks must stay within monorepo** — Packages symlinked from outside the monorepo root are rejected.
+- **Undeclared in-repo imports fail** — If your code imports an in-repo package not listed in `dependencies`, monocrate catches this and fails with a clear error.
 
 ## CLI Reference
 
@@ -192,7 +226,8 @@ monocrate <packages...> [options]
 
 | Option | Alias | Type | Default | Description |
 |--------|-------|------|---------|-------------|
-| `--bump` | `-b` | `string` | `minor` | Version bump strategy: `patch`, `minor`, `major`, or explicit semver (e.g., `2.3.0`) |
+| `--bump` | `-b` | `string` | `minor` | Version bump strategy: `patch`, `minor`, `major`, `package`, or explicit semver (e.g., `2.3.0`). Use `package` to read version from `package.json`. |
+| `--max` | | `boolean` | `false` | Use max version across all packages (unified versioning). When false, each package uses its own version. |
 | `--dry-run` | `-d` | `boolean` | `false` | Prepare the package without publishing to npm |
 | `--output-dir` | `-o` | `string` | (temp dir) | Directory where assembled package is written |
 | `--root` | `-r` | `string` | (auto) | Monorepo root directory (auto-detected if omitted) |
@@ -215,7 +250,8 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `pathToSubjectPackages` | `string \| string[]` | Yes | — | Package directories to assemble. Relative paths resolved from `cwd`. |
 | `publish` | `boolean` | Yes | — | Whether to publish to npm after assembly. |
 | `cwd` | `string` | Yes | — | Base directory for resolving relative paths. |
-| `bump` | `string` | No | `"minor"` | Version specifier: `"patch"`, `"minor"`, `"major"`, or explicit semver. |
+| `bump` | `string` | No | `"minor"` | Version specifier: `"patch"`, `"minor"`, `"major"`, `"package"`, or explicit semver. |
+| `max` | `boolean` | No | `false` | Use max version across all packages (unified versioning). |
 | `outputRoot` | `string` | No | (temp dir) | Output directory for the assembled package. |
 | `monorepoRoot` | `string` | No | (auto) | Monorepo root directory; auto-detected if omitted. |
 | `mirrorTo` | `string` | No | — | Mirror source files to this directory. |
@@ -226,8 +262,8 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | Property | Type | Description |
 |----------|------|-------------|
 | `outputDir` | `string` | Directory where the first package was assembled. |
-| `resolvedVersion` | `string` | The resolved version that was applied. |
-| `summaries` | `Array<{ packageName: string; outputDir: string }>` | Details for each assembled package. |
+| `resolvedVersion` | `string \| undefined` | The unified resolved version (only set when `max: true`). |
+| `summaries` | `Array<{ packageName: string; outputDir: string; version: string }>` | Details for each assembled package, including its version. |
 
 
 ## The Assembly Process
