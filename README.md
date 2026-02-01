@@ -4,41 +4,40 @@
 [![CI](https://github.com/imaman/monocrate/actions/workflows/ci.yml/badge.svg)](https://github.com/imaman/monocrate/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-*Because publishing from a monorepo should take seconds, not days.*
+*Monorepos? Great. Publishing from a monorepo? Comically hard.*
 
 ## The Problem
 
-Monorepos are great. Publishing from a monorepo is comically hard:
+Here is the distillation:
 
-Consider `@acme/my-awesome-package`, which imports `@acme/internal-utils`, a workspace dependency. The naive approach, running `npm publish`, produces an uninstallable package because `@acme/internal-utils` was never published to npm.
+Consider `@acme/my-awesome-package`, which imports `@acme/internal-utils`, a workspace dependency. The naive 
+approach - running `npm publish` - produces an uninstallable package because `@acme/internal-utils` was never published
+to npm.
 
-The standard solution is the "publish everything" approach. Tools like [Lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation now works, but `@acme/internal-utils` just became a permanently published API you're committed to maintaining. _Your internal refactoring freedom is gone._
+The standard solution is the "publish everything" approach. Tools like [Lerna](https://lerna.js.org/) will publish every
+internal dependency as its own public package. Installation now works, but `@acme/internal-utils` just became a 
+permanently published API you're committed to maintaining. _Your internal refactoring freedom is gone._
 
-Bundlers offer the opposite approach: tools like [esbuild](https://esbuild.github.io/) or [Rollup](https://rollupjs.org/) produce a self-contained file. But getting the TypeScript declarations (those `.d.ts` files) and the sourcemaps to _dovetail with the bundle_ requires fragile toolchain gymnastics.
+You can throw a bundler at the problem: tools like [esbuild](https://esbuild.github.io/) or 
+[Rollup](https://rollupjs.org/) produce a self-contained file from a given entrypoint. But type declarations and 
+sourcemaps often break, and consumers can't tree-shake a pre-bundled blob.
 
 ## The Solution
 
-[monocrate](https://www.npmjs.com/package/monocrate) solves this cleanly: a publishing CLI built for the monorepo era, it collects your package and its transitive internal dependencies into a single publishable unit.
+[monocrate](https://www.npmjs.com/package/monocrate) is a publishing CLI that gets this right. It produces a single 
+publishable directory containing everything needed from your package and its in-repo dependencies while preserving the 
+original file structure.
 
-It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
+Internal packages remain unpublished. Only one package to install. Tree-shaking works. Sourcemaps work. Types work.
 
 ## How It Works
 
-Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure:
-
-0. **Setup**: Creates a dedicated output directory
-1. **Dependency Discovery**: Traverses the dependency graph to find all workspace packages your code depends on, transitively
-2. **File Embedding**: Copies the publishable files (what `npm pack` would include) of each internal dependency into the output directory
-3. **Entry Point Resolution**: Examines each package's entry points to compute the exact file locations that imports will resolve to
-4. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path imports (`@acme/internal-utils` -> `../deps/packages/internal-utils/dist/index.js`)
-5. **Dependency Pruning**: Rewrites the dependencies in the `package.json` - removes all workspace packages deps, adds any third-party deps they brought in
-
+Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure.
 The result is a standard npm package that looks like you hand-crafted it for publication.
 
 ### What Gets Published
 
 Given this monorepo structure:
-
 ```
 packages/
 ├── my-awesome-package/
@@ -52,11 +51,10 @@ packages/
 ```
 
 Running `npx monocrate packages/my-awesome-package` produces:
-
 ```
-<tmpdir>/
-└── __acme__my-awesome-package/
-    ├── package.json      # name: @acme/my-awesome-package
+/tmp/monocrate-xxxxxx/
+└── __acme__my-awesome-package/  # mangled package name
+    ├── package.json             # name: "@acme/my-awesome-package", version: "1.3.0" (the new resolved version)
     ├── dist/
     │   └── index.js      # rewritten:
     │                     # import ... from '../deps/packages/internal-utils/dist/index.js'
@@ -67,7 +65,34 @@ Running `npx monocrate packages/my-awesome-package` produces:
                     └── index.js
 ```
 
-Consumers get one package containing exactly the code they need, with no broken references to private workspace packages.
+The `deps/` directory is where the files of in-repo dependencies get embedded. It preserves the original monorepo
+path structure: since `internal-utils` lived at `packages/internal-utils`, it ends up at `deps/packages/internal-utils`.
+If it had been at `libs/shared/utils`, it would be at `deps/libs/shared/utils`. This ensures predictable paths and
+avoids name collisions.
+
+Consumers get one package containing exactly the code they need.
+
+### The Assembly Process
+
+Here's how monocrate achieves this:
+
+0. **Setup**: Creates a dedicated output directory
+1. **Version Resolution**: Computes the new version (see [below](#version-resolution))
+2. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
+3. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
+4. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
+the exact file locations that import statements will resolve to
+5. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path
+imports (`@acme/internal-utils` becomes `../deps/packages/internal-utils/dist/index.js`)
+6. **Package.json Rewrite**: Sets the resolved version, removes in-repo deps, and adds any third-party deps they brought in
+
+### Version Resolution
+
+Monocrate uses **registry-based versioning**: it queries the registry for the latest published version and bumps it according
+to your `--bump` flag (`patch`, `minor`, `major`). Your source `package.json` is never modified.
+
+This means you don't need to maintain version numbers in your monorepo. The registry is the source of truth, and
+monocrate computes the next version at publish time. Of course, if --bump is an exact version ("1.7.9") it is used as-is.
 
 ## Installation
 
@@ -84,7 +109,7 @@ pnpm add --save-dev monocrate
 > npm run build
 > ```
 
-Once the package is built, you can `monocrate` it:
+Once built, just `monocrate` it:
 
 ```bash
 # Publish a package, patch bumping its version
@@ -93,7 +118,7 @@ npx monocrate packages/my-awesome-package --bump patch
 # Use --dry-run to run in "prepare" mode: do everything short of publishing
 npx monocrate packages/my-awesome-package --dry-run --output-dir /tmp/inspect --bump patch
 
-# --bump defaults to "minor", so these two are identical:
+# --bump defaults to "minor", so these two are equivalent:
 npx monocrate packages/my-awesome-package --bump minor
 npx monocrate packages/my-awesome-package
 
@@ -101,16 +126,16 @@ npx monocrate packages/my-awesome-package
 npx monocrate packages/my-awesome-package --bump 2.3.0
 ```
 
-> **Note:** `monocrate` does not modify your source code. Bump strategies are applied to the package's most recent version on the registry, not the version in your local `package.json`.
+## Advanced Features
 
 ### Custom Publish Name
 
-Publish `@acme/my-awesome-package` as `best-package-ever` without a repo-wide rename:
+Sometimes your internal package name doesn't match the name you want on npm. Use `publishName` to publish under a
+different name without renaming the package across your monorepo:
 
 ```json
 {
   "name": "@acme/my-awesome-package",
-  ...
   "monocrate": {
     "publishName": "best-package-ever"
   }
@@ -119,37 +144,41 @@ Publish `@acme/my-awesome-package` as `best-package-ever` without a repo-wide re
 
 ### Mirroring to a Public Repo
 
-Want to open-source your package while keeping your monorepo private? Use `--mirror-to` to copy the package and its internal dependencies to a separate public repository:
+Want to open-source your package while keeping your monorepo private? Use `--mirror-to` to copy the package and its
+in-repo dependencies to a separate public repository:
 
 ```bash
 npx monocrate packages/my-awesome-package --mirror-to ../public-repo
 ```
 
-This way, your public repo is self-contained—no dangling references to internal packages. Contributors can clone and work on your package.
+This way, your public repo stays in sync with what you publish—all necessary packages included. Contributors can
+clone and work on your package.
 
-Only committed files (from `git HEAD`) are mirrored; fails if untracked files exist.
+Requires a clean working tree. Only committed files (from `git HEAD`) are mirrored.
 
 ### Multiple Packages
 
-Publish several packages together with the same version:
+You can publish packages separately (`monocrate a; monocrate b`) or together in one command. Publishing together
+aligns their version numbers—useful when you want a unified version scheme across related packages (à la AWS SDK v3).
+This is purely a convenience; correctness is unaffected since in-repo dependencies are always embedded:
 
 ```bash
 npx monocrate packages/lib-a packages/lib-b --bump 2.4.0
 ```
 
-### CLI Reference
+## CLI Reference
 
 ```
 monocrate <packages...> [options]
 ```
 
-#### Arguments
+### Arguments
 
 | Argument | Description |
 |----------|-------------|
 | `packages` | One or more package directories to publish (required) |
 
-#### Options
+### Options
 
 | Option | Alias | Type | Default | Description |
 |--------|-------|------|---------|-------------|
@@ -164,7 +193,7 @@ monocrate <packages...> [options]
 
 ## Programmatic API
 
-Use `monocrate` as a library for custom workflows or build steps:
+For CI pipelines, custom build steps, or integration with other tooling, you can use monocrate as a library instead of invoking the CLI:
 
 ```typescript
 import { monocrate } from 'monocrate'
@@ -197,7 +226,6 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `bump` | `string` | No | `"minor"` | Version specifier: `"patch"`, `"minor"`, `"major"`, or explicit semver. |
 | `outputRoot` | `string` | No | (temp dir) | Output directory for the assembled package. |
 | `monorepoRoot` | `string` | No | (auto) | Monorepo root directory; auto-detected if omitted. |
-| `report` | `string` | No | — | Write resolved version to this file instead of stdout. |
 | `mirrorTo` | `string` | No | — | Mirror source files to this directory. |
 | `npmrcPath` | `string` | No | — | Path to `.npmrc` file for npm authentication. |
 
