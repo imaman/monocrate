@@ -104,15 +104,15 @@ pkg-c gets 3.0.1
 The `MonocrateResult` type changes to support per-package versions:
 
 ```typescript
-// Current
+// With --max (default)
 {
-  resolvedVersion: string        // single version for all
-  summaries: [{ outputDir, packageName }]
+  resolvedVersion: string        // unified version for all packages
+  summaries: [{ outputDir, packageName, version }]  // all versions are the same
 }
 
 // With --max=false
 {
-  resolvedVersion: string        // still present (could be undefined or first package's version)
+  resolvedVersion: undefined     // not set when using individual versions
   summaries: [{ outputDir, packageName, version }]  // version per package
 }
 ```
