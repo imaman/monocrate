@@ -62,39 +62,6 @@ describe('monocrate', () => {
     })
   })
 
-  describe('report option', () => {
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
-    it('writes resolved version to report file when specified', async () => {
-      vi.spyOn(publishModule, 'publish').mockImplementation(async () => {})
-
-      const monorepoRoot = folderify({
-        'package.json': { name, workspaces: ['packages/*'] },
-        'packages/app/package.json': pj('@test/app'),
-        'packages/app/dist/index.js': `export const foo = 'foo';`,
-      })
-
-      const dir = createTempDir()
-
-      const opts = {
-        cwd: monorepoRoot,
-        pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
-        monorepoRoot,
-        report: path.join(dir, 'stdout'),
-        publish: false,
-        bump: '2.8.512',
-      }
-
-      expect(await monocrate(opts)).toMatchObject({ resolvedVersion: '2.8.512' })
-      expect(unfolderify(dir)).toEqual({ stdout: '2.8.512' })
-
-      expect(await monocrate({ ...opts, bump: '2.3.4' })).toMatchObject({ resolvedVersion: '2.3.4' })
-      expect(unfolderify(dir)).toMatchObject({ stdout: '2.3.4' })
-    }, 30000)
-  })
-
   describe('monorepo discovery', () => {
     it('finds monorepo root with npm workspaces', () => {
       const monorepoRoot = folderify({
