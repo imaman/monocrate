@@ -18,7 +18,7 @@ Bundlers offer the opposite approach: tools like [esbuild](https://esbuild.githu
 
 ## The Solution
 
-[monocrate](https://www.npmjs.com/package/monocrate) solves this cleanly: a publishing CLI built for the monorepo era, it collects your package and its transitive internal dependencies into a single publishable unit.
+[monocrate](https://www.npmjs.com/package/monocrate) solves this cleanly: a publishing CLI purpose-built for modern monorepo workflows. it collects your package and its transitive internal dependencies into a single publishable unit.
 
 It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
 
@@ -105,7 +105,7 @@ npx monocrate packages/my-awesome-package --bump 2.3.0
 
 ### Custom Publish Name
 
-Publish `@acme/my-awesome-package` as `best-package-ever` without a repo-wide rename:
+Publish `@acme/my-awesome-package` as `best-package-ever` without renaming it repo-wide:
 
 ```json
 {
@@ -127,7 +127,7 @@ npx monocrate packages/my-awesome-package --mirror-to ../public-repo
 
 This way, your public repo is self-contained—no dangling references to internal packages. Contributors can clone and work on your package.
 
-Only committed files (from `git HEAD`) are mirrored; fails if untracked files exist.
+Requires a clean working tree; Only committed files (from `git HEAD`) are mirrored. 
 
 ### Multiple Packages
 
