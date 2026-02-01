@@ -25,15 +25,14 @@ sourcemaps often break, and consumers can't tree-shake a pre-bundled blob.
 ## The Solution
 
 [monocrate](https://www.npmjs.com/package/monocrate) is a publishing CLI that gets this right. It produces a single 
-publishable directory containing everything needed from your package and its in-repo dependencies while preserving the 
-original file structure.
+publishable directory containing everything needed from your package and its in-repo dependencies. Essentially, it 
+produces a standard npm package that looks like you hand-crafted it for publication.
 
-Internal packages remain unpublished. Only one package to install. Tree-shaking works. Sourcemaps work. Types work.
-
-## How It Works
-
-Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure.
-The result is a standard npm package that looks like you hand-crafted it for publication.
+- Consumers - get one package containing exactly the code they need. 
+- Internal packages - remain unpublished.
+- Tree-shaking - works.
+- Sourcemaps - work. 
+- Types - work.
 
 ### What Gets Published
 
@@ -67,32 +66,17 @@ Running `npx monocrate packages/my-awesome-package` produces:
 ```
 
 The `deps/` directory is where the files of in-repo dependencies get embedded. Each dependency is placed under a
-mangled version of its package name: `@acme/internal-utils` becomes `__acme__internal-utils`. This ensures predictable
-paths and avoids name collisions regardless of where packages live in the monorepo.
-
-Consumers get one package containing exactly the code they need.
-
-### The Assembly Process
-
-Here's how monocrate achieves this:
-
-0. **Setup**: Creates a dedicated output directory
-1. **Version Resolution**: Computes the new version (see [below](#version-resolution))
-2. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
-3. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
-4. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
-the exact file locations that import statements will resolve to
-5. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path
-imports (`@acme/internal-utils` becomes `../deps/__acme__internal-utils/dist/index.js`)
-6. **Package.json Rewrite**: Sets the resolved version, removes in-repo deps, and adds any third-party deps they brought in
+mangled version of its package name: `@acme/internal-utils` becomes `__acme__internal-utils`. This avoids name collisions 
+regardless of where packages live in the monorepo.
 
 ### Version Resolution
 
-Monocrate uses **registry-based versioning**: it queries the registry for the latest published version and bumps it according
-to your `--bump` flag (`patch`, `minor`, `major`). Your source `package.json` is never modified.
+`monocrate` uses **registry-based versioning**: it queries the registry for the latest published version and bumps it
+according to your `--bump` flag (`patch`, `minor`, `major`). Your source `package.json` is never modified.
 
-This means you don't need to maintain version numbers in your monorepo. The registry is the source of truth, and
-monocrate computes the next version at publish time. Of course, if --bump is an exact version ("1.7.9") it is used as-is.
+This means you don't need to maintain version numbers in your source code. The registry is the versioning source of 
+truth, and `monocrate` computes the next version at publish time. Of course, if --bump is an exact version ("1.7.9") it 
+is used as-is.
 
 ## Installation
 
@@ -237,3 +221,17 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 | `resolvedVersion` | `string` | The resolved version that was applied. |
 | `summaries` | `Array<{ packageName: string; outputDir: string }>` | Details for each assembled package. |
 
+
+### The Assembly Process
+
+Here's how monocrate achieves this:
+
+0. **Setup**: Creates a dedicated output directory
+1. **Version Resolution**: Computes the new version (see [below](#version-resolution))
+2. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
+3. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
+4. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
+the exact file locations that import statements will resolve to
+5. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path
+imports (`@acme/internal-utils` becomes `../deps/__acme__internal-utils/dist/index.js`)
+6. **Package.json Rewrite**: Sets the resolved version, removes in-repo deps, and adds any third-party deps they brought in
