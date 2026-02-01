@@ -39,36 +39,36 @@ The result is a standard npm package that looks like you hand-crafted it for pub
 
 Given this monorepo structure:
 ```
-packages/
-├── my-awesome-package/
-│   ├── package.json      # name: @acme/my-awesome-package
-│   └── src/
-│       └── index.ts      # import ... from '@acme/internal-utils'
-└── internal-utils/
-    ├── package.json      # name: @acme/internal-utils (private)
-    └── src/
-        └── index.ts
+/path/to/my-monorepo/
+└── packages/
+    ├── my-awesome-package/
+    │   ├── package.json      # name: @acme/my-awesome-package
+    │   └── src/
+    │       └── index.ts      # import ... from '@acme/internal-utils'
+    └── internal-utils/
+        ├── package.json      # name: @acme/internal-utils (private)
+        └── src/
+            └── index.ts
 ```
 
 Running `npx monocrate packages/my-awesome-package` produces:
 ```
 /tmp/monocrate-xxxxxx/
-└── __acme__my-awesome-package/  # mangled package name
-    ├── package.json             # name: "@acme/my-awesome-package", version: "1.3.0" (the new resolved version)
-    ├── dist/
-    │   └── index.js      # rewritten:
-    │                     # import ... from '../deps/packages/internal-utils/dist/index.js'
-    └── deps/
-        └── packages/
-            └── internal-utils/
+└── packages/
+    └── my-awesome-package/      # preserves the package's path in the monorepo
+        ├── package.json         # name: "@acme/my-awesome-package", version: "1.3.0" (the new resolved version)
+        ├── dist/
+        │   └── index.js         # rewritten:
+        │                        # import ... from '../deps/__acme__internal-utils/dist/index.js'
+        └── deps/
+            └── __acme__internal-utils/  # mangled package name
                 └── dist/
                     └── index.js
 ```
 
-The `deps/` directory is where the files of in-repo dependencies get embedded. It preserves the original monorepo
-path structure: since `internal-utils` lived at `packages/internal-utils`, it ends up at `deps/packages/internal-utils`.
-If it had been at `libs/shared/utils`, it would be at `deps/libs/shared/utils`. This ensures predictable paths and
-avoids name collisions.
+The `deps/` directory is where the files of in-repo dependencies get embedded. Each dependency is placed under a
+mangled version of its package name: `@acme/internal-utils` becomes `__acme__internal-utils`. This ensures predictable
+paths and avoids name collisions regardless of where packages live in the monorepo.
 
 Consumers get one package containing exactly the code they need.
 
@@ -83,7 +83,7 @@ Here's how monocrate achieves this:
 4. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
 the exact file locations that import statements will resolve to
 5. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path
-imports (`@acme/internal-utils` becomes `../deps/packages/internal-utils/dist/index.js`)
+imports (`@acme/internal-utils` becomes `../deps/__acme__internal-utils/dist/index.js`)
 6. **Package.json Rewrite**: Sets the resolved version, removes in-repo deps, and adds any third-party deps they brought in
 
 ### Version Resolution
