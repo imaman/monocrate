@@ -33,6 +33,7 @@ Usage: $0 <packages...> [options]`
     .example('$0 pkg/foo --bump patch', 'Bump to next patch and publish')
     .example('$0 libs/a libs/b', 'Multi-package (defaults to minor bump)')
     .example('$0 pkg/foo --dry-run', 'Prepare without publishing')
+    .example('$0 pkg/foo --bump package', 'Use version from package.json')
     .positional('packages', {
       describe: 'Package directories to publish',
       type: 'string',
@@ -42,7 +43,7 @@ Usage: $0 <packages...> [options]`
       bump: {
         alias: 'b',
         type: 'string' as const,
-        description: 'Version or increment (patch/minor/major)',
+        description: 'Version, increment (patch/minor/major), or "package" to use package.json version',
       },
       'output-dir': {
         alias: 'o',
