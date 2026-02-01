@@ -14,7 +14,7 @@ Consider `@acme/my-awesome-package`, which imports `@acme/internal-utils`, a wor
 
 The standard solution is the "publish everything" approach. Tools like [Lerna](https://lerna.js.org/) will publish every internal dependency as its own public package. Installation now works, but `@acme/internal-utils` just became a permanently published API you're committed to maintaining. _Your internal refactoring freedom is gone._
 
-Bundlers offer the opposite approach: tools like [esbuild](https://esbuild.github.io/) or [Rollup](https://rollupjs.org/) produce a self-contained file. But this kills tree shaking, and type declaration/sourcemaps are often broken as well.
+You can throw a bundler at the problem: tools like [esbuild](https://esbuild.github.io/) or [Rollup](https://rollupjs.org/) produce a self-contained file from a given entrypoint. But type declarations and sourcemaps often break, and consumers can't tree-shake a pre-bundled blob.
 
 ## The Solution
 
@@ -26,11 +26,11 @@ Internal packages remain unpublished. Only one package to install. Tree-shaking 
 
 Monocrate treats your package as the root of a dependency graph, then builds a self-contained publishable structure:
 
-0. **Setup**: Creates a dedicated output directory
-1. **Dependency Discovery**: Traverses the dependency graph to find all workspace packages your code depends on, transitively
-2. **File Embedding**: Copies the publishable files (what `npm pack` would include) of each in-repo dependency into the output directory
-3. **Entry Point Resolution**: Examines each package's entry points to compute the exact file locations that imports will resolve to
-4. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path imports (`@acme/internal-utils` -> `../deps/packages/internal-utils/dist/index.js`)
+0. **Set up**: Creates a dedicated output directory
+1. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
+2. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
+3. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute the exact file locations that import statements will resolve to
+4. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path imports (`@acme/internal-utils` becomes `../deps/packages/internal-utils/dist/index.js`)
 5. **Dependency Pruning**: Rewrites `package.json` dependencies by removing all in-repo deps, adding any third-party deps they brought in
 
 The result is a standard npm package that looks like you hand-crafted it for publication.
@@ -55,7 +55,7 @@ Running `npx monocrate packages/my-awesome-package` produces:
 
 ```
 <tmpdir>/
-└── __acme__my-awesome-package/
+└── __acme__my-awesome-package/  # mangled package name
     ├── package.json      # name: @acme/my-awesome-package
     ├── dist/
     │   └── index.js      # rewritten:
