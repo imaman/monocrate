@@ -18,9 +18,9 @@ Bundlers offer the opposite approach: tools like [esbuild](https://esbuild.githu
 
 ## The Solution
 
-[monocrate](https://www.npmjs.com/package/monocrate) solves this cleanly: a publishing CLI purpose-built for modern monorepo workflows. it collects your package and its transitive internal dependencies into a single publishable unit.
+[monocrate](https://www.npmjs.com/package/monocrate) is a publishing CLI that gets this right. It produces a single publishable directory containing all that is needed from your package and its in-repo dependencies. The original file structure is preserved.
 
-It handles subpath imports, dynamic imports, and TypeScript's module resolution rules correctly. Your internal packages stay private. Consumers install one package. Tree-shaking works. Sourcemaps work. Types work.
+Only one package is published. Tree-shaking works. Sourcemaps work. Types work.
 
 ## How It Works
 
@@ -28,7 +28,7 @@ Monocrate treats your package as the root of a dependency graph, then builds a s
 
 0. **Setup**: Creates a dedicated output directory
 1. **Dependency Discovery**: Traverses the dependency graph to find all workspace packages your code depends on, transitively
-2. **File Embedding**: Copies the publishable files (what `npm pack` would include) of each internal dependency into the output directory
+2. **File Embedding**: Copies the publishable files (what `npm pack` would include) of each in-repo dependency into the output directory
 3. **Entry Point Resolution**: Examines each package's entry points to compute the exact file locations that imports will resolve to
 4. **Import Rewriting**: Scans the `.js` and `.d.ts` files, converting imports of workspace packages to relative path imports (`@acme/internal-utils` -> `../deps/packages/internal-utils/dist/index.js`)
 5. **Dependency Pruning**: Rewrites the dependencies in the `package.json` - removes all workspace packages deps, adds any third-party deps they brought in
@@ -67,7 +67,7 @@ Running `npx monocrate packages/my-awesome-package` produces:
                     └── index.js
 ```
 
-Consumers get one package containing exactly the code they need, with no broken references to private workspace packages.
+Consumers get one package containing exactly the code they need, with no broken dependencies.
 
 ## Installation
 
@@ -119,15 +119,15 @@ Publish `@acme/my-awesome-package` as `best-package-ever` without renaming it re
 
 ### Mirroring to a Public Repo
 
-Want to open-source your package while keeping your monorepo private? Use `--mirror-to` to copy the package and its internal dependencies to a separate public repository:
+Want to open-source your package while keeping your monorepo private? Use `--mirror-to` to copy the package and its in-repo dependencies to a separate public repository:
 
 ```bash
 npx monocrate packages/my-awesome-package --mirror-to ../public-repo
 ```
 
-This way, your public repo is self-contained—no dangling references to internal packages. Contributors can clone and work on your package.
+This way, your public repo stays in sync with what you publish—all necessary packages included. Contributors can clone and work on your package.
 
-Requires a clean working tree; Only committed files (from `git HEAD`) are mirrored. 
+Requires a clean working tree; only committed files (from `git HEAD`) are mirrored. 
 
 ### Multiple Packages
 
