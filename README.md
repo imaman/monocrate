@@ -84,7 +84,7 @@ pnpm add --save-dev monocrate
 > npm run build
 > ```
 
-Once the package is built, you can run `monocrate`:
+Once the package is built, you can `monocrate` it:
 
 ```bash
 # Publish a package, patch bumping its version
