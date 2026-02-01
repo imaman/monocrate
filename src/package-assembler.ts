@@ -34,12 +34,9 @@ export class PackageAssembler {
     return AbsolutePath.join(this.outputRoot, this.pathInRepo)
   }
 
-  async computeNewVersion(versionSpecifier: VersionSpecifier | undefined) {
-    if (!versionSpecifier) {
-      return undefined
-    }
+  async computeNewVersion(versionSpecifier: VersionSpecifier) {
     const packageJsonVersion = this.explorer.getPackage(this.pkgName).packageJson.version
-    return resolveVersion(this.npmClient, this.fromDir, this.pkgName, versionSpecifier, packageJsonVersion)
+    return await resolveVersion(this.npmClient, this.fromDir, this.pkgName, versionSpecifier, packageJsonVersion)
   }
 
   async assemble(newVersion: string | undefined): Promise<{ compiletimeMembers: MonorepoPackage[] }> {

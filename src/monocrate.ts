@@ -68,10 +68,7 @@ export async function monocrate(options: MonocrateOptions): Promise<MonocrateRes
   }
 
   // versionSpecifier is always defined (defaults to 'minor'), so computeNewVersion always returns a string
-  const individualVersions = (await Promise.all(assemblers.map((a) => a.computeNewVersion(versionSpecifier)))).flatMap(
-    (v) => (v ? [v] : [])
-  )
-
+  const individualVersions = await Promise.all(assemblers.map((a) => a.computeNewVersion(versionSpecifier)))
   const v0 = individualVersions.at(0)
   if (!v0) {
     throw new Error('Inconsistency - no versions computed')
