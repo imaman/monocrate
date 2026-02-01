@@ -34,6 +34,12 @@ produces a standard npm package that looks like you hand-crafted it for publicat
 
 ### Quickstart
 
+```bash
+pnpm add --save-dev monocrate
+# or: yarn add --dev monocrate
+# or: npm install --save-dev monocrate
+```
+
 > **Note:** `monocrate` publishes, it doesn't build. Run your build first.
 > ```bash
 > npm run build
@@ -89,20 +95,10 @@ mangled version of its package name. This avoids name collisions regardless of w
 according to your `--bump` flag (`patch`, `minor`, `major`). Your source `package.json` is never modified.
 
 This means you don't need to maintain version numbers in your source code. The registry is the versioning source of 
-truth, and `monocrate` computes the next version at publish time. Of course, if --bump is an exact version ("1.7.9") it 
-is used as-is.
-
-## Installation
-
-```bash
-pnpm add --save-dev monocrate
-# or: yarn add --dev monocrate
-# or: npm install --save-dev monocrate
-```
+truth, and `monocrate` computes the next version at publish time. Of course, if an exact version is specified
+(`--bump 1.7.9`) it is used as-is.
 
 ## Examples
-
-> **Note:** Remember - Run your build first.
 
 ```bash
 # --bump defaults to "minor", so these two are equivalent:
@@ -112,7 +108,7 @@ npx monocrate packages/my-awesome-package
 # Explicit version
 npx monocrate packages/my-awesome-package --bump 2.3.0
 
-# Package location is resloved relative to CWD
+# Package location is resolved relative to CWD
 cd /path/to/my-monorepo/packages
 npx monocrate my-awesome-package --bump 2.3.0
 ```
@@ -236,7 +232,7 @@ Assembles one or more monorepo packages and their in-repo dependencies, and opti
 Here's a conceptual breakdown of the steps that happen at a typical `monocrate` run:
 
 0. **Setup**: Creates a dedicated output directory
-1. **Version Resolution**: Computes the new version (see [below](#version-resolution))
+1. **Version Resolution**: Computes the new version (see [above](#version-resolution))
 2. **Dependency Discovery**: Traverses the dependency graph to find all in-repo packages the package depends on, transitively
 3. **File Embedding**: Copies the publishable files (per `npm pack`) of each in-repo dependency into the output directory
 4. **Entry Point Resolution**: Examines each package's entry points (respecting `exports` and `main` fields) to compute
