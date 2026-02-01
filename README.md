@@ -101,8 +101,8 @@ truth, and `monocrate` computes the next version at publish time. Of course, if 
 For first-time publishing (when the package doesn't exist in the registry yet), `monocrate` treats the current version
 as `0.0.0` and applies the bump—resulting in `0.0.1` for patch, `0.1.0` for minor (the default), or `1.0.0` for major.
 
-If your workflow already computes versions (via `npm version`, Changesets, Lerna, etc.), use `--bump package` to read
-the version directly from the package's `package.json`:
+If the version to publish to is already set in the package's `package.json` file (via `npm version`, Changesets, Lerna,
+etc.), you can use `--bump package` to read the version directly from there:
 
 ```bash
 npm version minor --no-git-tag-version   # Sets version in package.json
