@@ -47,6 +47,7 @@ describe('multi-package versioning', () => {
       bump: 'patch',
       publish: true,
       npmrcPath: verdaccio.npmrcPath(),
+      max: true,
     })
 
     expect(result.resolvedVersion).toBe('3.0.1')
@@ -55,7 +56,7 @@ describe('multi-package versioning', () => {
     expect(verdaccio.runView('mpv-gamma')).toMatchObject({ version: '3.0.1' })
     expect(verdaccio.runView('mpv-delta')).toMatchObject({ version: '3.0.1' })
     expect(result.summaries.map((s) => s.packageName)).toEqual(['mpv-alpha', 'mpv-beta', 'mpv-gamma', 'mpv-delta'])
-    // With default max=true, all summaries should have the same version
+    // With max=true, all summaries should have the same version
     expect(result.summaries.map((s) => s.version)).toEqual(['3.0.1', '3.0.1', '3.0.1', '3.0.1'])
 
     expect(verdaccio.runConumser('mpv-alpha@3.0.1', `import { value } from 'mpv-alpha'; console.log(value)`)).toBe(
@@ -199,6 +200,7 @@ describe('multi-package versioning', () => {
       bump: '1.0.0',
       publish: true,
       npmrcPath: verdaccio.npmrcPath(),
+      max: true,
     })
 
     // Update C, publish A and C (major → 2.0.0)
@@ -210,6 +212,7 @@ describe('multi-package versioning', () => {
       bump: 'major',
       publish: true,
       npmrcPath: verdaccio.npmrcPath(),
+      max: true,
     })
 
     // Update C, publish A and B (major → 3.0.0)
@@ -221,6 +224,7 @@ describe('multi-package versioning', () => {
       bump: 'major',
       publish: true,
       npmrcPath: verdaccio.npmrcPath(),
+      max: true,
     })
 
     // Update C, publish B and C (major → 4.0.0)
@@ -232,6 +236,7 @@ describe('multi-package versioning', () => {
       bump: 'major',
       publish: true,
       npmrcPath: verdaccio.npmrcPath(),
+      max: true,
     })
 
     expect(verdaccio.runView('mpv-a')).toMatchObject({ versions: ['1.0.0', '2.0.0', '3.0.0'] })

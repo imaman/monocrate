@@ -1474,6 +1474,7 @@ console.log('Hello from bin');
         pathToSubjectPackages: ['packages/app1', 'packages/app2'],
         publish: false,
         bump: 'package',
+        max: true,
       })
 
       expect(resolvedVersion).toBe('5.6.7')

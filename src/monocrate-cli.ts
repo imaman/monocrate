@@ -73,8 +73,8 @@ Usage: $0 <packages...> [options]`
       },
       max: {
         type: 'boolean' as const,
-        description: 'Use max version across all packages (default: true)',
-        default: true,
+        description: 'Use max version across all packages (default: false)',
+        default: false,
       },
     })
     .strict()

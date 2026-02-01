@@ -40,6 +40,7 @@ describe('npm login check', () => {
       bump: '1.0.0',
       publish: false,
       npmrcPath,
+      max: true,
     })
     expect(result.resolvedVersion).toBe('1.0.0')
   }, 30000)
@@ -151,6 +152,7 @@ describe('npm publishing with Verdaccio', () => {
         bump: '1.4.1',
         publish: true,
         npmrcPath: verdaccio.npmrcPath(),
+        max: true,
       })
     ).toMatchObject({ resolvedVersion: '1.4.1' })
     expect(verdaccio.runView(pkgName)).toMatchObject({ version: '1.4.1' })
@@ -163,6 +165,7 @@ describe('npm publishing with Verdaccio', () => {
         bump: '2.7.1',
         publish: true,
         npmrcPath: verdaccio.npmrcPath(),
+        max: true,
       })
     ).toMatchObject({ resolvedVersion: '2.7.1' })
     expect(verdaccio.runView(pkgName)).toMatchObject({ version: '2.7.1' })
@@ -175,6 +178,7 @@ describe('npm publishing with Verdaccio', () => {
         bump: '3.1.4',
         publish: true,
         npmrcPath: verdaccio.npmrcPath(),
+        max: true,
       })
     ).toMatchObject({ resolvedVersion: '3.1.4' })
 

@@ -63,10 +63,10 @@ export interface MonocrateOptions {
   /**
    * Whether to use the maximum version across all packages.
    *
-   * When true (default): All packages are published at the same version, computed as the
+   * When true: All packages are published at the same version, computed as the
    * maximum of all individual resolved versions.
    *
-   * When false: Each package is published at its own individually resolved version based
+   * When false (default): Each package is published at its own individually resolved version based
    * on its current published version. Useful when packages have divergent version histories
    * and you want to preserve meaningful versioning per package.
    */
