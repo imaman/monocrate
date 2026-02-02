@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { glob } from 'glob'
-import { minimatch } from 'minimatch'
+import picomatch from 'picomatch'
 import yaml from 'yaml'
 import { z } from 'zod'
 import { PackageJson } from './package-json.js'
@@ -135,18 +135,19 @@ export class RepoExplorer {
     const patterns = this.parseWorkspacePatterns(monorepoRoot)
     const positivePatterns = patterns.filter((p) => !p.startsWith('!'))
     const negativePatterns = patterns.filter((p) => p.startsWith('!')).map((p) => p.slice(1))
-    const packages = new Map<string, MonorepoPackage>()
+    const isExcluded = negativePatterns.length > 0 ? picomatch(negativePatterns) : () => false
 
+    const packages = new Map<string, MonorepoPackage>()
     for (const pattern of positivePatterns) {
-      const fullPattern = path.join(monorepoRoot, pattern, 'package.json')
-      const matches = await glob(fullPattern, { ignore: '**/node_modules/**' })
+      const matches = await glob(path.join(monorepoRoot, pattern, 'package.json'), {
+        ignore: ['**/node_modules/**'],
+      })
 
       for (const match of matches) {
         const packageDir = AbsolutePath(path.dirname(match))
         const pathInRepo = path.relative(monorepoRoot, packageDir)
 
-        const isExcluded = negativePatterns.some((neg) => minimatch(pathInRepo, neg))
-        if (isExcluded) {
+        if (isExcluded(pathInRepo)) {
           continue
         }
 
