@@ -90,4 +90,64 @@ describe('monorepo discovery', () => {
     const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
     expect(explorer.listNames().sort()).toEqual(['@test/app', '@test/lib'])
   })
+
+  it('excludes multiple packages with multiple negative patterns', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*', '!packages/beta', '!packages/delta'] },
+      'packages/alpha/package.json': { name: '@test/alpha' },
+      'packages/beta/package.json': { name: '@test/beta' },
+      'packages/gamma/package.json': { name: '@test/gamma' },
+      'packages/delta/package.json': { name: '@test/delta' },
+    })
+
+    const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
+    expect(explorer.listNames().sort()).toEqual(['@test/alpha', '@test/gamma'])
+  })
+
+  it('excludes packages with negative pattern in npm workspaces object format', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: { packages: ['libs/*', '!libs/internal'] } },
+      'libs/utils/package.json': { name: '@test/utils' },
+      'libs/core/package.json': { name: '@test/core' },
+      'libs/internal/package.json': { name: '@test/internal' },
+    })
+
+    const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
+    expect(explorer.listNames().sort()).toEqual(['@test/core', '@test/utils'])
+  })
+
+  it('does not error when negative pattern matches nothing', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*', '!packages/nonexistent'] },
+      'packages/foo/package.json': { name: '@test/foo' },
+      'packages/bar/package.json': { name: '@test/bar' },
+    })
+
+    const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
+    expect(explorer.listNames().sort()).toEqual(['@test/bar', '@test/foo'])
+  })
+
+  it('returns empty when all packages are excluded', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*', '!packages/*'] },
+      'packages/foo/package.json': { name: '@test/foo' },
+      'packages/bar/package.json': { name: '@test/bar' },
+    })
+
+    const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
+    expect(explorer.listNames()).toEqual([])
+  })
+
+  it('negative pattern does not affect unrelated positive patterns', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*', 'libs/*', '!packages/foo'] },
+      'packages/foo/package.json': { name: '@test/packages-foo' },
+      'packages/bar/package.json': { name: '@test/packages-bar' },
+      'libs/foo/package.json': { name: '@test/libs-foo' },
+      'libs/bar/package.json': { name: '@test/libs-bar' },
+    })
+
+    const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
+    expect(explorer.listNames().sort()).toEqual(['@test/libs-bar', '@test/libs-foo', '@test/packages-bar'])
+  })
 })
