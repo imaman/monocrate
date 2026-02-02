@@ -751,6 +751,7 @@ export const a = 'a-' + b;
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/lib': 'workspace:^',
@@ -761,6 +762,7 @@ export const a = 'a-' + b;
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           lodash: '^4.17.21',
@@ -774,6 +776,7 @@ export const a = 'a-' + b;
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '2.0.0',
+      type: 'module',
       main: 'dist/index.js',
       dependencies: {
         chalk: '^5.0.0',
@@ -790,6 +793,7 @@ export const a = 'a-' + b;
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/lib': 'workspace:~',
@@ -800,6 +804,7 @@ export const a = 'a-' + b;
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           lodash: '^4.17.21',
@@ -813,6 +818,7 @@ export const a = 'a-' + b;
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '3.0.0',
+      type: 'module',
       main: 'dist/index.js',
       dependencies: {
         chalk: '^5.0.0',
@@ -829,6 +835,7 @@ export const a = 'a-' + b;
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/lib-a': 'workspace:*',
@@ -844,6 +851,7 @@ console.log(a + '-' + b + '-' + c);
       'packages/lib-a/package.json': {
         name: '@test/lib-a',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: { express: '^4.0.0' },
       },
@@ -851,6 +859,7 @@ console.log(a + '-' + b + '-' + c);
       'packages/lib-b/package.json': {
         name: '@test/lib-b',
         version: '2.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: { lodash: '^4.0.0' },
       },
@@ -858,6 +867,7 @@ console.log(a + '-' + b + '-' + c);
       'packages/lib-c/package.json': {
         name: '@test/lib-c',
         version: '3.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: { zod: '^3.0.0' },
       },
@@ -869,6 +879,7 @@ console.log(a + '-' + b + '-' + c);
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '5.0.0',
+      type: 'module',
       main: 'dist/index.js',
       dependencies: {
         express: '^4.0.0',
