@@ -31,13 +31,15 @@ Monocrate correctly handles:
 
 **Recommendation:** Detect `workspace:` prefix in dependencies and fail with a clear error if the package isn't found in the monorepo.
 
-### 2. Negated Workspace Patterns
+### ~~2. Negated Workspace Patterns~~
 
-**Current behavior:** Workspace patterns are passed directly to glob.
+~~**Current behavior:** Workspace patterns are passed directly to glob.~~
 
-**Gap:** Yarn supports negated patterns like `["packages/*", "!packages/internal-*"]` to exclude certain directories. While glob may handle this, it's not explicitly tested.
+~~**Gap:** Yarn supports negated patterns like `["packages/*", "!packages/internal-*"]` to exclude certain directories. While glob may handle this, it's not explicitly tested.~~
 
-**Recommendation:** Add test coverage for negated patterns.
+~~**Recommendation:** Add test coverage for negated patterns.~~
+
+*Addressed in PR #99: Negated patterns are now supported and tested in monorepo-discovery.test.ts*
 
 ## Testing Gaps
 
@@ -45,7 +47,7 @@ Monocrate correctly handles:
 
 Tests use `workspace:*` extensively but don't cover:
 - `workspace:^` and `workspace:~` (should work since lookup is by name, but untested)
-- Malformed or missing workspace dependencies
+- ~~Malformed or missing workspace dependencies~~ *(Addressed in PR #96: malformed workspaces now throw clear errors)*
 
 ### ~~2. Object-Format Workspaces~~
 
@@ -73,5 +75,5 @@ Missing test coverage for:
 | Error on unresolved `workspace:` deps | High | Low |
 | Test workspace protocol variants | Medium | Low |
 | ~~Test object-format workspaces~~ | ~~Medium~~ | ~~Low~~ |
-| Test negated patterns | Low | Low |
+| ~~Test negated patterns~~ | ~~Low~~ | ~~Low~~ |
 | ~~Test mixed/complex glob patterns~~ | ~~Low~~ | ~~Low~~ |
