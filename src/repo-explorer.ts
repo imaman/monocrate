@@ -100,10 +100,13 @@ export class RepoExplorer {
     const packageJsonPath = path.join(monorepoRoot, 'package.json')
     if (fs.existsSync(packageJsonPath)) {
       const WorkspacesConfig = z.object({
-        workspaces: z.union([z.array(z.string()), z.object({ packages: z.array(z.string()) })]),
+        workspaces: z.union([z.array(z.string()), z.object({ packages: z.array(z.string()) })]).optional(),
       })
       const parsed = WorkspacesConfig.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
-      if (parsed.success) {
+      if (!parsed.success) {
+        throw new Error(`Invalid package.json in ${packageJsonPath}: ${parsed.error.message}`)
+      }
+      if (parsed.data.workspaces) {
         const workspaces = parsed.data.workspaces
         return Array.isArray(workspaces) ? workspaces : workspaces.packages
       }
