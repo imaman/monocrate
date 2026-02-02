@@ -61,4 +61,33 @@ describe('monorepo discovery', () => {
     const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
     expect(explorer.listNames()).toEqual(['@test/app'])
   })
+
+  it('excludes packages with glob wildcard in negative pattern', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*', '!packages/*-internal'] },
+      'packages/pkg-public/package.json': { name: '@test/pkg-public' },
+      'packages/pkg-internal/package.json': { name: '@test/pkg-internal' },
+      'packages/util-public/package.json': { name: '@test/util-public' },
+      'packages/util-internal/package.json': { name: '@test/util-internal' },
+    })
+
+    const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
+    expect(explorer.listNames().sort()).toEqual(['@test/pkg-public', '@test/util-public'])
+  })
+
+  it('excludes packages with negative pattern in pnpm-workspace.yaml', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'pnpm-root' },
+      'pnpm-workspace.yaml': `packages:
+  - 'packages/*'
+  - '!packages/excluded'
+`,
+      'packages/app/package.json': { name: '@test/app' },
+      'packages/lib/package.json': { name: '@test/lib' },
+      'packages/excluded/package.json': { name: '@test/excluded' },
+    })
+
+    const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
+    expect(explorer.listNames().sort()).toEqual(['@test/app', '@test/lib'])
+  })
 })
