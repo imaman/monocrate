@@ -9,6 +9,9 @@ import type { PackageJson } from './package-json.js'
 import type { NpmClient } from './npm-client.js'
 import { manglePackageName } from './name-mangler.js'
 
+/** Directory name where in-repo dependencies are placed in the output. */
+export const DEPS_DIR = 'deps'
+
 /**
  * Resolves an import specifier to a package-relative path using Node.js resolution semantics.
  * Handles both bare imports (subpath='') and subpath imports (subpath='utils/helper').
@@ -74,7 +77,7 @@ export async function collectPackageLocations(
         dep,
         dep.name === closure.subjectPackageName
           ? outputDir
-          : AbsolutePath.join(outputDir, RelativePath('deps'), RelativePath(manglePackageName(dep.name)))
+          : AbsolutePath.join(outputDir, RelativePath(DEPS_DIR), RelativePath(manglePackageName(dep.name)))
       )
     )
   )

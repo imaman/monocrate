@@ -1342,7 +1342,44 @@ console.log('Hello from bin');
       expect(pkgJson.files).toEqual(['dist', 'bin'])
     })
 
-    // TODO(imaman): publish to a test registry
+    it('adds deps to files array when subject has both files field and in-repo dependencies', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name, workspaces: ['packages/*'] },
+        'packages/app/package.json': {
+          name: '@test/app',
+          version: '1.0.0',
+          main: 'dist/index.js',
+          files: ['dist'],
+          dependencies: { '@test/lib': 'workspace:*' },
+        },
+        'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet());`,
+        'packages/lib/package.json': {
+          name: '@test/lib',
+          version: '1.0.0',
+          main: 'dist/index.js',
+        },
+        'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
+      })
+
+      const { outputDir } = await monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        publish: false,
+        bump: '1.0.0',
+      })
+
+      const output = unfolderify(outputDir)
+      expect(output['package.json']).toEqual({
+        files: [
+          'dist',
+          // deps must be in files array, otherwise npm pack will exclude it
+          'deps',
+        ],
+        main: 'dist/index.js',
+        name: '@test/app',
+        version: '1.0.0',
+      })
+    })
   })
 
   // TODO(imaman): move this to a separate test file
