@@ -44,12 +44,11 @@ return `${subpath}.js`                     // Hardcoded extension
 
 ---
 
-### 3. Package.json `type` Field Not Used
-**Location:** `src/package-json.ts:29` (schema) vs `src/collect-package-locations.ts` (usage)
+### 3. Package.json `type` Field - Not a Resolution Issue
 
-The `type` field is parsed in the schema but never consulted during import resolution. Node.js uses this field to determine default file extensions:
-- `"type": "module"` -> default to `.mjs` semantics
-- `"type": "commonjs"` -> default to `.cjs` semantics
+**Note:** The `type` field does NOT affect extension resolution in Node.js. It only determines how `.js` files are interpreted (ESM vs CommonJS). Node.js does not "try" different extensions based on `type`.
+
+The hardcoded `index.js` fallback in monocrate follows Node.js CommonJS resolution behavior. Packages using `.mjs` or `.cjs` entry points **must** declare them via `exports` or `main` fields - there is no automatic fallback to try different extensions.
 
 ---
 
@@ -72,8 +71,8 @@ The `resolve.exports` library handles conditional exports (e.g., `"import"` vs `
 | `.mjs` file import rewriting | No |
 | `.cjs` file import rewriting | No |
 | `.d.mts` / `.d.cts` handling | No |
-| `"type": "module"` packages | No |
-| `"type": "commonjs"` packages | No |
+| Package with `main` pointing to `.mjs` | No |
+| Package with `main` pointing to `.cjs` | No |
 | Conditional exports (`"import"` / `"require"`) | No |
 | Dual-format packages (ESM + CJS) | No |
 | Subpath imports resolving to `.mjs`/`.cjs` | No |
@@ -91,20 +90,16 @@ The `resolve.exports` library handles conditional exports (e.g., `"import"` vs `
    )
    ```
 
-2. **Respect `type` field** in `resolveImport()` when no exports field exists:
-   - If `type: "module"` and subpath, try `.mjs` or `.js`
-   - If `type: "commonjs"` and subpath, try `.cjs` or `.js`
-
-3. **Consider removing hardcoded extension** for subpath fallback and instead require explicit `exports` mapping.
+2. **Consider requiring explicit `exports` mapping** for subpath imports, or document that packages using `.mjs`/`.cjs` entry points must use the `exports` or `main` fields.
 
 ### Testing
 
 Add test cases for:
-1. Package with `.mjs` entry point and `"type": "module"`
-2. Package with `.cjs` entry point and `"type": "commonjs"`
-3. Dual-format package with conditional exports
-4. In-repo dependency using `.mjs`/`.cjs` files
-5. Subpath imports resolving to non-`.js` extensions
+1. Package with `main` pointing to `.mjs` file
+2. Package with `main` pointing to `.cjs` file
+3. Dual-format package with conditional exports (`"import"` / `"require"`)
+4. In-repo dependency using `.mjs`/`.cjs` files that need import rewriting
+5. Subpath exports resolving to `.mjs`/`.cjs` files
 
 ---
 
