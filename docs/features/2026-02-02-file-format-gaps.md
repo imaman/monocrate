@@ -1,118 +1,78 @@
-# File Format Support Gaps in Monocrate
+# File Format Support for .mjs/.cjs in Monocrate
 
-## Executive Summary
+## Status: Implemented
 
-Monocrate currently only processes `.js` and `.d.ts` files for import rewriting. Support for alternative module formats (`.mjs`, `.cjs`) and their TypeScript equivalents (`.mts`, `.cts`) is missing entirely, both in implementation and testing.
+Support for alternative module formats (`.mjs`, `.cjs`) and their TypeScript declaration equivalents (`.d.mts`, `.d.cts`) has been implemented.
 
 ---
 
-## Implementation Gaps
+## What Was Implemented
 
-### 1. Import Rewriter Filter (Critical)
+### 1. Import Rewriter Filter Expanded
 **Location:** `src/import-rewriter.ts:18`
 
-```typescript
-const jsAndDtsFiles = files.filter((f) => f.endsWith('.js') || f.endsWith('.d.ts'))
-```
+The import rewriter now processes all JavaScript and TypeScript declaration file formats:
 
-**Impact:** Files with `.mjs`, `.cjs`, `.mts`, `.cts` extensions are silently skipped. Their imports to in-repo packages will NOT be rewritten, causing broken imports in the output.
+```typescript
+const rewritableFiles = files.filter((f) => /\.(js|mjs|cjs|d\.ts|d\.mts|d\.cts)$/.test(f))
+```
 
 | Extension | Status |
 |-----------|--------|
 | `.js`     | Processed |
 | `.d.ts`   | Processed |
-| `.mjs`    | Skipped |
-| `.cjs`    | Skipped |
-| `.d.mts`  | Skipped |
-| `.d.cts`  | Skipped |
+| `.mjs`    | Processed |
+| `.cjs`    | Processed |
+| `.d.mts`  | Processed |
+| `.d.cts`  | Processed |
+
+### 2. Test Coverage Added
+
+New test file: `src/integration-tests/file-formats.test.ts`
+
+| Scenario | Status |
+|----------|--------|
+| `.mjs` file import rewriting | Tested |
+| `.cjs` file dynamic import rewriting | Tested |
+| `.d.mts` file import rewriting | Tested |
+| `.d.cts` file import rewriting | Tested |
+| Package with `main` pointing to `.mjs` | Tested |
+| Package with `main` pointing to `.cjs` | Tested |
+| Conditional exports (`"import"` / `"require"`) | Tested |
+| Dual-format packages (ESM + CJS) | Tested |
+| Subpath exports resolving to `.mjs`/`.cjs` | Tested |
+| Mixed .mjs/.cjs dependency chains | Tested |
 
 ---
 
-### 2. Hardcoded `.js` Extension in Subpath Fallback Resolution
-**Location:** `src/collect-package-locations.ts:39-42`
+## Known Limitations
 
-```typescript
-if (subpath === '') {
-  return packageJson.main ?? 'index.js'   // Respects main field
-}
-return `${subpath}.js`                     // Hardcoded extension
-```
+### CommonJS `require()` Calls Are Not Rewritten
 
-**Analysis:**
+The import rewriter only handles ES module syntax:
+- `import ... from '...'` declarations
+- `export ... from '...'` declarations
+- `import('...')` dynamic imports
 
-- **Bare imports:** NOT broken. The `main` field is respected, so `"main": "index.mjs"` works correctly. The `index.js` fallback only applies when there's no `main` field.
+CommonJS `require()` calls are **not** rewritten because they are regular function calls, not module syntax that ts-morph can identify as import declarations.
 
-- **Subpath imports:** Potentially broken, but only for packages WITHOUT an `exports` field. When there's no `exports` field:
-  - `@myorg/pkg/utils/helper` resolves to `utils/helper.js` even if the actual file is `helper.mjs`
-  - `@myorg/pkg/utils/helper.mjs` (with explicit extension) resolves to `utils/helper.mjs.js` (broken)
+**Workaround:** Use dynamic `import()` instead of `require()` in `.cjs` files when importing in-repo dependencies.
+
+### Subpath Fallback Resolution
+
+When a package has no `exports` field, the fallback resolution appends `.js`:
+- `@myorg/pkg/utils/helper` resolves to `utils/helper.js`
 
 **Practical impact:** Low. Modern packages using `.mjs`/`.cjs` almost always have an `exports` field, which is handled correctly by `resolve.exports`.
 
 ---
 
-### 3. Package.json `type` Field - Not a Resolution Issue
+## Technical Notes
 
-**Note:** The `type` field does NOT affect extension resolution in Node.js. It only determines how `.js` files are interpreted (ESM vs CommonJS). Node.js does not "try" different extensions based on `type`.
+### Package.json `type` Field
 
-The hardcoded `index.js` fallback in monocrate follows Node.js CommonJS resolution behavior. Packages using `.mjs` or `.cjs` entry points **must** declare them via `exports` or `main` fields - there is no automatic fallback to try different extensions.
+The `type` field does NOT affect extension resolution in Node.js. It only determines how `.js` files are interpreted (ESM vs CommonJS). Packages using `.mjs` or `.cjs` entry points must declare them via `exports` or `main` fields.
 
----
+### Bare Import Resolution
 
-### 4. Conditional Exports Not Fully Tested
-
-The `resolve.exports` library handles conditional exports (e.g., `"import"` vs `"require"` conditions), but:
-- No tests verify this works correctly
-- No tests for dual-module packages with both ESM and CJS entry points
-
----
-
-## Testing Gaps
-
-### Current Test Coverage
-
-| Scenario | Tested |
-|----------|--------|
-| `.js` file import rewriting | Yes |
-| `.d.ts` file import rewriting | Yes |
-| `.mjs` file import rewriting | No |
-| `.cjs` file import rewriting | No |
-| `.d.mts` / `.d.cts` handling | No |
-| Package with `main` pointing to `.mjs` | No |
-| Package with `main` pointing to `.cjs` | No |
-| Conditional exports (`"import"` / `"require"`) | No |
-| Dual-format packages (ESM + CJS) | No |
-| Subpath imports resolving to `.mjs`/`.cjs` | No |
-
----
-
-## Recommended Fixes
-
-### Implementation
-
-1. **Expand the filter** in `import-rewriter.ts:18`:
-   ```typescript
-   const rewritableFiles = files.filter((f) =>
-     /\.(js|mjs|cjs|d\.ts|d\.mts|d\.cts)$/.test(f)
-   )
-   ```
-
-2. **Consider requiring explicit `exports` mapping** for subpath imports, or document that packages using `.mjs`/`.cjs` entry points must use the `exports` or `main` fields.
-
-### Testing
-
-Add test cases for:
-1. Package with `main` pointing to `.mjs` file
-2. Package with `main` pointing to `.cjs` file
-3. Dual-format package with conditional exports (`"import"` / `"require"`)
-4. In-repo dependency using `.mjs`/`.cjs` files that need import rewriting
-5. Subpath exports resolving to `.mjs`/`.cjs` files
-
----
-
-## Risk Assessment
-
-| Risk | Severity | Likelihood |
-|------|----------|------------|
-| Broken imports in ESM-only packages | High | Medium |
-| Broken imports in dual-format packages | High | Low |
-| Silent failures (files skipped without warning) | Medium | High |
+Bare imports (e.g., `import ... from '@myorg/pkg'`) correctly respect the `main` field. If `main` is `"dist/index.mjs"`, that path is used. The `index.js` fallback only applies when there's no `main` field.
