@@ -28,19 +28,25 @@ const jsAndDtsFiles = files.filter((f) => f.endsWith('.js') || f.endsWith('.d.ts
 
 ---
 
-### 2. Hardcoded `.js` Extension in Fallback Resolution
+### 2. Hardcoded `.js` Extension in Subpath Fallback Resolution
 **Location:** `src/collect-package-locations.ts:39-42`
 
 ```typescript
 if (subpath === '') {
-  return packageJson.main ?? 'index.js'   // Hardcoded fallback
+  return packageJson.main ?? 'index.js'   // Respects main field
 }
 return `${subpath}.js`                     // Hardcoded extension
 ```
 
-**Impact:** When the `exports` field doesn't provide a resolution, the fallback always appends `.js`. This breaks packages that use:
-- `index.mjs` or `index.cjs` as entry points
-- Subpath imports that resolve to `.mjs`/`.cjs` files
+**Analysis:**
+
+- **Bare imports:** NOT broken. The `main` field is respected, so `"main": "index.mjs"` works correctly. The `index.js` fallback only applies when there's no `main` field.
+
+- **Subpath imports:** Potentially broken, but only for packages WITHOUT an `exports` field. When there's no `exports` field:
+  - `@myorg/pkg/utils/helper` resolves to `utils/helper.js` even if the actual file is `helper.mjs`
+  - `@myorg/pkg/utils/helper.mjs` (with explicit extension) resolves to `utils/helper.mjs.js` (broken)
+
+**Practical impact:** Low. Modern packages using `.mjs`/`.cjs` almost always have an `exports` field, which is handled correctly by `resolve.exports`.
 
 ---
 
