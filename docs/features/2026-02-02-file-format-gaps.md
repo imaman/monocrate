@@ -75,11 +75,12 @@ To use monocrate with your monorepo:
 
 ## Technical Implementation
 
-The CommonJS detection happens in `src/import-rewriter.ts`:
+The CommonJS detection happens early in `src/validate-esm.ts`, called from `src/package-assembler.ts`:
 
-1. Files ending with `.cjs` are always rejected
-2. Files ending with `.js` are checked against their package's `type` field
-3. If `type` is not `"module"`, the file is rejected
-4. Only then are imports parsed and rewritten
+1. After collecting package locations (determining which files will be copied)
+2. Before any file I/O (directory creation, file copying)
+3. Files ending with `.cjs` or `.d.cts` are rejected
+4. Files ending with `.js` are checked against their package's `type` field
+5. If `type` is not `"module"`, the file is rejected
 
-This "fail early" approach ensures no broken output is produced.
+This "fail early" approach ensures no work is done before validation fails.

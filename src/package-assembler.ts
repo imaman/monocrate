@@ -10,6 +10,7 @@ import { AbsolutePath } from './paths.js'
 import type { RepoExplorer, MonorepoPackage } from './repo-explorer.js'
 import { computePackageClosure } from './compute-package-closure.js'
 import type { NpmClient } from './npm-client.js'
+import { validateEsmOnly } from './validate-esm.js'
 
 export class PackageAssembler {
   readonly pkgName
@@ -49,6 +50,9 @@ export class PackageAssembler {
     if (!subject) {
       throw new Error(`Internal mismatch: could not find location data of "${closure.subjectPackageName}"`)
     }
+
+    // Validate early: reject CommonJS files before any file I/O
+    validateEsmOnly(locations)
 
     await fsPromises.mkdir(outputDir, { recursive: true })
     const copiedFiles = await new FileCopier(packageMap).copy()
