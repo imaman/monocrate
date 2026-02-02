@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { monocrate } from '../index.js'
 import { folderify } from '../testing/folderify.js'
-import { unfolderify } from '../testing/unfolderify.js'
 import { pj, runMonocrate } from '../testing/monocrate-teskit.js'
 
 const name = 'root-package'
@@ -53,6 +52,7 @@ console.log(greet('World'));
         }),
         'packages/app/dist/index.mjs': `import { greet } from '@test/lib';
 export const result = greet('World');
+console.log(result);
 `,
         'packages/app/dist/index.d.mts': `import { greet } from '@test/lib';
 export declare const result: ReturnType<typeof greet>;
@@ -70,19 +70,18 @@ export declare const result: ReturnType<typeof greet>;
 `,
       })
 
-      const { outputDir } = await monocrate({
-        cwd: monorepoRoot,
-        pathToSubjectPackages: 'packages/app',
-        publish: false,
+      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', {
         bump: '1.0.0',
+        entryPoint: 'dist/index.mjs',
       })
-
-      const output = unfolderify(outputDir)
 
       // Verify .d.mts file has rewritten import
       const indexDmts = output['dist/index.d.mts'] as string
       expect(indexDmts).toContain('../deps/__test__lib/dist/index.mjs')
       expect(indexDmts).not.toContain("'@test/lib'")
+
+      // Verify the package actually runs correctly
+      expect(stdout.trim()).toBe('Hello, World!')
     })
   })
 
