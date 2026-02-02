@@ -136,6 +136,39 @@ describe('npm publishing with Verdaccio', () => {
     ).toBe('Hello, World!')
   }, 60000)
 
+  it('includes deps in tarball when subject has files field and in-repo dependencies', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/files-app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        files: ['dist'],
+        dependencies: { '@test/files-lib': 'workspace:*' },
+      },
+      'packages/app/dist/index.js': `import { greet } from '@test/files-lib'; export function sayHello(name) { return greet(name); }`,
+      'packages/lib/package.json': { name: '@test/files-lib', version: '1.0.0', main: 'dist/index.js' },
+      'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
+    })
+
+    await monocrate({
+      cwd: monorepoRoot,
+      pathToSubjectPackages: path.join(monorepoRoot, 'packages/app'),
+      monorepoRoot,
+      bump: '2.0.0',
+      publish: true,
+      npmrcPath: verdaccio.npmrcPath(),
+    })
+
+    // deps/ must be included in the tarball for the rewritten imports to work
+    expect(
+      verdaccio.runConumser(
+        '@test/files-app@2.0.0',
+        `import { sayHello } from '@test/files-app'; console.log(sayHello('World'))`
+      )
+    ).toBe('Hello, World!')
+  }, 60000)
+
   it('publishes multiple versions of the same package', async () => {
     const pkgName = `foo`
     const monorepoRoot = folderify({
