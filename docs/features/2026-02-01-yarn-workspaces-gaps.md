@@ -1,153 +1,78 @@
 # Yarn Workspaces Support Gaps
 
-## Intent
+## Context
 
-This document catalogs the functional and testing gaps in monocrate's support for Yarn workspaces. While monocrate handles basic npm/yarn workspace configurations, several yarn-specific features remain unsupported or untested.
+Monocrate is a publishing tool. It reads package.json files and source/dist directories to assemble packages for npm. It does not interact with node_modules, lock files, or package installation mechanics.
+
+This means many yarn-specific features are irrelevant:
+- **PnP mode** — Monocrate reads source files directly, not through yarn's resolution
+- **Nohoist** — An installation concern, not a publishing concern
+- **Focused workspaces** — Partial installs don't affect what monocrate reads
+- **yarn.lock** — Monocrate doesn't resolve third-party dependency versions
+- **Constraints** — Development-time validation, not publishing
 
 ## Current Support
 
-Monocrate currently supports:
+Monocrate correctly handles:
 
-- **Workspace patterns** from `package.json` in both formats:
-  - Array format: `"workspaces": ["packages/*"]`
-  - Object format: `"workspaces": { "packages": ["packages/*"] }` (Yarn style)
-- **Workspace protocol**: `"dep": "workspace:*"` dependencies are resolved correctly
-- **Monorepo root discovery**: Searches up the directory tree for `package.json` with `workspaces` field
+- **Workspace patterns** in both formats:
+  - Array: `"workspaces": ["packages/*"]`
+  - Object: `"workspaces": { "packages": ["packages/*"] }"`
+- **Workspace protocol**: Dependencies like `"dep": "workspace:*"` are resolved by package name lookup
+- **Monorepo root discovery**: Searches for `package.json` with `workspaces` field
 
 ## Functional Gaps
 
-### 1. Workspace Protocol Variants
+### 1. Missing Workspace Dependency Error Context
 
-**Current:** Only `workspace:*` is implicitly supported (resolved by package name lookup).
+**Current behavior:** When a dependency isn't found in the repo, it's treated as a third-party package.
 
-**Missing:** Yarn supports additional workspace protocol variants that are not explicitly handled:
-- `workspace:^` — Use caret range of workspace version
-- `workspace:~` — Use tilde range of workspace version
-- `workspace:^1.0.0` — Explicit version with caret
-- `workspace:packages/utils` — Path-based workspace reference
+**Gap:** If a package has `"foo": "workspace:*"` but `foo` doesn't exist in the monorepo, monocrate silently treats it as third-party. The `workspace:*` version string would then appear in the output package.json, which is invalid for npm.
 
-**Impact:** Packages using these variants may not resolve correctly or may produce unexpected dependency versions in the output `package.json`.
+**Recommendation:** Detect `workspace:` prefix in dependencies and fail with a clear error if the package isn't found in the monorepo.
 
-### 2. Yarn Berry (v2+) Configuration
+### 2. Negated Workspace Patterns
 
-**Missing:** No parsing of `.yarnrc.yml` configuration file, which can specify:
-- `nodeLinker` setting (pnp, pnpm, node-modules)
-- `nmHoistingLimits` for hoisting behavior
-- Custom workspace patterns via plugins
-- `enableGlobalCache` affecting dependency resolution
+**Current behavior:** Workspace patterns are passed directly to glob.
 
-**Impact:** Yarn Berry projects with custom configurations may not be detected or processed correctly.
+**Gap:** Yarn supports negated patterns like `["packages/*", "!packages/internal-*"]` to exclude certain directories. While glob may handle this, it's not explicitly tested.
 
-### 3. Plug'n'Play (PnP) Mode
-
-**Missing:** No support for Yarn's PnP resolution strategy:
-- `.pnp.cjs` / `.pnp.loader.mjs` files are not recognized
-- PnP virtual paths (`__virtual__`) are not handled in import rewriting
-- No detection of `.yarn/cache` zip archives for dependency lookup
-
-**Impact:** Projects using Yarn PnP cannot use monocrate without switching to `nodeLinker: node-modules`.
-
-### 4. Nohoist Patterns
-
-**Missing:** Yarn's `nohoist` configuration is not parsed:
-```json
-{
-  "workspaces": {
-    "packages": ["packages/*"],
-    "nohoist": ["**/react-native", "**/react-native/**"]
-  }
-}
-```
-
-**Impact:** Packages relying on nohoist for native modules or specific hoisting behavior may have incorrect dependency resolution.
-
-### 5. Yarn Constraints
-
-**Missing:** No awareness of `yarn constraints` feature for enforcing workspace rules. Constraints can affect:
-- Which versions of dependencies are allowed
-- Required fields in package.json files
-- Workspace relationship rules
-
-**Impact:** Monocrate cannot validate or respect constraints defined in the workspace.
-
-### 6. Yarn Lock File Awareness
-
-**Current:** Monorepo root is detected purely by `package.json` workspaces field or `pnpm-workspace.yaml`.
-
-**Missing:** `yarn.lock` presence could serve as:
-- Additional signal for monorepo root detection
-- Source of truth for resolved dependency versions
-- Verification that workspace dependencies are properly linked
-
-**Impact:** In ambiguous directory structures, yarn.lock could help disambiguate the true monorepo root.
-
-### 7. Focused Workspaces
-
-**Missing:** Yarn's `yarn workspaces focus` creates partial installs. Monocrate does not:
-- Detect focused workspace state
-- Warn when operating on a focused (incomplete) workspace
-- Handle missing peer dependencies from unfocused packages
-
-**Impact:** Running monocrate on a focused workspace may produce incomplete or incorrect output.
+**Recommendation:** Add test coverage for negated patterns.
 
 ## Testing Gaps
 
-### 1. No Yarn-Specific Test Suite
+### 1. Workspace Protocol Variants
 
-**Current:** Tests are workspace-manager-agnostic. They use `workspace:*` protocol but don't test yarn-specific behaviors.
+Tests use `workspace:*` extensively but don't cover:
+- `workspace:^` and `workspace:~` (should work since lookup is by name, but untested)
+- Malformed or missing workspace dependencies
 
-**Missing:**
-- Dedicated test suite for yarn workspace features
-- Tests that verify behavior differences between npm and yarn workspaces
-- Integration tests running actual `yarn` commands
+### 2. Object-Format Workspaces
 
-### 2. Workspace Protocol Variant Coverage
+The object format `{ "packages": [...] }` is supported in code but has minimal test coverage compared to the array format.
 
-**Missing tests for:**
-- `workspace:^` and `workspace:~` protocol variants
-- Mixed workspace protocols within one monorepo
-- Workspace protocol in `peerDependencies` and `optionalDependencies`
+### 3. Mixed Workspace Patterns
 
-### 3. Yarn Berry Version Testing
+No tests for multiple patterns with different glob styles:
+```json
+{
+  "workspaces": ["packages/*", "apps/**", "tools/cli"]
+}
+```
 
-**Missing:**
-- Tests against Yarn v2, v3, and v4 behaviors
-- Tests for `.yarnrc.yml` configuration parsing
-- Tests for projects using `packageManager` field in root `package.json`
+### 4. Edge Cases
 
-### 4. Environment Variable Handling
+Missing test coverage for:
+- Empty workspaces array
+- Workspace patterns that match no packages
+- Packages with `workspace:` deps pointing to non-existent packages
 
-**Current:** Tests clean `npm_config_*` variables set by yarn, but this is reactive.
+## Recommendations
 
-**Missing:**
-- Tests verifying monocrate works in a yarn-spawned environment
-- Tests for `YARN_*` environment variables that may affect behavior
-- Tests for `corepack` integration
-
-### 5. Edge Cases
-
-**Missing tests for:**
-- Nested workspaces (workspace containing another workspace root)
-- Workspace aliases (`"@alias": "workspace:packages/real-name"`)
-- Portal protocol (`"dep": "portal:../external-package"`)
-- Patch protocol (`"dep": "patch:lodash@npm:4.17.21#./patches/lodash.patch"`)
-
-## Prioritization
-
-| Gap | Severity | Effort | Recommendation |
-|-----|----------|--------|----------------|
-| Workspace protocol variants | High | Low | Handle `workspace:^` and `workspace:~` in dependency processing |
-| PnP mode | High | High | Document as unsupported; suggest `nodeLinker: node-modules` workaround |
-| yarn.lock awareness | Medium | Low | Use for root detection heuristic |
-| .yarnrc.yml parsing | Medium | Medium | Parse essential fields like `nodeLinker` |
-| Nohoist patterns | Low | Medium | Document as out of scope (affects install, not publish) |
-| Focused workspaces | Low | Low | Add warning detection |
-| Yarn constraints | Low | High | Document as out of scope |
-
-## Recommended Next Steps
-
-1. **Document limitations**: Add yarn-specific notes to README about PnP and constraints
-2. **Add workspace protocol handling**: Parse and normalize `workspace:^` and `workspace:~` variants
-3. **Improve root detection**: Include `yarn.lock` as a heuristic signal
-4. **Create yarn test fixtures**: Add test cases with yarn-specific configurations
-5. **Detect unsupported modes**: Warn when PnP mode is detected
+| Item | Priority | Effort |
+|------|----------|--------|
+| Error on unresolved `workspace:` deps | High | Low |
+| Test workspace protocol variants | Medium | Low |
+| Test object-format workspaces | Medium | Low |
+| Test negated patterns | Low | Low |
+| Test mixed/complex glob patterns | Low | Low |
