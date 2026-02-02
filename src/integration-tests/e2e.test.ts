@@ -721,4 +721,144 @@ export const a = 'a-' + b;
     // Verify execution works
     expect(stdout.trim()).toBe('a-b')
   }, 15000)
+
+  it('handles workspace:^ protocol variant', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name, workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: {
+          '@test/lib': 'workspace:^',
+          chalk: '^5.0.0',
+        },
+      },
+      'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet('World'));`,
+      'packages/lib/package.json': {
+        name: '@test/lib',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: {
+          lodash: '^4.17.21',
+        },
+      },
+      'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '2.0.0' })
+
+    expect(output['package.json']).toEqual({
+      name: '@test/app',
+      version: '2.0.0',
+      main: 'dist/index.js',
+      dependencies: {
+        chalk: '^5.0.0',
+        lodash: '^4.17.21',
+      },
+    })
+
+    expect(stdout.trim()).toBe('Hello, World!')
+  })
+
+  it('handles workspace:~ protocol variant', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name, workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: {
+          '@test/lib': 'workspace:~',
+          chalk: '^5.0.0',
+        },
+      },
+      'packages/app/dist/index.js': `import { greet } from '@test/lib'; console.log(greet('World'));`,
+      'packages/lib/package.json': {
+        name: '@test/lib',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: {
+          lodash: '^4.17.21',
+        },
+      },
+      'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '3.0.0' })
+
+    expect(output['package.json']).toEqual({
+      name: '@test/app',
+      version: '3.0.0',
+      main: 'dist/index.js',
+      dependencies: {
+        chalk: '^5.0.0',
+        lodash: '^4.17.21',
+      },
+    })
+
+    expect(stdout.trim()).toBe('Hello, World!')
+  })
+
+  it('handles mixed workspace protocol variants in dependency chain', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name, workspaces: ['packages/*'] },
+      'packages/app/package.json': {
+        name: '@test/app',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: {
+          '@test/lib-a': 'workspace:*',
+          '@test/lib-b': 'workspace:^',
+          '@test/lib-c': 'workspace:~',
+        },
+      },
+      'packages/app/dist/index.js': `import { a } from '@test/lib-a';
+import { b } from '@test/lib-b';
+import { c } from '@test/lib-c';
+console.log(a + '-' + b + '-' + c);
+`,
+      'packages/lib-a/package.json': {
+        name: '@test/lib-a',
+        version: '1.0.0',
+        main: 'dist/index.js',
+        dependencies: { express: '^4.0.0' },
+      },
+      'packages/lib-a/dist/index.js': `export const a = 'A';`,
+      'packages/lib-b/package.json': {
+        name: '@test/lib-b',
+        version: '2.0.0',
+        main: 'dist/index.js',
+        dependencies: { lodash: '^4.0.0' },
+      },
+      'packages/lib-b/dist/index.js': `export const b = 'B';`,
+      'packages/lib-c/package.json': {
+        name: '@test/lib-c',
+        version: '3.0.0',
+        main: 'dist/index.js',
+        dependencies: { zod: '^3.0.0' },
+      },
+      'packages/lib-c/dist/index.js': `export const c = 'C';`,
+    })
+
+    const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '5.0.0' })
+
+    expect(output['package.json']).toEqual({
+      name: '@test/app',
+      version: '5.0.0',
+      main: 'dist/index.js',
+      dependencies: {
+        express: '^4.0.0',
+        lodash: '^4.0.0',
+        zod: '^3.0.0',
+      },
+    })
+
+    // All three in-repo deps should be bundled in deps directory
+    expect(output).toHaveProperty('deps/__test__lib-a/dist/index.js')
+    expect(output).toHaveProperty('deps/__test__lib-b/dist/index.js')
+    expect(output).toHaveProperty('deps/__test__lib-c/dist/index.js')
+
+    expect(stdout.trim()).toBe('A-B-C')
+  })
 })
