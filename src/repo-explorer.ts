@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { glob } from 'glob'
-import { parse as parseYaml } from 'yaml'
+import yaml from 'yaml'
 import { z } from 'zod'
 import { PackageJson } from './package-json.js'
 import { AbsolutePath, RelativePath } from './paths.js'
@@ -113,7 +113,7 @@ export class RepoExplorer {
     if (fs.existsSync(pnpmWorkspacePath)) {
       const content = fs.readFileSync(pnpmWorkspacePath, 'utf-8')
       const PnpmWorkspace = z.object({ packages: z.array(z.string()) })
-      const parsed = PnpmWorkspace.safeParse(parseYaml(content))
+      const parsed = PnpmWorkspace.safeParse(yaml.parse(content))
       if (!parsed.success) {
         throw new Error(`Invalid pnpm-workspace.yaml at ${pnpmWorkspacePath}: ${parsed.error.message}`)
       }
