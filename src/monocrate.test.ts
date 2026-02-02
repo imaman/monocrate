@@ -1328,13 +1328,17 @@ console.log('Hello from bin');
       })
 
       const output = unfolderify(outputDir)
-      const pkgJson = output['package.json'] as Record<string, unknown>
-
-      // deps/ must be in files array, otherwise npm pack will exclude it
-      expect(pkgJson.files).toEqual(['dist', 'deps'])
+      expect(output['package.json']).toEqual({
+        files: [
+          'dist',
+          // deps must be in files array, otherwise npm pack will exclude it
+          'deps',
+        ],
+        main: 'dist/index.js',
+        name: '@test/app',
+        version: '1.0.0',
+      })
     })
-
-    // TODO(imaman): publish to a test registry
   })
 
   // TODO(imaman): move this to a separate test file
