@@ -124,7 +124,7 @@ export class RepoExplorer {
     return ['packages/*']
   }
 
-  static async discover(monorepoRoot: AbsolutePath): Promise<Map<string, MonorepoPackage>> {
+  private static async discover(monorepoRoot: AbsolutePath): Promise<Map<string, MonorepoPackage>> {
     const patterns = this.parseWorkspacePatterns(monorepoRoot)
     const packages = new Map<string, MonorepoPackage>()
 
