@@ -44,7 +44,7 @@ export class PackageAssembler {
     const closure = computePackageClosure(this.pkgName, this.explorer)
     const outputDir = this.getOutputDir()
     const locations = await collectPackageLocations(this.npmClient, closure, outputDir)
-    validateEsmOnly(locations)
+    validateEsmOnly(locations, this.explorer.repoRootDir)
 
     const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
