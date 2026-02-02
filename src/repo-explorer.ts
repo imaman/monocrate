@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { glob } from 'glob'
+import { glob } from 'tinyglobby'
 import yaml from 'yaml'
 import { z } from 'zod'
 import { PackageJson } from './package-json.js'
@@ -132,25 +132,26 @@ export class RepoExplorer {
 
   private static async discover(monorepoRoot: AbsolutePath): Promise<Map<string, MonorepoPackage>> {
     const patterns = this.parseWorkspacePatterns(monorepoRoot)
+    const globPatterns = patterns.map((p) => path.join(p, 'package.json'))
+
+    const matches = await glob(globPatterns, {
+      cwd: monorepoRoot,
+      ignore: ['**/node_modules/**'],
+    })
+
     const packages = new Map<string, MonorepoPackage>()
+    for (const match of matches) {
+      const packageDir = AbsolutePath(path.join(monorepoRoot, path.dirname(match)))
+      const packageJson = this.readPackageJson(packageDir)
 
-    for (const pattern of patterns) {
-      const fullPattern = path.join(monorepoRoot, pattern, 'package.json')
-      const matches = await glob(fullPattern, { ignore: '**/node_modules/**' })
-
-      for (const match of matches) {
-        const packageDir = AbsolutePath(path.dirname(match))
-        const packageJson = this.readPackageJson(packageDir)
-
-        if (packageJson.name) {
-          packages.set(packageJson.name, {
-            name: packageJson.name,
-            publishAs: packageJson.monocrate?.publishName ?? packageJson.name,
-            fromDir: packageDir,
-            pathInRepo: RelativePath(path.relative(monorepoRoot, packageDir)),
-            packageJson,
-          })
-        }
+      if (packageJson.name) {
+        packages.set(packageJson.name, {
+          name: packageJson.name,
+          publishAs: packageJson.monocrate?.publishName ?? packageJson.name,
+          fromDir: packageDir,
+          pathInRepo: RelativePath(path.dirname(match)),
+          packageJson,
+        })
       }
     }
 
