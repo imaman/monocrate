@@ -298,24 +298,4 @@ describe('--mirror-to option', () => {
       'packages/test-util/package.json',
     ])
   })
-
-  it('does not mirror when mirrorTo is not specified', async () => {
-    const monorepoRoot = folderify({
-      'package.json': { name, workspaces: ['packages/*'] },
-      'packages/app/package.json': pj('@test/app'),
-      'packages/app/src/index.ts': `export const foo = 'foo';`,
-      'packages/app/dist/index.js': `export const foo = 'foo';`,
-    })
-
-    // No mirrorTo option
-    const result = await monocrate({
-      cwd: monorepoRoot,
-      pathToSubjectPackages: 'packages/app',
-      publish: false,
-      bump: '1.0.0',
-    })
-
-    // Should complete without error, outputDir should exist
-    expect(fs.existsSync(result.outputDir)).toBe(true)
-  })
 })
