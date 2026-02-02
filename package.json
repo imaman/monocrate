@@ -48,7 +48,6 @@
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@types/node": "^20.19.29",
-    "@types/picomatch": "^4.0.2",
     "@types/yargs": "^17.0.35",
     "@vitest/coverage-v8": "^1.2.0",
     "eslint": "^9.0.0",
@@ -73,10 +72,9 @@
   },
   "dependencies": {
     "esbuild": "^0.24.0",
-    "glob": "^13.0.0",
-    "picomatch": "^4.0.3",
     "resolve.exports": "^2.0.3",
     "tinyexec": "^1.0.2",
+    "tinyglobby": "^0.2.15",
     "ts-morph": "^27.0.2",
     "yaml": "^2.8.2",
     "yargs": "^18.0.0",

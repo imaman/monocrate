@@ -1,7 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { glob } from 'glob'
-import picomatch from 'picomatch'
+import { glob } from 'tinyglobby'
 import yaml from 'yaml'
 import { z } from 'zod'
 import { PackageJson } from './package-json.js'
@@ -133,35 +132,28 @@ export class RepoExplorer {
 
   private static async discover(monorepoRoot: AbsolutePath): Promise<Map<string, MonorepoPackage>> {
     const patterns = this.parseWorkspacePatterns(monorepoRoot)
-    const positivePatterns = patterns.filter((p) => !p.startsWith('!'))
-    const negativePatterns = patterns.filter((p) => p.startsWith('!')).map((p) => p.slice(1))
-    const isExcluded = negativePatterns.length > 0 ? picomatch(negativePatterns) : () => false
+    const positivePatterns = patterns.filter((p) => !p.startsWith('!')).map((p) => `${p}/package.json`)
+    const negativePatterns = patterns.filter((p) => p.startsWith('!')).map((p) => `!${p.slice(1)}/package.json`)
+    const globPatterns = [...positivePatterns, ...negativePatterns]
+
+    const matches = await glob(globPatterns, {
+      cwd: monorepoRoot,
+      ignore: ['**/node_modules/**'],
+    })
 
     const packages = new Map<string, MonorepoPackage>()
-    for (const pattern of positivePatterns) {
-      const matches = await glob(path.join(monorepoRoot, pattern, 'package.json'), {
-        ignore: ['**/node_modules/**'],
-      })
+    for (const match of matches) {
+      const packageDir = AbsolutePath(path.join(monorepoRoot, path.dirname(match)))
+      const packageJson = this.readPackageJson(packageDir)
 
-      for (const match of matches) {
-        const packageDir = AbsolutePath(path.dirname(match))
-        const pathInRepo = path.relative(monorepoRoot, packageDir)
-
-        if (isExcluded(pathInRepo)) {
-          continue
-        }
-
-        const packageJson = this.readPackageJson(packageDir)
-
-        if (packageJson.name) {
-          packages.set(packageJson.name, {
-            name: packageJson.name,
-            publishAs: packageJson.monocrate?.publishName ?? packageJson.name,
-            fromDir: packageDir,
-            pathInRepo: RelativePath(pathInRepo),
-            packageJson,
-          })
-        }
+      if (packageJson.name) {
+        packages.set(packageJson.name, {
+          name: packageJson.name,
+          publishAs: packageJson.monocrate?.publishName ?? packageJson.name,
+          fromDir: packageDir,
+          pathInRepo: RelativePath(path.dirname(match)),
+          packageJson,
+        })
       }
     }
 
