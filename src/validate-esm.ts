@@ -23,7 +23,7 @@ function validateFile(file: string, location: PackageLocation, repoRoot: Absolut
   // .cjs and .d.cts files are always CommonJS
   if (file.endsWith('.cjs') || file.endsWith('.d.cts')) {
     throw new Error(
-      `Cannot process ${ext} file: ${filePath}\n` +
+      `Cannot process a ${ext} file: ${filePath}\n` +
         `Monocrate only supports ES modules. Use .mjs extension or set "type": "module" in package.json.`
     )
   }
@@ -31,7 +31,7 @@ function validateFile(file: string, location: PackageLocation, repoRoot: Absolut
   // .js files are CommonJS unless the package has "type": "module"
   if (file.endsWith('.js') && location.packageJson.type !== 'module') {
     throw new Error(
-      `Cannot process .js file in CommonJS package: ${filePath}\n` +
+      `Cannot process a .js file in a CommonJS package: ${filePath}\n` +
         `Package "${location.name}" does not have "type": "module" in package.json.\n` +
         `Monocrate only supports ES modules. Set "type": "module" in package.json or use .mjs extension.`
     )

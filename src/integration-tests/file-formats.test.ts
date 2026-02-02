@@ -165,7 +165,7 @@ console.log(helper());
           publish: false,
           bump: '1.0.0',
         })
-      ).rejects.toThrow('Cannot process .cjs file: packages/app/dist/index.cjs')
+      ).rejects.toThrow('Cannot process a .cjs file: packages/app/dist/index.cjs')
     })
 
     it('rejects .js files in packages without type: module', async () => {
@@ -188,7 +188,7 @@ console.log(helper());
           publish: false,
           bump: '1.0.0',
         })
-      ).rejects.toThrow('Cannot process .js file in CommonJS package: packages/app/dist/index.js')
+      ).rejects.toThrow('Cannot process a .js file in a CommonJS package: packages/app/dist/index.js')
     })
 
     it('rejects .js files in packages with type: commonjs', async () => {
@@ -211,7 +211,7 @@ console.log(helper());
           publish: false,
           bump: '1.0.0',
         })
-      ).rejects.toThrow('Cannot process .js file in CommonJS package: packages/app/dist/index.js')
+      ).rejects.toThrow('Cannot process a .js file in a CommonJS package: packages/app/dist/index.js')
     })
 
     it('rejects in-repo dependencies with .cjs files', async () => {
@@ -242,7 +242,7 @@ console.log(greet());
           publish: false,
           bump: '1.0.0',
         })
-      ).rejects.toThrow('Cannot process .cjs file: packages/lib/dist/index.cjs')
+      ).rejects.toThrow('Cannot process a .cjs file: packages/lib/dist/index.cjs')
     })
 
     it('accepts .js files in packages with type: module', async () => {
