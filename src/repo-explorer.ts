@@ -1,6 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { glob } from 'glob'
+import { minimatch } from 'minimatch'
 import yaml from 'yaml'
 import { z } from 'zod'
 import { PackageJson } from './package-json.js'
@@ -132,14 +133,23 @@ export class RepoExplorer {
 
   private static async discover(monorepoRoot: AbsolutePath): Promise<Map<string, MonorepoPackage>> {
     const patterns = this.parseWorkspacePatterns(monorepoRoot)
+    const positivePatterns = patterns.filter((p) => !p.startsWith('!'))
+    const negativePatterns = patterns.filter((p) => p.startsWith('!')).map((p) => p.slice(1))
     const packages = new Map<string, MonorepoPackage>()
 
-    for (const pattern of patterns) {
+    for (const pattern of positivePatterns) {
       const fullPattern = path.join(monorepoRoot, pattern, 'package.json')
       const matches = await glob(fullPattern, { ignore: '**/node_modules/**' })
 
       for (const match of matches) {
         const packageDir = AbsolutePath(path.dirname(match))
+        const pathInRepo = path.relative(monorepoRoot, packageDir)
+
+        const isExcluded = negativePatterns.some((neg) => minimatch(pathInRepo, neg))
+        if (isExcluded) {
+          continue
+        }
+
         const packageJson = this.readPackageJson(packageDir)
 
         if (packageJson.name) {
@@ -147,7 +157,7 @@ export class RepoExplorer {
             name: packageJson.name,
             publishAs: packageJson.monocrate?.publishName ?? packageJson.name,
             fromDir: packageDir,
-            pathInRepo: RelativePath(path.relative(monorepoRoot, packageDir)),
+            pathInRepo: RelativePath(pathInRepo),
             packageJson,
           })
         }
