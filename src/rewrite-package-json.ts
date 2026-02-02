@@ -26,5 +26,12 @@ export function rewritePackageJson(closure: PackageClosure, version: string | un
     rewritten.dependencies = closure.allThirdPartyDeps
   }
 
+  // If the package has a files field and has in-repo dependencies, add deps/ to files
+  // Otherwise npm pack will exclude the deps/ directory from the tarball
+  const hasInRepoDeps = closure.runtimeMembers.length > 1
+  if (rewritten.files && hasInRepoDeps) {
+    rewritten.files = [...rewritten.files, 'deps']
+  }
+
   fs.writeFileSync(path.join(outputDir, 'package.json'), JSON.stringify(rewritten, null, 2) + '\n')
 }
