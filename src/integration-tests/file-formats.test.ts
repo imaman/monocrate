@@ -70,7 +70,8 @@ export declare const result: ReturnType<typeof greet>;
         entryPoint: 'dist/index.mjs',
       })
 
-      // Verify .d.mts file has rewritten import
+      // Declaration files (.d.mts) don't execute, so we must verify their imports
+      // were rewritten by checking file contents directly
       const indexDmts = output['dist/index.d.mts'] as string
       expect(indexDmts).toContain('../deps/__test__lib/dist/index.mjs')
       expect(indexDmts).not.toContain("'@test/lib'")
@@ -81,7 +82,7 @@ export declare const result: ReturnType<typeof greet>;
   })
 
   describe('main field pointing to .mjs', () => {
-    it('resolves package with main pointing to .mjs file', async () => {
+    it('correctly imports a dep whose main file is .mjs', async () => {
       const monorepoRoot = folderify({
         'package.json': { name, workspaces: ['packages/*'] },
         'packages/app/package.json': pj('@test/app', {
@@ -104,11 +105,7 @@ console.log(greet('World'));
 `,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '1.0.0' })
-
-      // Verify import was rewritten to the .mjs file
-      const indexJs = output['dist/index.js'] as string
-      expect(indexJs).toContain('../deps/__test__lib/dist/index.mjs')
+      const { stdout } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '1.0.0' })
 
       expect(stdout.trim()).toBe('Hello from mjs, World!')
     })
@@ -143,12 +140,7 @@ console.log(helper());
 `,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '1.0.0' })
-
-      // Verify subpath import was rewritten to the .mjs file
-      const indexJs = output['dist/index.js'] as string
-      expect(indexJs).toContain('../deps/__test__lib/dist/utils/helper.mjs')
-      expect(indexJs).not.toContain("'@test/lib/utils'")
+      const { stdout } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '1.0.0' })
 
       expect(stdout.trim()).toBe('Helper from .mjs!')
     })
@@ -173,7 +165,7 @@ console.log(helper());
           publish: false,
           bump: '1.0.0',
         })
-      ).rejects.toThrow('Cannot process CommonJS file')
+      ).rejects.toThrow('Cannot process CommonJS file: @test/app/dist/index.cjs')
     })
 
     it('rejects .js files in packages without type: module', async () => {
@@ -196,7 +188,7 @@ console.log(helper());
           publish: false,
           bump: '1.0.0',
         })
-      ).rejects.toThrow('does not have "type": "module"')
+      ).rejects.toThrow('Package "@test/app" does not have "type": "module"')
     })
 
     it('rejects .js files in packages with type: commonjs', async () => {
@@ -219,7 +211,7 @@ console.log(helper());
           publish: false,
           bump: '1.0.0',
         })
-      ).rejects.toThrow('does not have "type": "module"')
+      ).rejects.toThrow('Package "@test/app" does not have "type": "module"')
     })
 
     it('rejects in-repo dependencies with .cjs files', async () => {
@@ -250,7 +242,7 @@ console.log(greet());
           publish: false,
           bump: '1.0.0',
         })
-      ).rejects.toThrow('Cannot process CommonJS file')
+      ).rejects.toThrow('Cannot process CommonJS file: @test/lib/dist/index.cjs')
     })
 
     it('accepts .js files in packages with type: module', async () => {
@@ -274,12 +266,7 @@ console.log(greet('World'));
 `,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '1.0.0' })
-
-      // Verify .js file was processed successfully
-      const indexJs = output['dist/index.js'] as string
-      expect(indexJs).toContain('../deps/__test__lib/dist/index.js')
-      expect(indexJs).not.toContain("'@test/lib'")
+      const { stdout } = await runMonocrate(monorepoRoot, 'packages/app', { bump: '1.0.0' })
 
       expect(stdout.trim()).toBe('Hello, World!')
     })
