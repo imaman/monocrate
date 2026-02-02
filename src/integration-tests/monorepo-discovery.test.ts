@@ -38,4 +38,27 @@ describe('monorepo discovery', () => {
       'Could not find monorepo root'
     )
   })
+
+  it('excludes a single package with a negative pattern', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*', '!packages/excluded'] },
+      'packages/app/package.json': { name: '@test/app' },
+      'packages/lib/package.json': { name: '@test/lib' },
+      'packages/excluded/package.json': { name: '@test/excluded' },
+    })
+
+    const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
+    expect(explorer.listNames().sort()).toEqual(['@test/app', '@test/lib'])
+  })
+
+  it('excludes packages regardless of negative pattern position in array', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['!packages/excluded', 'packages/*'] },
+      'packages/app/package.json': { name: '@test/app' },
+      'packages/excluded/package.json': { name: '@test/excluded' },
+    })
+
+    const explorer = await RepoExplorer.create(AbsolutePath(monorepoRoot))
+    expect(explorer.listNames()).toEqual(['@test/app'])
+  })
 })
