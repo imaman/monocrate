@@ -1,0 +1,41 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import { describe, it, expect } from 'vitest'
+import { RepoExplorer } from '../repo-explorer.js'
+import { AbsolutePath } from '../paths.js'
+import { folderify } from '../testing/folderify.js'
+import { createTempDir } from '../testing/monocrate-teskit.js'
+
+describe('monorepo discovery', () => {
+  it('finds monorepo root with npm workspaces', () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'my-monorepo', workspaces: ['packages/*'] },
+      'packages/app/package.json': { name: '@test/app' },
+    })
+
+    const found = RepoExplorer.findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
+    expect(found).toBe(monorepoRoot)
+  })
+
+  it('finds monorepo root with pnpm workspaces', () => {
+    const monorepoRoot = folderify({
+      'package.json': { name: 'pnpm-root' },
+      'pnpm-workspace.yaml': `packages:
+  - 'packages/*'
+`,
+      'packages/app/package.json': { name: '@test/app' },
+    })
+
+    const found = RepoExplorer.findMonorepoRoot(AbsolutePath(path.join(monorepoRoot, 'packages/app')))
+    expect(found).toBe(monorepoRoot)
+  })
+
+  it('throws when no monorepo root is found', () => {
+    const tempDir = createTempDir('no-monorepo-')
+    fs.mkdirSync(path.join(tempDir, 'some-package'))
+
+    expect(() => RepoExplorer.findMonorepoRoot(AbsolutePath(path.join(tempDir, 'some-package')))).toThrow(
+      'Could not find monorepo root'
+    )
+  })
+})
