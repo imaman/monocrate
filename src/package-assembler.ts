@@ -44,15 +44,14 @@ export class PackageAssembler {
     const closure = computePackageClosure(this.pkgName, this.explorer)
     const outputDir = this.getOutputDir()
     const locations = await collectPackageLocations(this.npmClient, closure, outputDir)
+    validateEsmOnly(locations)
+
     const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
     const subject = packageMap.get(closure.subjectPackageName)
     if (!subject) {
       throw new Error(`Internal mismatch: could not find location data of "${closure.subjectPackageName}"`)
     }
-
-    // Validate early: reject CommonJS files before any file I/O
-    validateEsmOnly(locations)
 
     await fsPromises.mkdir(outputDir, { recursive: true })
     const copiedFiles = await new FileCopier(packageMap).copy()
