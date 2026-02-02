@@ -284,7 +284,9 @@ export const message = lib.greet();
           publish: false,
           bump: '2.8.512',
         })
-      ).rejects.toThrow('Invalid package.json')
+      ).rejects.toThrow(
+        `Invalid workspaces field in package.json: expected an array of strings (e.g., ["packages/*"]) or an object with a "packages" array (e.g., { packages: ["packages/*"] })`
+      )
     })
 
     it('throws when pnpm-workspace.yaml is malformed', async () => {
@@ -303,7 +305,9 @@ export const message = lib.greet();
           publish: false,
           bump: '2.8.512',
         })
-      ).rejects.toThrow('Invalid pnpm-workspace.yaml')
+      ).rejects.toThrow(
+        `Invalid pnpm-workspace.yaml: expected a "packages" field with an array of strings (e.g., packages: ["packages/*"])`
+      )
     })
 
     it('works with workspace object format (packages field)', async () => {

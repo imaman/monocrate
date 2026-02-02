@@ -104,7 +104,9 @@ export class RepoExplorer {
       })
       const parsed = WorkspacesConfig.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
       if (!parsed.success) {
-        throw new Error(`Invalid package.json in ${packageJsonPath}: ${parsed.error.message}`)
+        throw new Error(
+          `Invalid workspaces field in package.json: expected an array of strings (e.g., ["packages/*"]) or an object with a "packages" array (e.g., { packages: ["packages/*"] })`
+        )
       }
       if (parsed.data.workspaces) {
         const workspaces = parsed.data.workspaces
@@ -118,7 +120,9 @@ export class RepoExplorer {
       const PnpmWorkspace = z.object({ packages: z.array(z.string()) })
       const parsed = PnpmWorkspace.safeParse(yaml.parse(content))
       if (!parsed.success) {
-        throw new Error(`Invalid pnpm-workspace.yaml at ${pnpmWorkspacePath}: ${parsed.error.message}`)
+        throw new Error(
+          `Invalid pnpm-workspace.yaml: expected a "packages" field with an array of strings (e.g., packages: ["packages/*"])`
+        )
       }
       return parsed.data.packages
     }
