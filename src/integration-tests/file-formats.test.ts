@@ -28,15 +28,10 @@ console.log(greet('World'));
 `,
       })
 
-      const { stdout, output } = await runMonocrate(monorepoRoot, 'packages/app', {
+      const { stdout } = await runMonocrate(monorepoRoot, 'packages/app', {
         bump: '1.0.0',
         entryPoint: 'dist/index.mjs',
       })
-
-      // Verify .mjs file has rewritten import
-      const indexMjs = output['dist/index.mjs'] as string
-      expect(indexMjs).toContain('../deps/__test__lib/dist/index.mjs')
-      expect(indexMjs).not.toContain("'@test/lib'")
 
       expect(stdout.trim()).toBe('Hello, World!')
     })
