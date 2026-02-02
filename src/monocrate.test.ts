@@ -269,6 +269,43 @@ export const message = lib.greet();
       ).rejects.toThrow('Import of in-repo package "@test/lib" found in packages/app/dist/index.js')
     })
 
+    it('throws when workspaces field in package.json is malformed', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { workspaces: 'not-an-array-or-object' },
+        'packages/app/package.json': pj('@test/app'),
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackages: 'packages/app',
+          monorepoRoot,
+          publish: false,
+          bump: '2.8.512',
+        })
+      ).rejects.toThrow('Invalid package.json')
+    })
+
+    it('throws when pnpm-workspace.yaml is malformed', async () => {
+      const monorepoRoot = folderify({
+        'package.json': { name: 'pnpm-root' },
+        'pnpm-workspace.yaml': `packages: "not-an-array"`,
+        'packages/app/package.json': pj('@test/app'),
+        'packages/app/dist/index.js': `export const foo = 'foo';`,
+      })
+
+      await expect(
+        monocrate({
+          cwd: monorepoRoot,
+          pathToSubjectPackages: 'packages/app',
+          monorepoRoot,
+          publish: false,
+          bump: '2.8.512',
+        })
+      ).rejects.toThrow('Invalid pnpm-workspace.yaml')
+    })
+
     it('works with workspace object format (packages field)', async () => {
       const monorepoRoot = folderify({
         'package.json': { workspaces: { packages: ['packages/*'] } },
