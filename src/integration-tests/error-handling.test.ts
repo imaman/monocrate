@@ -235,6 +235,7 @@ export const message = lib.greet();
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '2.8.512',
+      type: 'module',
       main: 'dist/index.js',
     })
 

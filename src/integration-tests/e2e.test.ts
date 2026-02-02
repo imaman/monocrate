@@ -13,6 +13,7 @@ describe('monocrate e2e', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         types: 'dist/index.d.ts',
         dependencies: {
@@ -25,6 +26,7 @@ describe('monocrate e2e', () => {
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         types: 'dist/index.d.ts',
         dependencies: {
@@ -40,6 +42,7 @@ describe('monocrate e2e', () => {
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '4.256.16384',
+      type: 'module',
       main: 'dist/index.js',
       types: 'dist/index.d.ts',
       dependencies: {
@@ -58,6 +61,7 @@ describe('monocrate e2e', () => {
       'packages/app-alpha/package.json': {
         name: '@test/app-alpha',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/lib-alpha': 'workspace:*',
@@ -68,6 +72,7 @@ describe('monocrate e2e', () => {
       'packages/lib-alpha/package.json': {
         name: '@test/lib-alpha',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           lodash: '^4.17.21',
@@ -78,6 +83,7 @@ describe('monocrate e2e', () => {
       'packages/app-beta/package.json': {
         name: '@test/app-beta',
         version: '2.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/lib-beta': 'workspace:*',
@@ -88,6 +94,7 @@ describe('monocrate e2e', () => {
       'packages/lib-beta/package.json': {
         name: '@test/lib-beta',
         version: '2.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           uuid: '^9.0.0',
@@ -102,6 +109,7 @@ describe('monocrate e2e', () => {
     expect(alpha.output['package.json']).toEqual({
       name: '@test/app-alpha',
       version: '4.16.64',
+      type: 'module',
       main: 'dist/index.js',
       dependencies: {
         chalk: '^5.0.0',
@@ -116,6 +124,7 @@ describe('monocrate e2e', () => {
     expect(beta.output['package.json']).toEqual({
       name: '@test/app-beta',
       version: '5.25.125',
+      type: 'module',
       main: 'dist/index.js',
       dependencies: {
         zod: '^3.0.0',
@@ -131,6 +140,7 @@ describe('monocrate e2e', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/level1': 'workspace:*',
@@ -143,6 +153,7 @@ console.log(fromLevel1());
       'packages/level1/package.json': {
         name: '@test/level1',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/level2': 'workspace:*',
@@ -157,6 +168,7 @@ export function fromLevel1() {
       'packages/level2/package.json': {
         name: '@test/level2',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/level3': 'workspace:*',
@@ -171,6 +183,7 @@ export function fromLevel2() {
       'packages/level3/package.json': {
         name: '@test/level3',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/level4': 'workspace:*',
@@ -185,6 +198,7 @@ export function fromLevel3() {
       'packages/level4/package.json': {
         name: '@test/level4',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           uuid: '^9.0.0',
@@ -201,6 +215,7 @@ export function fromLevel3() {
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '4.16.64',
+      type: 'module',
       main: 'dist/index.js',
       dependencies: {
         express: '^4.18.0',
@@ -223,6 +238,7 @@ export function fromLevel3() {
       'packages/app/package.json': {
         name: '@test/pnpm-app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/pnpm-lib': 'workspace:*',
@@ -235,6 +251,7 @@ console.log(pnpmGreet());
       'packages/lib/package.json': {
         name: '@test/pnpm-lib',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           lodash: '^4.17.21',
@@ -251,6 +268,7 @@ console.log(pnpmGreet());
     expect(output['package.json']).toEqual({
       name: '@test/pnpm-app',
       version: '9.81.729',
+      type: 'module',
       main: 'dist/index.js',
       dependencies: {
         chalk: '^5.0.0',
@@ -267,6 +285,7 @@ console.log(pnpmGreet());
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/lib': 'workspace:*',
@@ -283,6 +302,7 @@ console.log(greet('World'));
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           lodash: '^4.17.21',
@@ -302,6 +322,7 @@ console.log(greet('World'));
     expect(output['package.json']).toEqual({
       name: '@test/app',
       version: '3.9.27',
+      type: 'module',
       main: 'dist/index.js',
       dependencies: {
         chalk: '^5.0.0',
@@ -348,6 +369,7 @@ console.log(greet('World'));
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: {
           '@test/lib': 'workspace:*',
@@ -359,6 +381,7 @@ throwError();
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
       },
       'packages/lib/dist/index.js': libSource,

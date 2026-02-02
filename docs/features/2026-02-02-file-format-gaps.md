@@ -1,78 +1,85 @@
-# File Format Support for .mjs/.cjs in Monocrate
+# File Format Support for .mjs in Monocrate
 
 ## Status: Implemented
 
-Support for alternative module formats (`.mjs`, `.cjs`) and their TypeScript declaration equivalents (`.d.mts`, `.d.cts`) has been implemented.
+Support for ES module file formats (`.mjs`) and their TypeScript declaration equivalents (`.d.mts`) has been implemented. **CommonJS files are explicitly rejected** to ensure reliable import rewriting.
 
 ---
 
-## What Was Implemented
+## ES Modules Only
 
-### 1. Import Rewriter Filter Expanded
-**Location:** `src/import-rewriter.ts:18`
+Monocrate only supports ES modules. All packages must have `"type": "module"` in their package.json, or use `.mjs` file extensions.
 
-The import rewriter now processes all JavaScript and TypeScript declaration file formats:
+### Why ES Modules Only?
 
-```typescript
-const rewritableFiles = files.filter((f) => /\.(js|mjs|cjs|d\.ts|d\.mts|d\.cts)$/.test(f))
+Monocrate rewrites imports from in-repo packages to relative paths. This rewriting relies on parsing ES module syntax (`import`/`export` declarations and dynamic `import()` calls).
+
+CommonJS `require()` calls cannot be reliably rewritten because:
+- `require()` is a regular function call, not special syntax
+- It can be aliased, dynamically constructed, or wrapped
+- Detecting all `require()` usages would require complex static analysis with edge cases
+
+Rather than silently produce broken output, monocrate rejects CommonJS files upfront with a clear error message.
+
+---
+
+## Supported File Formats
+
+| Extension | Status | Notes |
+|-----------|--------|-------|
+| `.js` with `"type": "module"` | Supported | Imports are rewritten |
+| `.mjs` | Supported | Always ESM, imports are rewritten |
+| `.d.ts` | Supported | Type declarations are rewritten |
+| `.d.mts` | Supported | Type declarations are rewritten |
+| `.js` without `"type": "module"` | **Rejected** | Treated as CommonJS |
+| `.cjs` | **Rejected** | Always CommonJS |
+| `.d.cts` | **Rejected** | Associated with CommonJS |
+
+---
+
+## Error Messages
+
+### For `.cjs` files:
+```
+Cannot process CommonJS file: packages/lib/dist/index.cjs
+Monocrate only supports ES modules. Use .mjs extension or set "type": "module" in package.json.
 ```
 
-| Extension | Status |
-|-----------|--------|
-| `.js`     | Processed |
-| `.d.ts`   | Processed |
-| `.mjs`    | Processed |
-| `.cjs`    | Processed |
-| `.d.mts`  | Processed |
-| `.d.cts`  | Processed |
-
-### 2. Test Coverage Added
-
-New test file: `src/integration-tests/file-formats.test.ts`
-
-| Scenario | Status |
-|----------|--------|
-| `.mjs` file import rewriting | Tested |
-| `.cjs` file dynamic import rewriting | Tested |
-| `.d.mts` file import rewriting | Tested |
-| `.d.cts` file import rewriting | Tested |
-| Package with `main` pointing to `.mjs` | Tested |
-| Package with `main` pointing to `.cjs` | Tested |
-| Conditional exports (`"import"` / `"require"`) | Tested |
-| Dual-format packages (ESM + CJS) | Tested |
-| Subpath exports resolving to `.mjs`/`.cjs` | Tested |
-| Mixed .mjs/.cjs dependency chains | Tested |
+### For `.js` files without `type: "module"`:
+```
+Cannot process CommonJS file: packages/lib/dist/index.js
+Package "@myorg/lib" does not have "type": "module" in package.json.
+Monocrate only supports ES modules. Set "type": "module" in package.json or use .mjs extension.
+```
 
 ---
 
-## Known Limitations
+## Migration Guide
 
-### CommonJS `require()` Calls Are Not Rewritten
+To use monocrate with your monorepo:
 
-The import rewriter only handles ES module syntax:
-- `import ... from '...'` declarations
-- `export ... from '...'` declarations
-- `import('...')` dynamic imports
-
-CommonJS `require()` calls are **not** rewritten because they are regular function calls, not module syntax that ts-morph can identify as import declarations.
-
-**Workaround:** Use dynamic `import()` instead of `require()` in `.cjs` files when importing in-repo dependencies.
-
-### Subpath Fallback Resolution
-
-When a package has no `exports` field, the fallback resolution appends `.js`:
-- `@myorg/pkg/utils/helper` resolves to `utils/helper.js`
-
-**Practical impact:** Low. Modern packages using `.mjs`/`.cjs` almost always have an `exports` field, which is handled correctly by `resolve.exports`.
+1. **Add `"type": "module"` to all package.json files** that contain JavaScript code
+2. **Use ES module syntax** (`import`/`export`) instead of CommonJS (`require`/`module.exports`)
+3. **Rename `.cjs` files to `.mjs`** and update to ES module syntax
+4. **Update TypeScript config** if needed:
+   ```json
+   {
+     "compilerOptions": {
+       "module": "ESNext",
+       "moduleResolution": "bundler"
+     }
+   }
+   ```
 
 ---
 
-## Technical Notes
+## Technical Implementation
 
-### Package.json `type` Field
+The CommonJS detection happens in `src/import-rewriter.ts`:
 
-The `type` field does NOT affect extension resolution in Node.js. It only determines how `.js` files are interpreted (ESM vs CommonJS). Packages using `.mjs` or `.cjs` entry points must declare them via `exports` or `main` fields.
+1. Files ending with `.cjs` are always rejected
+2. Files ending with `.js` are checked against their package's `type` field
+3. If `type` is not `"module"`, the file is rejected
+4. Only then are imports parsed and rewritten
 
-### Bare Import Resolution
-
-Bare imports (e.g., `import ... from '@myorg/pkg'`) correctly respect the `main` field. If `main` is `"dist/index.mjs"`, that path is used. The `index.js` fallback only applies when there's no `main` field.
+This "fail early" approach ensures no broken output is produced.

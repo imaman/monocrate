@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { Project, SyntaxKind } from 'ts-morph'
-import type { PackageMap } from './package-location.js'
+import type { PackageLocation, PackageMap } from './package-location.js'
 import { resolveImport } from './collect-package-locations.js'
 import { AbsolutePath, RelativePath } from './paths.js'
 
@@ -16,9 +16,46 @@ export class ImportRewriter {
 
   async rewriteAll(files: AbsolutePath[]): Promise<void> {
     const rewritableFiles = files.filter((f) => /\.(js|mjs|cjs|d\.ts|d\.mts|d\.cts)$/.test(f))
+
+    // Validate that no CommonJS files are present - we can't rewrite require() calls
+    for (const file of rewritableFiles) {
+      this.rejectIfCommonJS(file)
+    }
+
     for (const file of rewritableFiles) {
       await this.rewriteFile(file)
     }
+  }
+
+  private rejectIfCommonJS(filePath: AbsolutePath): void {
+    // .cjs and .d.cts files are always CommonJS
+    if (filePath.endsWith('.cjs') || filePath.endsWith('.d.cts')) {
+      throw new Error(
+        `Cannot process CommonJS file: ${this.toRepoPath(filePath)}\n` +
+          `Monocrate only supports ES modules. Use .mjs extension or set "type": "module" in package.json.`
+      )
+    }
+
+    // .js files are CommonJS unless the package has "type": "module"
+    if (filePath.endsWith('.js')) {
+      const packageLocation = this.findPackageForFile(filePath)
+      if (packageLocation && packageLocation.packageJson.type !== 'module') {
+        throw new Error(
+          `Cannot process CommonJS file: ${this.toRepoPath(filePath)}\n` +
+            `Package "${packageLocation.name}" does not have "type": "module" in package.json.\n` +
+            `Monocrate only supports ES modules. Set "type": "module" in package.json or use .mjs extension.`
+        )
+      }
+    }
+  }
+
+  private findPackageForFile(filePath: AbsolutePath): PackageLocation | undefined {
+    for (const location of this.packageMap.values()) {
+      if (filePath.startsWith(location.toDir + '/') || filePath === location.toDir) {
+        return location
+      }
+    }
+    return undefined
   }
 
   private async rewriteFile(pathToImporter: AbsolutePath): Promise<void> {

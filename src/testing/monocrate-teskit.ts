@@ -39,6 +39,7 @@ export function pj(
   return {
     version: '0.9.9',
     main: 'dist/index.js',
+    type: 'module',
     ...more,
     name,
     ...version,
