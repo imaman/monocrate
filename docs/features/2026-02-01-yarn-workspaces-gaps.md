@@ -47,18 +47,17 @@ Tests use `workspace:*` extensively but don't cover:
 - `workspace:^` and `workspace:~` (should work since lookup is by name, but untested)
 - Malformed or missing workspace dependencies
 
-### 2. Object-Format Workspaces
+### ~~2. Object-Format Workspaces~~
 
-The object format `{ "packages": [...] }` is supported in code but has minimal test coverage compared to the array format.
+~~The object format `{ "packages": [...] }` is supported in code but has minimal test coverage compared to the array format.~~
 
-### 3. Mixed Workspace Patterns
+*Covered by test: "works with workspace object format (packages field)" in monocrate.test.ts:272*
 
-No tests for multiple patterns with different glob styles:
-```json
-{
-  "workspaces": ["packages/*", "apps/**", "tools/cli"]
-}
-```
+### ~~3. Mixed Workspace Patterns~~
+
+~~No tests for multiple patterns with different glob styles.~~
+
+*Covered by tests using `["packages/*", "libs/*"]` in monocrate.test.ts:889, 924*
 
 ### 4. Edge Cases
 
@@ -73,6 +72,6 @@ Missing test coverage for:
 |------|----------|--------|
 | Error on unresolved `workspace:` deps | High | Low |
 | Test workspace protocol variants | Medium | Low |
-| Test object-format workspaces | Medium | Low |
+| ~~Test object-format workspaces~~ | ~~Medium~~ | ~~Low~~ |
 | Test negated patterns | Low | Low |
-| Test mixed/complex glob patterns | Low | Low |
+| ~~Test mixed/complex glob patterns~~ | ~~Low~~ | ~~Low~~ |
