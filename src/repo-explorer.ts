@@ -132,9 +132,7 @@ export class RepoExplorer {
 
   private static async discover(monorepoRoot: AbsolutePath): Promise<Map<string, MonorepoPackage>> {
     const patterns = this.parseWorkspacePatterns(monorepoRoot)
-    const positivePatterns = patterns.filter((p) => !p.startsWith('!')).map((p) => `${p}/package.json`)
-    const negativePatterns = patterns.filter((p) => p.startsWith('!')).map((p) => `!${p.slice(1)}/package.json`)
-    const globPatterns = [...positivePatterns, ...negativePatterns]
+    const globPatterns = patterns.map((p) => (p.startsWith('!') ? `!${p.slice(1)}/package.json` : `${p}/package.json`))
 
     const matches = await glob(globPatterns, {
       cwd: monorepoRoot,
