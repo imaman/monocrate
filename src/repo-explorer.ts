@@ -1,6 +1,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { glob } from 'glob'
+import { parse as parseYaml } from 'yaml'
+import { z } from 'zod'
 import { PackageJson } from './package-json.js'
 import { AbsolutePath, RelativePath } from './paths.js'
 import { validatePublishNames } from './validate-publish-names.js'
@@ -97,28 +99,25 @@ export class RepoExplorer {
   private static parseWorkspacePatterns(monorepoRoot: AbsolutePath): string[] {
     const packageJsonPath = path.join(monorepoRoot, 'package.json')
     if (fs.existsSync(packageJsonPath)) {
-      const parsed = PackageJson.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
+      const WorkspacesConfig = z.object({
+        workspaces: z.union([z.array(z.string()), z.object({ packages: z.array(z.string()) })]),
+      })
+      const parsed = WorkspacesConfig.safeParse(JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')))
       if (parsed.success) {
         const workspaces = parsed.data.workspaces
-        if (Array.isArray(workspaces)) {
-          return workspaces
-        }
-        if (workspaces && typeof workspaces === 'object' && 'packages' in workspaces) {
-          return workspaces.packages
-        }
+        return Array.isArray(workspaces) ? workspaces : workspaces.packages
       }
     }
 
     const pnpmWorkspacePath = path.join(monorepoRoot, 'pnpm-workspace.yaml')
     if (fs.existsSync(pnpmWorkspacePath)) {
       const content = fs.readFileSync(pnpmWorkspacePath, 'utf-8')
-      const match = /packages:\s*\n((?:\s+-\s+.+\n?)+)/m.exec(content)
-      if (match?.[1]) {
-        return match[1]
-          .split('\n')
-          .map((line) => line.replace(/^\s*-\s*['"]?|['"]?\s*$/g, ''))
-          .filter(Boolean)
+      const PnpmWorkspace = z.object({ packages: z.array(z.string()) })
+      const parsed = PnpmWorkspace.safeParse(parseYaml(content))
+      if (!parsed.success) {
+        throw new Error(`Invalid pnpm-workspace.yaml at ${pnpmWorkspacePath}: ${parsed.error.message}`)
       }
+      return parsed.data.packages
     }
 
     return ['packages/*']
