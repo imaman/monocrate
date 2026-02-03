@@ -2,7 +2,7 @@
 
 ## Summary
 
-Extend monocrate to rewrite `require()` calls in CommonJS modules, in addition to the existing ESM `import` rewriting. This allows monorepo packages using CommonJS to be assembled and published.
+Extend monocrate to support CommonJS modules by intercepting `require()` calls at runtime. This allows monorepo packages using CommonJS to be assembled and published.
 
 ## Current Behavior
 
@@ -15,96 +15,124 @@ Only ESM files (`.mjs`, or `.js` with `"type": "module"`) are processed.
 
 ## Proposed Behavior
 
-Monocrate will rewrite `require()` calls in CommonJS files using the same static analysis approach used for ESM imports.
+Monocrate will inject a runtime hook that intercepts `require()` calls and rewrites in-repo package paths to their assembled locations.
 
-### Supported Patterns
+### How It Works
+
+1. Monocrate generates a bootstrap module (`__monocrate_bootstrap__.cjs`) in the assembled output
+2. The bootstrap sets up a `Module._resolveFilename` hook before any application code runs
+3. When `require('@myorg/utils')` is called, the hook rewrites it to the correct path (`./deps/__myorg__utils/dist/index.js`)
+4. The package.json `main` field (if pointing to a CJS file) is updated to load the bootstrap first
+
+### All Patterns Supported
 
 ```javascript
-// Static require - SUPPORTED
+// Direct require - works
 const utils = require('@myorg/utils');
-const { helper } = require('@myorg/utils');
 
-// Nested path - SUPPORTED
-const foo = require('@myorg/utils/lib/foo');
-```
-
-### Unsupported Patterns (will error)
-
-```javascript
-// Computed/dynamic require - ERROR
+// Computed require - works
 const name = '@myorg/utils';
 require(name);
 
-// Aliased require - ERROR
+// Aliased require - works
 const r = require;
 r('@myorg/utils');
 
-// Template literal - ERROR
+// Template literal - works
 require(`@myorg/${name}`);
 ```
 
-When an unsupported pattern is detected, monocrate will throw an error with file location and guidance, similar to the existing "Computed import not supported" error for dynamic ESM imports.
+The runtime hook intercepts all `require()` calls regardless of how they're written.
 
 ## File Type Handling
 
 After this change, monocrate will process:
 
-| Extension | Package Type | Rewriting |
+| Extension | Package Type | Mechanism |
 |-----------|--------------|-----------|
-| `.mjs` | Any | ESM imports |
-| `.js` | `"type": "module"` | ESM imports |
-| `.cjs` | Any | CommonJS require |
-| `.js` | `"type": "commonjs"` or unset | CommonJS require |
-| `.d.ts`, `.d.mts` | Any | ESM imports (type declarations) |
-| `.d.cts` | Any | CommonJS require (type declarations) |
+| `.mjs` | Any | Static rewriting (existing) |
+| `.js` | `"type": "module"` | Static rewriting (existing) |
+| `.cjs` | Any | Runtime hook |
+| `.js` | `"type": "commonjs"` or unset | Runtime hook |
+| `.d.ts`, `.d.mts` | Any | Static rewriting (existing) |
+| `.d.cts` | Any | No rewriting needed (type declarations only) |
+
+ESM continues to use static rewriting since `import` is a keyword that cannot be aliased.
 
 ## Technical Approach
 
-Use ts-morph (already a dependency) to find and rewrite `require()` calls:
+### Bootstrap Module
 
-1. Find all `CallExpression` nodes where the callee is the identifier `require`
-2. Verify the first argument is a `StringLiteral` (error otherwise)
-3. Apply the same path resolution logic used for ESM imports
-4. Update the string literal value
+Monocrate generates a bootstrap file that:
 
-This mirrors the existing approach for `import()` dynamic imports in `import-rewriter.ts`.
-
-## Limitations
-
-Static analysis cannot detect aliased `require()` calls:
+1. Captures the original `Module._resolveFilename`
+2. Installs a wrapper that checks if the request matches an in-repo package
+3. If matched, resolves to the assembled location; otherwise delegates to the original
 
 ```javascript
-const r = require;
-r('./foo');  // Not detected - will fail at runtime
+// __monocrate_bootstrap__.cjs (generated)
+const Module = require('module');
+const path = require('path');
+
+const packageMap = {
+  '@myorg/utils': './deps/__myorg__utils/dist/index.js',
+  // ... other in-repo packages
+};
+
+const originalResolveFilename = Module._resolveFilename;
+
+Module._resolveFilename = function(request, parent, isMain, options) {
+  const mapped = packageMap[request];
+  if (mapped && parent?.filename) {
+    const resolvedPath = path.resolve(path.dirname(parent.filename), mapped);
+    return originalResolveFilename.call(this, resolvedPath, parent, isMain, options);
+  }
+  return originalResolveFilename.call(this, request, parent, isMain, options);
+};
 ```
 
-This is an inherent limitation of static rewriting. The alternative (runtime hooking) would not produce transformed files on disk, which monocrate requires for publishing.
+### Entry Point Wrapping
 
-**Mitigation**: Aliased require is rare in practice. Most CommonJS code uses direct `require()` calls. We will document this limitation clearly.
+For packages with a CJS entry point, monocrate creates a wrapper that loads the bootstrap first:
 
-## Error Messages
+```javascript
+// Original main: dist/index.js (CJS)
+// Assembled main: dist/index.js becomes:
 
-**Computed require:**
-```
-Computed require not supported: require(${expr}) at src/index.cjs:15.
-CommonJS require() calls must use string literals so monocrate can analyze and rewrite them.
+require('./__monocrate_bootstrap__.cjs');
+module.exports = require('./__original_index__.js');
 ```
 
-**Aliased require (if detected):**
-```
-Aliased require not supported at src/index.cjs:10.
-The 'require' function appears to be aliased. Monocrate can only rewrite direct require() calls.
-```
+Alternatively, if the package uses `"exports"` in package.json, we can prepend the bootstrap require to each CJS entry file.
+
+### When Bootstrap Is Needed
+
+The bootstrap is only generated when:
+- The assembled package contains CommonJS files, AND
+- Those files import in-repo packages
+
+If a package is pure ESM or has no in-repo dependencies, no bootstrap is needed.
+
+## Stability of `Module._resolveFilename`
+
+Despite being an internal Node.js API, `Module._resolveFilename` is the de facto standard for module resolution hooking. It has remained stable since Node 0.x and is used by widely-adopted tools:
+
+- ts-node
+- @babel/register
+- pirates
+- proxyquire
+
+Breaking this API would break a significant portion of the Node.js ecosystem.
 
 ## Testing
 
 Add tests for:
-- Basic `.cjs` file rewriting
+- Basic `.cjs` file with in-repo dependency
 - `.js` files in CommonJS packages (no `"type": "module"`)
-- `.d.cts` type declaration rewriting
-- Nested `require()` paths
-- Error cases: computed require, template literals
+- Computed/dynamic require patterns
 - Mixed packages: ESM main package depending on CommonJS in-repo dependency
+- Pure CJS monorepo
+- Verify bootstrap is not generated when not needed
 
 ## Migration
 
