@@ -56,6 +56,10 @@ export function computePackageClosure(pkgName: string, repoExplorer: RepoExplore
         const depPackage = repoExplorer.lookupPackage(depName)
         if (depPackage) {
           visit(depPackage)
+        } else if (depVersion?.startsWith('workspace:')) {
+          throw new Error(
+            `Workspace dependency "${depName}" (${depVersion}) in package "${pkg.name}" was not found in the monorepo`
+          )
         } else if (thirdPartyVersions && depVersion) {
           const existing = thirdPartyVersions.get(depName) ?? []
           existing.push({ version: depVersion, requiredBy: pkg.name })
