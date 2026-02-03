@@ -61,50 +61,84 @@ ESM continues to use static rewriting since `import` is a keyword that cannot be
 
 ## Technical Approach
 
-### Bootstrap Module
+### Performance Consideration
 
-Monocrate generates a bootstrap file at the package root that:
+Since `Module` is a process-wide singleton, naively chaining hooks (one per monocrate package) would add O(N) overhead to every `require()` call. Instead, we use a single shared hook with O(1) lookup.
 
-1. Captures the previous `Module._resolveFilename` (which may be another monocrate hook or the original)
-2. Installs a wrapper that only handles requires originating from within this package
-3. Delegates all other requires to the previous hook in the chain
+### Single Shared Hook with Registry
+
+All monocrate packages share one hook. Each package registers its mappings with the hook rather than installing its own.
+
+The registry is keyed by **package name** (extracted from the request), making lookups O(1):
 
 ```javascript
 // __monocrate_bootstrap__.cjs (generated)
 const Module = require('module');
 const path = require('path');
 
-const packageRoot = __dirname;
-const packageMap = {
+const MY_ROOT = __dirname;
+const MY_MAPPINGS = {
   '@myorg/utils': './deps/__myorg__utils/dist/index.js',
   // ... other in-repo packages
 };
 
-const previous = Module._resolveFilename;
-
-Module._resolveFilename = function(request, parent, isMain, options) {
-  const mapped = packageMap[request];
-  // Only apply if require originates from within this package
-  if (mapped && parent?.filename?.startsWith(packageRoot)) {
-    const resolvedPath = path.resolve(packageRoot, mapped);
-    return previous.call(this, resolvedPath, parent, isMain, options);
+// Extract package name: '@foo/bar/sub' -> '@foo/bar', 'foo/sub' -> 'foo'
+function getPackageName(request) {
+  if (request.startsWith('@')) {
+    const parts = request.split('/');
+    return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : undefined;
   }
-  return previous.call(this, request, parent, isMain, options);
-};
+  const first = request.split('/')[0];
+  return first || undefined;
+}
+
+// Check if monocrate hook already exists
+if (Module._resolveFilename.__monocrateRegistry) {
+  // Register with existing hook
+  for (const [pkgName, resolved] of Object.entries(MY_MAPPINGS)) {
+    const existing = Module._resolveFilename.__monocrateRegistry.get(pkgName);
+    if (existing) {
+      existing.set(MY_ROOT, resolved);
+    } else {
+      Module._resolveFilename.__monocrateRegistry.set(pkgName, new Map([[MY_ROOT, resolved]]));
+    }
+  }
+} else {
+  // First monocrate package - install the hook
+  // Registry: packageName -> Map<packageRoot, resolvedPath>
+  const registry = new Map();
+  for (const [pkgName, resolved] of Object.entries(MY_MAPPINGS)) {
+    registry.set(pkgName, new Map([[MY_ROOT, resolved]]));
+  }
+
+  const original = Module._resolveFilename;
+
+  const hook = function(request, parent, isMain, options) {
+    const pkgName = getPackageName(request);
+    const mappings = pkgName ? registry.get(pkgName) : undefined;
+
+    if (mappings && parent?.filename) {
+      // Find which package root this require originates from
+      for (const [root, resolved] of mappings) {
+        if (parent.filename.startsWith(root)) {
+          return original.call(this, path.resolve(root, resolved), parent, isMain, options);
+        }
+      }
+    }
+    return original.call(this, request, parent, isMain, options);
+  };
+
+  hook.__monocrateRegistry = registry;
+  Module._resolveFilename = hook;
+}
 ```
 
-### Hook Chaining
+### Performance Analysis
 
-Multiple monocrate-packaged packages can coexist because each hook:
-- Scopes its mappings to requires from its own package directory (`parent.filename.startsWith(packageRoot)`)
-- Delegates everything else to the previous hook
+- **Non-monocrate requires (vast majority):** O(1) - one `getPackageName` call, one Map lookup returning `undefined`
+- **Monocrate-managed requires:** O(K) where K = number of monocrate packages depending on that specific in-repo package (typically 1-3)
 
-When a consumer uses both `pkg-a` and `pkg-b` (both packaged by monocrate):
-1. `pkg-a` loads, installs its hook (capturing the original `_resolveFilename`)
-2. `pkg-b` loads, installs its hook (capturing `pkg-a`'s hook)
-3. A require from `pkg-b` → handled by `pkg-b`'s hook
-4. A require from `pkg-a` → passes through `pkg-b`'s hook, handled by `pkg-a`'s hook
-5. A require from elsewhere → passes through both, handled by the original
+This eliminates the "tax on every require" problem. The overhead for unrelated requires is negligible.
 
 ### Bootstrap Injection
 
