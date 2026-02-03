@@ -34,7 +34,7 @@ describe('--mirror-to option', () => {
 
     // Should mirror files preserving path structure
     expect(mirrored).toEqual({
-      'packages/app/package.json': { name: '@test/app', version: '0.9.9', main: 'dist/index.js' },
+      'packages/app/package.json': { name: '@test/app', version: '0.9.9', type: 'module', main: 'dist/index.js' },
       'packages/app/src/index.ts': `export const foo = 'foo';`,
       'packages/app/dist/index.js': `export const foo = 'foo';`,
     })
@@ -237,11 +237,12 @@ describe('--mirror-to option', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '0.9.9',
+        type: 'module',
         main: 'dist/index.js',
         devDependencies: { '@test/build-tool': 'workspace:*' },
       },
       'packages/app/dist/index.js': `export const foo = 'foo';`,
-      'packages/build-tool/package.json': { name: '@test/build-tool', version: '0.9.9', main: 'dist/index.js' },
+      'packages/build-tool/package.json': { name: '@test/build-tool', version: '0.9.9', type: 'module', main: 'dist/index.js' },
       'packages/build-tool/dist/index.js': `export function build() { return 'building'; }`,
     })
   })

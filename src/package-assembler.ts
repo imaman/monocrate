@@ -10,6 +10,7 @@ import { AbsolutePath } from './paths.js'
 import type { RepoExplorer, MonorepoPackage } from './repo-explorer.js'
 import { computePackageClosure } from './compute-package-closure.js'
 import type { NpmClient } from './npm-client.js'
+import { validateEsmOnly } from './validate-esm.js'
 
 export class PackageAssembler {
   readonly pkgName
@@ -43,6 +44,8 @@ export class PackageAssembler {
     const closure = computePackageClosure(this.pkgName, this.explorer)
     const outputDir = this.getOutputDir()
     const locations = await collectPackageLocations(this.npmClient, closure, outputDir)
+    validateEsmOnly(locations, this.explorer.repoRootDir)
+
     const packageMap = new Map(locations.map((at) => [at.name, at] as const))
 
     const subject = packageMap.get(closure.subjectPackageName)

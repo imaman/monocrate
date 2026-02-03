@@ -11,7 +11,7 @@ describe('npm login check', () => {
   it('fails early with actionable message when not logged in to npm, but skips check when publish is false', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
-      'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', main: 'dist/index.js' },
+      'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', type: 'module', main: 'dist/index.js' },
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello!'; }`,
     })
 
@@ -67,7 +67,7 @@ describe('npm publishing with Verdaccio', () => {
   it('publishes a simple package and it can be installed from the registry', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
-      'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', main: 'dist/index.js' },
+      'packages/mylib/package.json': { name: '@test/mylib', version: '1.0.0', type: 'module', main: 'dist/index.js' },
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
 
@@ -88,7 +88,7 @@ describe('npm publishing with Verdaccio', () => {
   it('publishes a simple non-scoped package', async () => {
     const monorepoRoot = folderify({
       'package.json': { workspaces: ['packages/*'] },
-      'packages/mylib/package.json': { name: 'mylib', version: '1.0.0', main: 'dist/index.js' },
+      'packages/mylib/package.json': { name: 'mylib', version: '1.0.0', type: 'module', main: 'dist/index.js' },
       'packages/mylib/dist/index.js': `export function hello() { return 'Hello from mylib!'; }`,
     })
 
@@ -111,11 +111,12 @@ describe('npm publishing with Verdaccio', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: { '@test/lib': 'workspace:*' },
       },
       'packages/app/dist/index.js': `import { greet } from '@test/lib'; export function sayHello(name) { return greet(name); }`,
-      'packages/lib/package.json': { name: '@test/lib', version: '1.0.0', main: 'dist/index.js' },
+      'packages/lib/package.json': { name: '@test/lib', version: '1.0.0', type: 'module', main: 'dist/index.js' },
       'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
     })
 
@@ -142,12 +143,13 @@ describe('npm publishing with Verdaccio', () => {
       'packages/app/package.json': {
         name: '@test/files-app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         files: ['dist'],
         dependencies: { '@test/files-lib': 'workspace:*' },
       },
       'packages/app/dist/index.js': `import { greet } from '@test/files-lib'; export function sayHello(name) { return greet(name); }`,
-      'packages/lib/package.json': { name: '@test/files-lib', version: '1.0.0', main: 'dist/index.js' },
+      'packages/lib/package.json': { name: '@test/files-lib', version: '1.0.0', type: 'module', main: 'dist/index.js' },
       'packages/lib/dist/index.js': `export function greet(name) { return 'Hello, ' + name + '!'; }`,
     })
 

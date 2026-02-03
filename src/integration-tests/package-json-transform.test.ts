@@ -48,6 +48,7 @@ describe('package.json transformation', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         description: 'Test package',
         keywords: ['test', 'example'],
@@ -79,6 +80,7 @@ describe('package.json transformation', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: { lodash: '^4.17.21' },
         peerDependencies: { react: '>=17.0.0' },

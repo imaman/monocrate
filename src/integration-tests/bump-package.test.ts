@@ -12,6 +12,7 @@ describe('--bump package option', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '3.5.7',
+        type: 'module',
         main: 'dist/index.js',
       },
       'packages/app/dist/index.js': `export const foo = 'foo';`,
@@ -33,6 +34,7 @@ describe('--bump package option', () => {
       'package.json': { name, workspaces: ['packages/*'] },
       'packages/app/package.json': {
         name: '@test/app',
+        type: 'module',
         main: 'dist/index.js',
       },
       'packages/app/dist/index.js': `export const foo = 'foo';`,
@@ -54,6 +56,7 @@ describe('--bump package option', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0-beta.1',
+        type: 'module',
         main: 'dist/index.js',
       },
       'packages/app/dist/index.js': `export const foo = 'foo';`,
@@ -77,6 +80,7 @@ describe('--bump package option', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: 'not-a-version',
+        type: 'module',
         main: 'dist/index.js',
       },
       'packages/app/dist/index.js': `export const foo = 'foo';`,
@@ -100,12 +104,14 @@ describe('--bump package option', () => {
       'packages/app1/package.json': {
         name: '@test/app1',
         version: '1.2.3',
+        type: 'module',
         main: 'dist/index.js',
       },
       'packages/app1/dist/index.js': `export const app1 = 'app1';`,
       'packages/app2/package.json': {
         name: '@test/app2',
         version: '5.6.7',
+        type: 'module',
         main: 'dist/index.js',
       },
       'packages/app2/dist/index.js': `export const app2 = 'app2';`,

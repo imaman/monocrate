@@ -13,6 +13,7 @@ describe('files property support', () => {
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         files: ['dist', 'bin'],
       },
@@ -48,6 +49,7 @@ console.log('Hello from bin');
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         files: ['dist', 'types.d.ts'],
       },
@@ -76,6 +78,7 @@ console.log('Hello from bin');
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         dependencies: { '@test/lib': 'workspace:*' },
       },
@@ -83,6 +86,7 @@ console.log('Hello from bin');
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         files: ['dist', 'extra'],
       },
@@ -98,6 +102,7 @@ console.log('Hello from bin');
       'package.json': {
         main: 'dist/index.js',
         name: '@test/app',
+        type: 'module',
         version: '3.9.27',
       },
       'deps/__test__lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
@@ -106,6 +111,7 @@ console.log('Hello from bin');
         files: ['dist', 'extra'],
         main: 'dist/index.js',
         name: '@test/lib',
+        type: 'module',
         version: '1.0.0',
       },
     })
@@ -118,6 +124,7 @@ console.log('Hello from bin');
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         // No files property
       },
@@ -140,6 +147,7 @@ console.log('Hello from bin');
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'lib/index.js',
         files: ['lib'],
       },
@@ -159,6 +167,7 @@ console.log('Hello from bin');
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         files: ['dist', 'docs', 'optional'],
       },
@@ -182,6 +191,7 @@ console.log('Hello from bin');
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         files: ['dist', 'bin'],
       },
@@ -210,6 +220,7 @@ console.log('Hello from bin');
       'packages/app/package.json': {
         name: '@test/app',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
         files: ['dist'],
         dependencies: { '@test/lib': 'workspace:*' },
@@ -218,6 +229,7 @@ console.log('Hello from bin');
       'packages/lib/package.json': {
         name: '@test/lib',
         version: '1.0.0',
+        type: 'module',
         main: 'dist/index.js',
       },
       'packages/lib/dist/index.js': `export function greet() { return 'Hello!'; }`,
@@ -239,6 +251,7 @@ console.log('Hello from bin');
       ],
       main: 'dist/index.js',
       name: '@test/app',
+      type: 'module',
       version: '1.0.0',
     })
   })
