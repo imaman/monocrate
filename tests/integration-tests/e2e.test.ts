@@ -50,7 +50,7 @@ describe('monocrate e2e', () => {
         lodash: '^4.17.21',
       },
     })
-
+    // Verify end-to-end:
     expect(stdout.trim()).toBe('Hello, World!')
   })
 
