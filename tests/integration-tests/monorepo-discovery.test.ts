@@ -1,8 +1,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { RepoExplorer } from '../repo-explorer.js'
-import { AbsolutePath } from '../paths.js'
+import { RepoExplorer } from '../../src/repo-explorer.js'
+import { AbsolutePath } from '../../src/paths.js'
 import { folderify } from '../testing/folderify.js'
 import { createTempDir } from '../testing/monocrate-teskit.js'
 

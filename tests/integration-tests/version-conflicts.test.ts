@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { monocrate } from '../index.js'
+import { monocrate } from '../../src/index.js'
 import { folderify } from '../testing/folderify.js'
 import { pj, runMonocrate } from '../testing/monocrate-teskit.js'
 

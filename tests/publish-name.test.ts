@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { describe, expect, test, beforeAll, afterAll } from 'vitest'
-import { monocrate } from './monocrate.js'
+import { monocrate } from '../src/monocrate.js'
 import { folderify } from './testing/folderify.js'
 import { pj } from './testing/monocrate-teskit.js'
 import { unfolderify } from './testing/unfolderify.js'

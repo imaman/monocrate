@@ -1,8 +1,8 @@
 import { execSync } from 'child_process'
 import { unfolderify } from './unfolderify.js'
-import { monocrate } from '../monocrate.js'
+import { monocrate } from '../../src/monocrate.js'
 import path from 'node:path'
-import type { PackageJson } from '../package-json.js'
+import type { PackageJson } from '../../src/package-json.js'
 import os from 'node:os'
 import fs from 'node:fs'
 
