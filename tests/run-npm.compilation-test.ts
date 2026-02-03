@@ -9,8 +9,8 @@
 
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 
-import type { AbsolutePath } from './paths.js'
-import { runNpm } from './run-npm.js'
+import type { AbsolutePath } from '../src/paths.js'
+import { runNpm } from '../src/run-npm.js'
 
 export async function testOverloads(cwd: AbsolutePath) {
   // ============================================================

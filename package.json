@@ -15,8 +15,7 @@
     }
   },
   "files": [
-    "dist/src",
-    "!dist/src/**/*.compilation-test.*"
+    "dist/src"
   ],
   "scripts": {
     "build": "tsc",
