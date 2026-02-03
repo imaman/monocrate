@@ -30,6 +30,9 @@ produces a standard npm package that looks like you hand-crafted it for publicat
 - 🔒 Internal packages remain unpublished
 - ✅ Tree-shaking, sourcemaps, and types all work
 
+> [!NOTE]
+> **ESM only** — monocrate supports ES modules exclusively. CommonJS packages (`.cjs` files or `.js` without `"type": "module"`) are not supported. If your monorepo uses CommonJS, consider [migrating to ESM](https://nodejs.org/api/esm.html).
+
 ### Quickstart
 
 ```bash
@@ -189,9 +192,6 @@ npx monocrate packages/lib-a packages/lib-b --bump patch --max
 This is purely a stylistic choice; correctness is unaffected since in-repo dependencies are always embedded.
 
 ## Scope
-
-> [!NOTE]
-> **ESM only** — monocrate supports ES modules exclusively. CommonJS packages (`.cjs` files or `.js` without `"type": "module"`) are not supported. If your monorepo uses CommonJS, consider migrating to ESM by adding `"type": "module"` to your package.json files or using the `.mjs` extension. See [Node.js ESM documentation](https://nodejs.org/api/esm.html) for migration guidance.
 
 monocrate makes a few deliberate choices:
 
