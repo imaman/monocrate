@@ -63,47 +63,60 @@ ESM continues to use static rewriting since `import` is a keyword that cannot be
 
 ### Bootstrap Module
 
-Monocrate generates a bootstrap file that:
+Monocrate generates a bootstrap file at the package root that:
 
-1. Captures the original `Module._resolveFilename`
-2. Installs a wrapper that checks if the request matches an in-repo package
-3. If matched, resolves to the assembled location; otherwise delegates to the original
+1. Captures the previous `Module._resolveFilename` (which may be another monocrate hook or the original)
+2. Installs a wrapper that only handles requires originating from within this package
+3. Delegates all other requires to the previous hook in the chain
 
 ```javascript
 // __monocrate_bootstrap__.cjs (generated)
 const Module = require('module');
 const path = require('path');
 
+const packageRoot = __dirname;
 const packageMap = {
   '@myorg/utils': './deps/__myorg__utils/dist/index.js',
   // ... other in-repo packages
 };
 
-const originalResolveFilename = Module._resolveFilename;
+const previous = Module._resolveFilename;
 
 Module._resolveFilename = function(request, parent, isMain, options) {
   const mapped = packageMap[request];
-  if (mapped && parent?.filename) {
-    const resolvedPath = path.resolve(path.dirname(parent.filename), mapped);
-    return originalResolveFilename.call(this, resolvedPath, parent, isMain, options);
+  // Only apply if require originates from within this package
+  if (mapped && parent?.filename?.startsWith(packageRoot)) {
+    const resolvedPath = path.resolve(packageRoot, mapped);
+    return previous.call(this, resolvedPath, parent, isMain, options);
   }
-  return originalResolveFilename.call(this, request, parent, isMain, options);
+  return previous.call(this, request, parent, isMain, options);
 };
 ```
 
-### Entry Point Wrapping
+### Hook Chaining
 
-For packages with a CJS entry point, monocrate creates a wrapper that loads the bootstrap first:
+Multiple monocrate-packaged packages can coexist because each hook:
+- Scopes its mappings to requires from its own package directory (`parent.filename.startsWith(packageRoot)`)
+- Delegates everything else to the previous hook
+
+When a consumer uses both `pkg-a` and `pkg-b` (both packaged by monocrate):
+1. `pkg-a` loads, installs its hook (capturing the original `_resolveFilename`)
+2. `pkg-b` loads, installs its hook (capturing `pkg-a`'s hook)
+3. A require from `pkg-b` → handled by `pkg-b`'s hook
+4. A require from `pkg-a` → passes through `pkg-b`'s hook, handled by `pkg-a`'s hook
+5. A require from elsewhere → passes through both, handled by the original
+
+### Bootstrap Injection
+
+Every CommonJS file in the assembled package gets this line prepended:
 
 ```javascript
-// Original main: dist/index.js (CJS)
-// Assembled main: dist/index.js becomes:
-
 require('./__monocrate_bootstrap__.cjs');
-module.exports = require('./__original_index__.js');
 ```
 
-Alternatively, if the package uses `"exports"` in package.json, we can prepend the bootstrap require to each CJS entry file.
+The relative path is computed based on the file's depth (e.g., `../` for files in subdirectories).
+
+Node's require cache ensures the bootstrap executes only once per package, regardless of how many files require it.
 
 ### When Bootstrap Is Needed
 
