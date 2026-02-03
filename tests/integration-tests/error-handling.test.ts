@@ -241,4 +241,42 @@ export const message = lib.greet();
 
     expect(stdout.trim()).toBe('Hello!')
   })
+
+  it('throws when workspace: dependency points to non-existent package', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name, workspaces: ['packages/*'] },
+      'packages/app/package.json': pj('@test/app', { dependencies: { '@test/missing-lib': 'workspace:*' } }),
+      'packages/app/dist/index.js': `export const foo = 'foo';`,
+    })
+
+    await expect(
+      monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        monorepoRoot,
+        publish: false,
+        bump: '1.0.0',
+      })
+    ).rejects.toThrow('Workspace dependency "@test/missing-lib" (workspace:*) in package "@test/app" was not found')
+  })
+
+  it('throws when workspace: dependency in transitive dep points to non-existent package', async () => {
+    const monorepoRoot = folderify({
+      'package.json': { name, workspaces: ['packages/*'] },
+      'packages/app/package.json': pj('@test/app', { dependencies: { '@test/lib': 'workspace:*' } }),
+      'packages/app/dist/index.js': `import { foo } from '@test/lib'; export const bar = foo;`,
+      'packages/lib/package.json': pj('@test/lib', { dependencies: { '@test/missing': 'workspace:*' } }),
+      'packages/lib/dist/index.js': `export const foo = 'foo';`,
+    })
+
+    await expect(
+      monocrate({
+        cwd: monorepoRoot,
+        pathToSubjectPackages: 'packages/app',
+        monorepoRoot,
+        publish: false,
+        bump: '1.0.0',
+      })
+    ).rejects.toThrow('Workspace dependency "@test/missing" (workspace:*) in package "@test/lib" was not found')
+  })
 })
