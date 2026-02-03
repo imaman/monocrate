@@ -30,6 +30,9 @@ produces a standard npm package that looks like you hand-crafted it for publicat
 - 🔒 Internal packages remain unpublished
 - ✅ Tree-shaking, sourcemaps, and types all work
 
+> [!NOTE]
+> **ESM only** — monocrate supports ES modules exclusively. CommonJS packages (`.cjs` files or `.js` without `"type": "module"`) are not supported. If your monorepo uses CommonJS, consider [migrating to ESM](https://nodejs.org/api/esm.html).
+
 ### Quickstart
 
 ```bash
