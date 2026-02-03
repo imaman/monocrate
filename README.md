@@ -1,6 +1,6 @@
 
 > [!IMPORTANT]
-> This # [monocrate](https://www.npmjs.com/package/monocrate) project is now maintained at **[moojo-tech/monocrate](https://github.com/moojo-tech/monocrate)**.
+> The [monocrate](https://www.npmjs.com/package/monocrate) project is now maintained at **[moojo-tech/monocrate](https://github.com/moojo-tech/monocrate)**.
 >
 > Please visit the new repository for:
 > - Latest source code
