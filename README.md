@@ -190,6 +190,9 @@ This is purely a stylistic choice; correctness is unaffected since in-repo depen
 
 ## Scope
 
+> [!NOTE]
+> **ESM only** — monocrate supports ES modules exclusively. CommonJS packages (`.cjs` files or `.js` without `"type": "module"`) are not supported. If your monorepo uses CommonJS, consider migrating to ESM by adding `"type": "module"` to your package.json files or using the `.mjs` extension. See [Node.js ESM documentation](https://nodejs.org/api/esm.html) for migration guidance.
+
 monocrate makes a few deliberate choices:
 
 - **Runtime dependencies only** — Only `dependencies` are traversed and embedded. `devDependencies` are ignored since 
