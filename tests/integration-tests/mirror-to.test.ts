@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { monocrate } from '../index.js'
+import { monocrate } from '../../src/index.js'
 import { folderify } from '../testing/folderify.js'
 import { unfolderify } from '../testing/unfolderify.js'
 import { createTempDir, initGitRepo, pj } from '../testing/monocrate-teskit.js'
@@ -242,7 +242,12 @@ describe('--mirror-to option', () => {
         devDependencies: { '@test/build-tool': 'workspace:*' },
       },
       'packages/app/dist/index.js': `export const foo = 'foo';`,
-      'packages/build-tool/package.json': { name: '@test/build-tool', version: '0.9.9', type: 'module', main: 'dist/index.js' },
+      'packages/build-tool/package.json': {
+        name: '@test/build-tool',
+        version: '0.9.9',
+        type: 'module',
+        main: 'dist/index.js',
+      },
       'packages/build-tool/dist/index.js': `export function build() { return 'building'; }`,
     })
   })

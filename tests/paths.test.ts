@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { AbsolutePath, RelativePath } from './paths.js'
+import { AbsolutePath, RelativePath } from '../src/paths.js'
 
 const { contains } = AbsolutePath
 

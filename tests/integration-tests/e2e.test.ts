@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { monocrate } from '../index.js'
+import { monocrate } from '../../src/index.js'
 import { folderify } from '../testing/folderify.js'
 import { unfolderify } from '../testing/unfolderify.js'
 import { pj, runMonocrate } from '../testing/monocrate-teskit.js'
@@ -50,7 +50,7 @@ describe('monocrate e2e', () => {
         lodash: '^4.17.21',
       },
     })
-
+    // Verify end-to-end:
     expect(stdout.trim()).toBe('Hello, World!')
   })
 
