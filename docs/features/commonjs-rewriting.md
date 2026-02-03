@@ -1,6 +1,9 @@
 # CommonJS `require()` Path Rewriting
 
-**Status: Considered but rejected**
+> [!WARNING]
+> **Status: Considered but rejected**
+>
+> This feature was explored but will not be implemented. See [Conclusion](#conclusion) for rationale.
 
 ## Summary
 
